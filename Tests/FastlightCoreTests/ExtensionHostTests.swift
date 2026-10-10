@@ -65,6 +65,40 @@ import Testing
         #expect(lib.issues.first?.message == "extension.json: command[0]: link points outside the extension folder")
     }
 
+    /// The fingerprint doesn't follow links, so code reached through one
+    /// that leads out of the folder could change without asking again.
+    @Test func refusesSymlinksOutOfTheFolder() throws {
+        let elsewhere = try FakeExtension.tempDir()
+        try Data("echo hi".utf8).write(to: elsewhere.appendingPathComponent("helper.sh"))
+        let fm = FileManager.default
+        for (name, target) in [("dir", elsewhere.path), ("file", elsewhere.appendingPathComponent("helper.sh").path),
+                               ("relative", "../../\(elsewhere.lastPathComponent)"), ("dangling", "/nonexistent/x"),
+                               ("up", "..")] {
+            let root = try FakeExtension.tempDir()
+            let dir = try FakeExtension.folder(in: root)
+            try fm.createSymbolicLink(atPath: dir.appendingPathComponent("lib").path, withDestinationPath: target)
+            let lib = library(root)
+            lib.refresh()
+            #expect(lib.extensions.isEmpty, "\(name)")
+            #expect(lib.issues.first?.message == "lib links outside the extension folder (to \(target))", "\(name)")
+        }
+    }
+
+    @Test func allowsSymlinksWithinTheFolder() throws {
+        let root = try FakeExtension.tempDir()
+        let dir = try FakeExtension.folder(in: root)
+        let fm = FileManager.default
+        try fm.createDirectory(at: dir.appendingPathComponent("src/lib"), withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: dir.appendingPathComponent("lib").path, withDestinationPath: "src/lib")
+        try fm.createSymbolicLink(atPath: dir.appendingPathComponent("src/up").path, withDestinationPath: "..")
+        try fm.createSymbolicLink(atPath: dir.appendingPathComponent("main").path, withDestinationPath: dir.appendingPathComponent("run.sh").path)
+        try fm.createSymbolicLink(atPath: dir.appendingPathComponent("later").path, withDestinationPath: "not-yet")
+        let lib = library(root)
+        lib.refresh()
+        #expect(lib.issues.map(\.description) == [])
+        #expect(lib.extensions.count == 1)
+    }
+
     @Test func builtInsFindTheirExecutableInHelpers() throws {
         let builtIns = try FakeExtension.tempDir()
         let helpers = try FakeExtension.tempDir()
@@ -268,6 +302,18 @@ import Testing
         // Changed on disk after the last rescan: the approved fingerprint no
         // longer matches, so it must not start.
         try Data("echo pwned".utf8).write(to: root.appendingPathComponent("ext/extra.sh"))
+        await #expect(throws: ExtensionError.needsConsent) {
+            try await host.search(ext, query: "x", mode: .keyword, limit: 5)
+        }
+        #expect(host.pid(of: ext.id) == nil)
+    }
+
+    @Test func refusesToStartWithALinkOutAddedSinceApproval() async throws {
+        let (host, ext, root) = try setup()
+        host.consent.approve(ext)
+        defer { host.stopAll(graceful: false) }
+        try FileManager.default.createSymbolicLink(atPath: root.appendingPathComponent("ext/lib").path,
+                                                   withDestinationPath: FileManager.default.homeDirectoryForCurrentUser.path)
         await #expect(throws: ExtensionError.needsConsent) {
             try await host.search(ext, query: "x", mode: .keyword, limit: 5)
         }
