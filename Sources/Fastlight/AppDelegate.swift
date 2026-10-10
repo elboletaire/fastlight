@@ -1,11 +1,12 @@
 import AppKit
-import Carbon.HIToolbox
 import ServiceManagement
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
-    private var hotKey: HotKey?
+    private var hotKey: GlobalShortcut!
+    private var settings: SettingsWindowController?
+    private let showItem = NSMenuItem(title: "Show Fastlight", action: #selector(toggle), keyEquivalent: "")
     private lazy var extensions = ExtensionCenter()
     private lazy var panel = PanelController(model: SearchModel(extensions: extensions))
     private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLoginItem), keyEquivalent: "")
@@ -16,12 +17,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.button?.image = Self.menuBarIcon()
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(withTitle: "Show Fastlight", action: #selector(toggle), keyEquivalent: " ")
-            .keyEquivalentModifierMask = .option
+        menu.addItem(showItem)
         menu.addItem(.separator())
         extensionsItem.submenu = NSMenu(title: "Extensions")
         menu.addItem(extensionsItem)
         menu.addItem(loginItem)
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         menu.addItem(withTitle: "About Fastlight", action: #selector(about), keyEquivalent: "")
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit Fastlight", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -29,14 +30,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.menu = menu
         statusItem = item
 
-        // ⌥Space, so it doesn't fight Spotlight. To take ⌘Space instead, turn
-        // off Spotlight's shortcut in System Settings and change this line.
-        hotKey = HotKey(keyCode: UInt32(kVK_Space), modifiers: UInt32(optionKey)) { [weak self] in
-            self?.toggle()
-        }
-        if hotKey == nil {
-            NSLog("Fastlight: could not register ⌥Space; another app may own it")
-        }
+        // ⌥Space unless changed in Settings: ⌘Space is Spotlight's on a stock Mac.
+        hotKey = GlobalShortcut { [weak self] in self?.toggle() }
+        hintIfSpotlightWins()
         _ = panel // Starts the daemon and the first app scan now rather than on first show.
 
         // `--show [query]` opens the panel at launch, for trying changes out.
@@ -59,6 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        // Shows the current shortcut, which Settings may have changed.
+        showItem.keyEquivalent = KeyboardLayout.keyEquivalent(for: hotKey.shortcut)
+        showItem.keyEquivalentModifierMask = NSEvent.ModifierFlags(rawValue: hotKey.shortcut.modifiers.rawValue)
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         extensions.refresh()
         extensionsItem.submenu = extensionsMenu()
@@ -163,6 +162,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggle() {
         panel.toggle()
+    }
+
+    @objc private func openSettings() {
+        let controller = settings ?? SettingsWindowController(
+            model: SettingsModel(hotKey: hotKey, spotlight: SystemShortcuts.makeSpotlight()))
+        settings = controller
+        controller.show()
+    }
+
+    /// Once per shortcut: say why it opens Spotlight instead (it was set to
+    /// ⌘Space, then Spotlight got its shortcut back, say after a reset).
+    private func hintIfSpotlightWins() {
+        let s = hotKey.shortcut
+        let key = "fastlight.hintedSpotlightConflict"
+        guard !SystemShortcuts.makeSpotlight().conflicts(with: s).isEmpty else {
+            UserDefaults.standard.removeObject(forKey: key)
+            return
+        }
+        guard UserDefaults.standard.string(forKey: key) != s.description else { return }
+        UserDefaults.standard.set(s.description, forKey: key)
+        Toast.shared.show("\(KeyboardLayout.display(s)) opens Spotlight, not Fastlight. See Fastlight Settings.",
+                          symbol: "exclamationmark.triangle.fill", duration: 5)
     }
 
     @objc private func toggleLoginItem() {

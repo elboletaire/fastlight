@@ -103,6 +103,69 @@ enum Snapshot {
                 print(file.path)
             }
         }
+        renderSettings(into: dir, suite: suite)
+    }
+
+    // MARK: Settings
+
+    /// The Settings window in each state of the shortcut recorder and the
+    /// ⌘Space flow, against throwaway preferences (never the real ones).
+    private static func renderSettings(into dir: URL, suite: String) {
+        struct State {
+            var name: String
+            var shortcut = Shortcut.default
+            var spotlightOn = true
+            var setup: (SettingsModel) -> Void = { _ in }
+        }
+        let states = [
+            State(name: "settings"),
+            State(name: "settings-recording") { $0.startRecording(); $0.held = [.control, .option] },
+            State(name: "settings-error") { m in
+                m.startRecording()
+                m.message = .init(text: Shortcut.Problem.appShortcut.message(for: Shortcut(keyCode: 8, modifiers: .command)), tone: .error)
+            },
+            State(name: "settings-waiting") { $0.waiting = true },
+            State(name: "settings-free", spotlightOn: false),
+            State(name: "settings-conflict", shortcut: .commandSpace),
+            State(name: "settings-done", shortcut: .commandSpace) { m in
+                _ = try? m.spotlight.disable(conflictingWith: .commandSpace)
+                m.refresh()
+            },
+        ]
+        let d = suite + ".settings"
+        for state in states {
+            for dark in [false, true] {
+                UserDefaults().removePersistentDomain(forName: d)
+                let defaults = UserDefaults(suiteName: d)!
+                ShortcutSetting(defaults: defaults).save(state.shortcut)
+                let store = MemorySymbolicHotKeyStore(state.spotlightOn ? [:] : ["64": ["enabled": false]])
+                let model = SettingsModel(hotKey: GlobalShortcut(setting: ShortcutSetting(defaults: defaults), live: false) {},
+                                          spotlight: SpotlightShortcut(store: store, defaults: defaults))
+                model.reload = {}
+                state.setup(model)
+                let file = dir.appendingPathComponent("\(state.name)-\(dark ? "dark" : "light").png")
+                renderWindow(SettingsView(model: model), dark: dark, to: file)
+                model.cancelRecording()
+                print(file.path)
+            }
+        }
+        UserDefaults().removePersistentDomain(forName: d)
+    }
+
+    /// Draws a real (offscreen) window's content, AppKit controls included,
+    /// which ImageRenderer can't do. Titlebar and shadow are left out.
+    private static func renderWindow(_ view: some View, dark: Bool, to url: URL) {
+        let host = NSHostingView(rootView: view)
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: host.fittingSize), styleMask: [.titled],
+                              backing: .buffered, defer: false)
+        window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        window.contentView = host
+        window.setContentSize(host.fittingSize)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        host.layoutSubtreeIfNeeded()
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
+        host.cacheDisplay(in: host.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
 
     /// Runs the main loop (where providers report back) until `done`.
