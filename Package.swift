@@ -9,6 +9,7 @@ let package = Package(
         // The bundled emoji picker and calculator, extensions like any other.
         .executable(name: "fastlight-emoji", targets: ["fastlight-emoji"]),
         .executable(name: "fastlight-calc", targets: ["fastlight-calc"]),
+        .executable(name: "fastlight-convert", targets: ["fastlight-convert"]),
     ],
     targets: [
         // Search providers, the fsearch client and the extension host. No
@@ -21,8 +22,12 @@ let package = Package(
         // The bundled calculator: the expression parser, and its stdin loop.
         .target(name: "FastlightCalc"),
         .executableTarget(name: "fastlight-calc", dependencies: ["FastlightCalc"]),
+        // Units, world clocks and date math; numbers formatted like the calculator's.
+        .target(name: "FastlightConvert", dependencies: ["FastlightCalc"]),
+        .executableTarget(name: "fastlight-convert", dependencies: ["FastlightConvert"]),
         .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
+        .testTarget(name: "FastlightConvertTests", dependencies: ["FastlightConvert", "FastlightCalc"]),
     ]
 )

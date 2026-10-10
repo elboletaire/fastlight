@@ -10,7 +10,7 @@ object per line.
 - **Global mode (opt-in):** a few results in the extension's own section,
   next to Applications and Files, when it answers within 80 ms.
 
-Fastlight ships with two, built the same way:
+Fastlight ships with three, built the same way:
 
 - **Emoji.** Type `:` and a name or keyword (`:joy`, `:thumbs`, `:tada:`), or
   `emoji ` and the same. ↵ pastes into the app you were using, ⌘↵ copies.
@@ -26,6 +26,31 @@ Fastlight ships with two, built the same way:
   `sin`/`cos`/`tan` and their inverses (radians), `deg` and `rad`. Decimals
   take `.`, and `,` too where that's the decimal separator. Division by zero
   has no result.
+- **Conversions.** Type a conversion in normal search and the answer is the
+  Top Hit, or type `convert ` first for a few conversions at once, world
+  clocks and the week number. ↵ copies the answer (numbers without
+  thousands separators), ⌘↵ pastes it. All offline.
+  - Units: `10 km in mi`, `10km to miles`, `72f in c`, `100 °F`,
+    `5 gb in mb`, `1 GiB in MB`, `3 ft 4 in in cm`, `60 mph in km/h`,
+    `2 cups in ml`, `1 acre in m2`, `30 mpg in l/100km`,
+    `how many ml in 2 cups`. Length, mass, temperature, volume (US cups,
+    gallons and fluid ounces; `imp gal` for imperial), area, speed, data
+    (`KB` is 1000 bytes, `KiB` 1024), time, energy, power, pressure, angle
+    and fuel economy. With no target (`10 km`) it picks the usual one.
+  - Time: `time in tokyo`, `tokyo time`, `utc`, `pst time`,
+    `3pm london in nyc`, `15:00 in tokyo` (from here), `9am pst` (to here).
+    Cities come from the time zone database, plus common names and
+    abbreviations (NYC, SF, PST, CET).
+  - Dates: `days until dec 25`, `days since 2024-01-01`,
+    `how long until friday`, `days between 2026-01-01 and 2026-12-31`,
+    `today + 90 days`, `90 days ago`, `in 2 weeks`, `week number` (ISO 8601).
+
+  Normal search only answers what is clearly a conversion: a number and a
+  unit with a target (`5 m in ft`), or a unit that can't be anything else
+  (`10 km`, but not `3 in`, `5 m` or `3 days`); `time in …` or `… time`
+  with a known place; a time of day with a place; the date phrases above.
+  `time machine`, `tokyo` or `dec 25` stay plain searches; `convert tokyo`
+  or `convert dec 25` answer.
 
 <img src="images/emoji-keyword-light.jpg" width="640" alt="Keyword mode: the Emoji pill in the search bar, results for “joy”, and an action bar naming Paste Emoji and Copy Emoji">
 
@@ -92,7 +117,7 @@ extension's stderr goes to `~/Library/Logs/Fastlight/Extensions/<id>.log`
 | `id` | yes | Lowercase reverse-DNS, like `com.example.bc`. Unique. |
 | `name` | yes | Up to 40 characters. Shown on the pill, the section and the menu. |
 | `version` | yes | Semantic version, like `1.0.0` or `1.1.0-beta.1`. |
-| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
+| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`, `convert`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
 | `command` | yes | Executable and arguments. Relative paths are inside the folder (and must be executable: `chmod +x`); absolute ones are for interpreters (`/bin/sh`, `/usr/bin/osascript`). Runs with the folder as working directory. |
 | `description` | | Up to 200 characters; shown when asking for approval. |
 | `author` | | Up to 100 characters. |

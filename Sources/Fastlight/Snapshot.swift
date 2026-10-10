@@ -292,6 +292,13 @@ enum Snapshot {
             Scene(name: "calculator-global", query: "15% of 80", files: [
                 f("Documents/Budget/15 percent rule.pdf", size: 98_000, ago: 60 * day),
             ]),
+            Scene(name: "convert-keyword", query: "convert "),
+            Scene(name: "convert-units", query: "convert 10 km"),
+            Scene(name: "convert-global", query: "10 km in mi", files: [
+                f("Documents/Running/10 km plan.pdf", size: 120_000, ago: 30 * day),
+            ]),
+            Scene(name: "convert-time", query: "3pm london in nyc"),
+            Scene(name: "convert-days", query: "days until dec 25"),
             Scene(name: "indexing", query: "", state: .indexing),
         ]
     }
