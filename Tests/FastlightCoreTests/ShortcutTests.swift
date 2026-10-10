@@ -23,6 +23,16 @@ import Testing
         #expect(s(Key.space, .option).display(keyName: { _ in "?" }) == "⌥Space")
     }
 
+    /// Problems name the shortcut the way the field shows it.
+    @Test func problemsUseTheLayoutsKeyNames() {
+        let azerty: (UInt16) -> String? = { $0 == 12 ? "A" : nil }
+        let cmdA = s(12, .command)
+        #expect(cmdA.problem?.message(for: cmdA, keyName: azerty) == "⌘A is a menu shortcut in most apps. Add ⌥ or ⌃.")
+        #expect(cmdA.problem?.message(for: cmdA) == "⌘Q is a menu shortcut in most apps. Add ⌥ or ⌃.")
+        let lock = s(12, [.control, .command])
+        #expect(lock.problem?.message(for: lock, keyName: azerty).hasPrefix("macOS uses ⌃⌘A for Lock Screen.") == true)
+    }
+
     /// ⌘V is pressed by what types V on the user's layout, not ANSI V.
     @Test func findsTheKeyThatTypesACharacter() {
         let qwerty: (UInt16) -> String? = { Key.ansi[$0] }

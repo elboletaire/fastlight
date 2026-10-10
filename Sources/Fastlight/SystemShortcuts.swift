@@ -71,7 +71,12 @@ enum SystemShortcuts {
 enum KeyboardLayout {
     /// "⌃⌥A" on AZERTY where a US keyboard would say "⌃⌥Q".
     static func display(_ s: Shortcut) -> String {
-        s.display { character(for: $0)?.uppercased() }
+        s.display(keyName: keyName)
+    }
+
+    /// A character key's name on the current layout, as `display` shows it.
+    static func keyName(_ code: UInt16) -> String? {
+        character(for: code)?.uppercased()
     }
 
     /// What the key types on the current layout, with no modifiers or with
