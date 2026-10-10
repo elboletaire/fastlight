@@ -44,7 +44,7 @@ import Testing
           {"id":"b","title":"B","icon":"globe"},
           {"id":"c","title":"C","icon":"⭐️"},
           {"id":"d","title":"D","icon":"./icon.png"},
-          {"id":"e","title":"E","icon":{"app":"com.apple.Safari"}}
+          {"id":"e","title":"E","icon":{"app":"com.apple.Safari"},"topHit":true}
         ]}
         """#
         let items = try ExtensionReply.items(from: Data(line.utf8))
@@ -60,6 +60,7 @@ import Testing
         #expect(items[3].icon == .path("./icon.png"))
         #expect(items[3].icon?.resolved(in: URL(fileURLWithPath: "/ext")) == .path("/ext/icon.png"))
         #expect(items[4].icon == .app("com.apple.Safari"))
+        #expect(!items[0].topHit && items[4].topHit)
     }
 
     @Test func reportsReplyProblemsByPath() {
