@@ -68,6 +68,13 @@ public struct DateText: Sendable {
         formatter("jmm").string(from: d)
     }
 
+    /// A time's hour as written: 1 for "1:15", "01:15" and "1:15 PM", 13
+    /// for "13:15"; 0 when it has no digits.
+    static func writtenHour(_ time: String) -> Int {
+        let digit: (Character) -> Bool = { $0.isASCII && $0.isNumber }
+        return Int(String(time.drop { !digit($0) }.prefix(while: digit))) ?? 0
+    }
+
     /// The full date, for copying: "Friday, 9 October 2026".
     public func fullDay(_ d: Date, context: Formatter.Context = .beginningOfSentence) -> String {
         formatter("EEEEdMMMMy", context: context).string(from: d)
@@ -89,9 +96,14 @@ public struct DateText: Sendable {
         }
         let sameDay = calendar.isDate(e.start, inSameDayAs: e.end)
         if e.start <= now, now < e.end {
-            if calendar.isDate(e.end, inSameDayAs: now) { return L("Now, until %@", time(e.end)) }
-            if days(to: e.end) == 1 { return L("Now, until Tomorrow, %@", time(e.end)) }
-            return L("Now, until %1$@, %2$@", inlineDay(e.end), time(e.end))
+            // The hour picks the article: "a la una", but "a les dues"
+            // (Catalan and Spanish), as a count picks a plural.
+            let end = time(e.end), hour = Self.writtenHour(end)
+            if calendar.isDate(e.end, inSameDayAs: now) { return Lp("Now, until %@", "Now, until %@", count: hour, end) }
+            if days(to: e.end) == 1 {
+                return Lp("Now, until Tomorrow, %@", "Now, until Tomorrow, %@", count: hour, end)
+            }
+            return Lp("Now, until %1$@, %2$@", "Now, until %1$@, %2$@", count: hour, inlineDay(e.end), end)
         }
         if sameDay { return "\(day(e.start)), \(time(e.start)) – \(time(e.end))" }
         return "\(day(e.start)), \(time(e.start)) – \(inlineDay(e.end)), \(time(e.end))"

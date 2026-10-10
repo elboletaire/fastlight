@@ -12,10 +12,7 @@
 "Tomorrow" = "Mañana";
 "Yesterday" = "Ayer";
 "%@, all day" = "%@, todo el día";
-"Now, until %@" = "Ahora, hasta las %@";
 "Overdue · %@" = "Atrasado · %@";
 "Until %@" = "Hasta el %@";
-"Now, until %1$@, %2$@" = "Ahora, hasta el %1$@, a las %2$@";
 "Until Today" = "Hasta hoy";
 "Until Tomorrow" = "Hasta mañana";
-"Now, until Tomorrow, %@" = "Ahora, hasta mañana, a las %@";
