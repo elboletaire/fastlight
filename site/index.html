@@ -69,6 +69,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
   "installUrl": "https://github.com/elboletaire/fastlight/releases/latest",
   "codeRepository": "https://github.com/elboletaire/fastlight",
   "license": "https://github.com/elboletaire/fastlight/blob/main/LICENSE",
+  "featureList": ["Applications and files in separate sections", "Whole-disk file search with typo tolerance", "Search inside files", "Emoji picker", "Calculator", "Extensions in any language"],
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "author": { "@type": "Person", "name": "elboletaire", "url": "https://github.com/elboletaire" }
@@ -87,6 +88,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
       <ul>
         <li><a href="#fast">Speed</a></li>
         <li><a href="#syntax">Queries</a></li>
+        <li><a href="#extensions">Extensions</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="#faq">FAQ</a></li>
       </ul>
@@ -254,6 +256,41 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
     </div>
   </section>
 
+  <section id="extensions" class="section wrap" aria-labelledby="extensions-title">
+    <div class="split split-media">
+      <div class="copy">
+        <h2 id="extensions-title">Make it&nbsp;yours.</h2>
+        <p>Extensions add their own results, through a keyword or in their own section of the normal results.</p>
+        <ul class="sections-list">
+          <li><strong>Emoji</strong> — type <kbd>:</kbd> then a name (<code>:joy</code>, <code>:tada:</code>); ↵ pastes it where you were typing.</li>
+          <li><strong>Calculator</strong> — type math (<code>1920*1080</code>, <code>15% of 80</code>) and the answer is the Top Hit, or start with <kbd>=</kbd>; ↵ copies it.</li>
+          <li><strong>Your own</strong> — any language: a folder with an <code>extension.json</code> and a script that speaks JSON lines.</li>
+        </ul>
+        <pre><code>{
+  "id": "com.example.bc",
+  "name": "bc",
+  "version": "1.0.0",
+  "keywords": ["bc"],
+  "command": ["/bin/sh", "bc.sh"]
+}</code></pre>
+        <p><a href="https://github.com/elboletaire/fastlight/blob/main/docs/extensions/README.md">Read the extension guide</a></p>
+      </div>
+      <figure class="shot-card">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/emoji-keyword-dark-720.webp 720w, assets/emoji-keyword-dark-1200.webp 1200w" sizes="(min-width: 960px) 600px, calc(100vw - 32px)">
+          <img src="assets/emoji-keyword-light-1200.webp" srcset="assets/emoji-keyword-light-720.webp 720w, assets/emoji-keyword-light-1200.webp 1200w" sizes="(min-width: 960px) 600px, calc(100vw - 32px)" width="1200" height="678" loading="lazy" decoding="async" alt="The emoji picker in keyword mode with the query “joy”: Face with Tears of Joy at the top with its emoji and the :joy: keyword, then similar emoji, and an action bar naming Paste Emoji and Copy Emoji.">
+        </picture>
+      </figure>
+    </div>
+    <figure class="shot-card shot-wide">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="assets/calculator-global-dark-720.webp 720w, assets/calculator-global-dark-1200.webp 1200w" sizes="(min-width: 1064px) 1000px, calc(100vw - 32px)">
+        <img src="assets/calculator-global-light-1200.webp" srcset="assets/calculator-global-light-720.webp 720w, assets/calculator-global-light-1200.webp 1200w" sizes="(min-width: 1064px) 1000px, calc(100vw - 32px)" width="1200" height="493" loading="lazy" decoding="async" alt="The query “15% of 80”: 12 as the Top Hit with the calculator icon, and the file 15 percent rule.pdf under Files.">
+      </picture>
+      <figcaption>Math in normal search: the answer is the Top Hit, and ↵ copies it.</figcaption>
+    </figure>
+  </section>
+
   <section id="keys" class="section wrap" aria-labelledby="keys-title">
     <div class="split split-keys">
       <div class="copy">
@@ -267,10 +304,12 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
           <tr><td><kbd>⌥</kbd><kbd>Space</kbd></td><td>Show or hide Fastlight</td></tr>
           <tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>Move through results</td></tr>
           <tr><td><kbd>Tab</kbd> <span class="or">/</span> <kbd>⇧</kbd><kbd>Tab</kbd></td><td>Next or previous section (also <kbd>⌘</kbd><kbd>↓</kbd> <kbd>⌘</kbd><kbd>↑</kbd>)</td></tr>
-          <tr><td><kbd>↵</kbd></td><td>Open</td></tr>
-          <tr><td><kbd>⌘</kbd><kbd>↵</kbd></td><td>Show in Finder</td></tr>
+          <tr><td><kbd>↵</kbd></td><td>Open (on an extension result, its main action, like Paste)</td></tr>
+          <tr><td><kbd>⌘</kbd><kbd>↵</kbd></td><td>Show in Finder (on an extension result, its second action, like Copy)</td></tr>
           <tr><td><kbd>⌘</kbd><kbd>Y</kbd></td><td>Quick Look</td></tr>
           <tr><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd></td><td>Copy the path</td></tr>
+          <tr><td><kbd>:</kbd> <span class="or">/</span> <kbd>=</kbd></td><td>Emoji picker / calculator</td></tr>
+          <tr><td><kbd>⌫</kbd></td><td>On an empty field, leave an extension</td></tr>
           <tr><td><kbd>⎋</kbd></td><td>Clear the query, then close</td></tr>
         </tbody>
       </table>
@@ -315,7 +354,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
       <div class="faq">
         <details>
           <summary>Does anything leave my Mac?</summary>
-          <p>No. The index, the queries and the results stay on your Mac. Fastlight and fsearch talk over a local socket in <code>~/Library/Application Support/FSearch</code>; there is no account, no analytics and no network access.</p>
+          <p>No. The index, the queries and the results stay on your Mac. Fastlight and fsearch talk over a local socket in <code>~/Library/Application Support/FSearch</code>; there is no account, no analytics and no network access. Extensions you install can do whatever their code does; the built-in emoji picker and calculator never use the network.</p>
         </details>
         <details>
           <summary>Why does it need Full Disk Access?</summary>
@@ -325,6 +364,14 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
         <details>
           <summary>How is it different from Spotlight?</summary>
           <p>Spotlight relies on metadata importers and decides what is worth indexing; Fastlight indexes every file name it can reach and answers fuzzy, typo-tolerant queries in about a millisecond. It keeps apps and files in separate sections and adds a query language with filters such as <code>in:</code>, <code>mtime:</code> and <code>grep:</code>. It doesn’t replace Spotlight, so you can keep both.</p>
+        </details>
+        <details>
+          <summary>Can I extend it?</summary>
+          <p>Yes: an extension is a folder with an <code>extension.json</code> and a program in any language that answers JSON lines. Drop it in <code>~/Library/Application Support/Fastlight/Extensions/</code>. The emoji picker and the calculator are built the same way and come with the app. <a href="https://github.com/elboletaire/fastlight/blob/main/docs/extensions/README.md">Read the extension guide</a>.</p>
+        </details>
+        <details>
+          <summary>Are extensions safe?</summary>
+          <p>Fastlight asks before running a new extension and again whenever its files change. An approved extension runs with Fastlight’s permissions, which can include Full Disk Access, and isn’t sandboxed, so only install extensions you trust. Turn them off any time from the menu-bar icon › Extensions. The built-in ones are part of the app.</p>
         </details>
         <details>
           <summary>What do I need to run it?</summary>
