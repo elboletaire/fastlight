@@ -291,9 +291,9 @@ import Testing
 }
 
 /// A child process that holds `socket.lock` and wrote its pid into it, like
-/// a running `fsearch serve`. It is /bin/sleep (or /bin/sh, then exec'ing
-/// sleep with SIGTERM ignored), and the lock comes from an fd we lock and
-/// hand over, since a flock belongs to the open file, not the process.
+/// a running `fsearch serve`. It is /bin/sleep (with SIGTERM blocked, for one
+/// that won't stop), and the lock comes from an fd we lock and hand over,
+/// since a flock belongs to the open file, not the process.
 final class LockHolder {
     let pid: pid_t
 
@@ -307,9 +307,7 @@ final class LockHolder {
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }
         posix_spawn_file_actions_adddup2(&actions, fd, 63)
-        let argv: [String] = ignoreTERM
-            ? ["/bin/sh", "-c", "trap '' TERM; exec /bin/sleep 30"]
-            : ["/bin/sleep", "30"]
+        let argv = ["/bin/sleep", "30"]
         var cargs = argv.map { strdup($0) } + [nil]
         defer { cargs.forEach { free($0) } }
         // The test runner may ignore or block SIGTERM, and children inherit
@@ -317,24 +315,23 @@ final class LockHolder {
         var attr: posix_spawnattr_t?
         posix_spawnattr_init(&attr)
         defer { posix_spawnattr_destroy(&attr) }
-        var all = sigset_t(), none = sigset_t()
+        var all = sigset_t(), mask = sigset_t()
         sigfillset(&all)
-        sigemptyset(&none)
+        sigemptyset(&mask)
+        // One that won't stop gets SIGTERM blocked from its first instruction:
+        // a shell trapping it first left a moment to die in, under load.
+        if ignoreTERM { sigaddset(&mask, SIGTERM) }
         posix_spawnattr_setsigdefault(&attr, &all)
-        posix_spawnattr_setsigmask(&attr, &none)
-        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK))
+        posix_spawnattr_setsigmask(&attr, &mask)
+        // Only the lock (fd 63) goes along: not other tests' pipes and sockets,
+        // which a 30 s sleeper would otherwise keep open.
+        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_CLOEXEC_DEFAULT))
         var child: pid_t = 0
         guard posix_spawn(&child, argv[0], &actions, &attr, &cargs, nil) == 0 else { throw FSearchError.unreachable("spawn") }
         pid = child
         // Like fsearch: the pid goes into the locked file.
         ftruncate(fd, 0)
         _ = "\(child)".withCString { write(fd, $0, strlen($0)) }
-        // Wait for a /bin/sh holder to have exec'd sleep with TERM ignored.
-        if ignoreTERM {
-            for _ in 0..<100 where ProcessDetails.of(child)?.executable != "/bin/sleep" {
-                Thread.sleep(forTimeInterval: 0.01)
-            }
-        }
     }
 
     func kill() {
