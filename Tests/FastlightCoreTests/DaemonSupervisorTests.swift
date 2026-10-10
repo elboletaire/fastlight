@@ -30,10 +30,64 @@ import Testing
     }
 
     @Test func replacesForeignDaemons() {
-        for exe in ["/Users/me/src/fastlight/build/Fastlight.app/Contents/Helpers/fsearch",
-                    "/Users/me/.local/bin/fsearch", "/opt/homebrew/bin/fsearch"] {
+        for exe in ["/Users/me/.local/bin/fsearch", "/opt/homebrew/bin/fsearch"] {
             #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process(exe), ownBinary: own) == .replace(7))
+            // Whoever started it.
+            #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process(exe, parent: 500),
+                                           parent: process("/bin/zsh"), ownBinary: own) == .replace(7))
         }
+    }
+
+    let dev = "/Users/me/src/fastlight/build/Fastlight.app"
+
+    /// Two copies (installed and a dev build, say) used to stop each other's
+    /// daemon on every reconnect.
+    @Test func usesTheDaemonOfAnotherRunningFastlight() {
+        let helper = "\(dev)/Contents/Helpers/fsearch"
+        let app = process("\(dev)/Contents/MacOS/Fastlight")
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process(helper, parent: 500), parent: app,
+                                       ownBinary: own) == .use(.otherApp))
+        // Renamed, but the same bundle id.
+        let renamed = "/Users/me/Applications/Fastlight Dev.app"
+        let ids = { (app: String) in app == renamed ? "dev.fastlight" : nil }
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process("\(renamed)/Contents/Helpers/fsearch", parent: 500),
+                                       parent: process("\(renamed)/Contents/MacOS/Fastlight"), ownBinary: own,
+                                       ownBundleID: "dev.fastlight", bundleID: ids) == .use(.otherApp))
+    }
+
+    @Test func replacesTheDaemonOfAFastlightThatQuit() {
+        // Reparented to launchd once its app quit: nobody looks after it.
+        let helper = "\(dev)/Contents/Helpers/fsearch"
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process(helper, parent: 1), ownBinary: own) == .replace(7))
+    }
+
+    @Test func otherAppsHelpersAreForeign() {
+        let other = "/Applications/Other.app"
+        // Not run by its own app.
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process("\(dev)/Contents/Helpers/fsearch", parent: 500),
+                                       parent: process("/bin/zsh"), ownBinary: own) == .replace(7))
+        // Not a Fastlight, by name...
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process("\(other)/Contents/Helpers/fsearch", parent: 500),
+                                       parent: process("\(other)/Contents/MacOS/Other"), ownBinary: own) == .replace(7))
+        // ...or by bundle id, whatever its name.
+        let ids = { (_: String) in "com.example.other" }
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process("\(dev)/Contents/Helpers/fsearch", parent: 500),
+                                       parent: process("\(dev)/Contents/MacOS/Fastlight"), ownBinary: own,
+                                       ownBundleID: "dev.fastlight", bundleID: ids) == .replace(7))
+        // A helper by another name.
+        #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process("\(dev)/Contents/Helpers/fsearch2", parent: 500),
+                                       parent: process("\(dev)/Contents/MacOS/Fastlight"), ownBinary: own) == .replace(7))
+    }
+
+    @Test func readsAnAppsBundleID() throws {
+        let dir = try FakeDaemon.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let app = dir.appendingPathComponent("X.app")
+        try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+        #expect(DaemonOwnership.bundleID(ofApp: app.path) == nil)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "dev.fastlight"], format: .xml, options: 0)
+            .write(to: app.appendingPathComponent("Contents/Info.plist"))
+        #expect(DaemonOwnership.bundleID(ofApp: app.path) == "dev.fastlight")
     }
 
     @Test func leavesTheLoginAgentAlone() {
@@ -41,6 +95,8 @@ import Testing
         #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process(agent), ownBinary: own,
                                        launchAgentProgram: agent) == .use(.launchAgent))
         // Same binary, but not run by launchd (a CLI-started daemon): ours wins.
+        // One whose parent exited is run by launchd too, and can't be told
+        // from the agent's: it's left alone as well.
         #expect(DaemonOwnership.decide(lockHeld: true, pid: 7, process: process(agent, parent: 500), ownBinary: own,
                                        launchAgentProgram: agent) == .replace(7))
     }

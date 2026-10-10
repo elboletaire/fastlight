@@ -65,8 +65,9 @@ public enum DaemonOwnership {
     public enum Decision: Equatable, Sendable {
         /// Nothing holds the lock: start our daemon on first connect.
         case start
-        /// Talk to whatever is running: our own daemon, a login agent, or
-        /// one we can't identify (and so won't touch).
+        /// Talk to whatever is running: our own daemon, another running
+        /// Fastlight's, a login agent, or one we can't identify (and so
+        /// won't touch).
         case use(Reason)
         /// A different binary (or an outdated copy of ours) serves the
         /// socket: stop it and start ours.
@@ -74,7 +75,7 @@ public enum DaemonOwnership {
     }
 
     public enum Reason: Equatable, Sendable {
-        case own, launchAgent, noBundle, unidentified
+        case own, otherApp, launchAgent, noBundle, unidentified
     }
 
     /// Pure: everything it needs is in its arguments.
@@ -83,16 +84,22 @@ public enum DaemonOwnership {
     ///   - lockHeld: a daemon holds `socket.lock`.
     ///   - pid: the pid written in `socket.lock`.
     ///   - process: libproc's answer for that pid, nil if it can't be read.
+    ///   - parent: libproc's answer for its parent, if it has one besides
+    ///     launchd.
     ///   - ownBinary: the helper inside our bundle; nil when running without
     ///     one (`swift run`), which keeps the old "use whatever runs" rule.
     ///   - ownBinaryChanged: the helper's ctime. A daemon started before it
     ///     runs an older binary that was replaced at the same path (an app
     ///     update in place).
+    ///   - ownBundleID: our bundle identifier, to recognise a renamed copy.
+    ///   - bundleID: reads an app's bundle identifier.
     ///   - launchAgentProgram: the program of fsearch's own login agent
     ///     (`mt.nd.fsearch`), if installed. launchd restarts that one
     ///     (KeepAlive), so stopping it would only start a fight.
-    public static func decide(lockHeld: Bool, pid: pid_t?, process: ProcessDetails?,
+    public static func decide(lockHeld: Bool, pid: pid_t?, process: ProcessDetails?, parent: ProcessDetails? = nil,
                               ownBinary: String?, ownBinaryChanged: Date? = nil,
+                              ownBundleID: String? = nil,
+                              bundleID: (String) -> String? = DaemonOwnership.bundleID(ofApp:),
                               launchAgentProgram: String? = nil) -> Decision {
         guard lockHeld else { return .start }
         guard let ownBinary else { return .use(.noBundle) }
@@ -102,10 +109,66 @@ public enum DaemonOwnership {
             if let changed = ownBinaryChanged, changed > process.started { return .replace(pid) }
             return .use(.own)
         }
+        if process.parentPID > 1,
+           isRunningFastlight(helper: exe, parent: parent, ownBundleID: ownBundleID, bundleID: bundleID) {
+            return .use(.otherApp)
+        }
+        // launchd is the parent of a launch agent, but also of any daemon
+        // whose parent exited (one started by `fsearch` on the command line,
+        // say), so this can't tell those apart. Asking launchctl which pid
+        // runs the agent could, at the cost of a subprocess on every
+        // connect; for a binary the user set up to run at login, using it
+        // either way is harmless.
         if let agent = launchAgentProgram, exe == canonical(agent), process.parentPID == 1 {
             return .use(.launchAgent)
         }
         return .replace(pid)
+    }
+
+    /// Another Fastlight's daemon is used, not replaced, while that copy
+    /// runs: two copies (an installed one and a development build, say)
+    /// would otherwise stop each other's daemon on every reconnect, each
+    /// time blocking for the stop and the bind and leaving a cold daemon.
+    ///
+    /// The trade-off is Full Disk Access, which macOS grants per app and
+    /// which fsearch only checks when it starts: that daemon sees what the
+    /// copy that started it may see. If only this copy has access, search
+    /// misses protected folders (and the panel says so) until the other copy
+    /// quits; `FDARestartPolicy` won't restart a daemon that isn't ours.
+    ///
+    /// A daemon whose app quit is reparented to launchd: then nobody is
+    /// looking after it, and ours replaces it, so a build run once doesn't
+    /// keep serving (with its access and its fsearch version) for good.
+    ///
+    /// True when `helper` is `<app>.app/Contents/Helpers/fsearch`, the app
+    /// is Fastlight (by bundle id, or by name when either id is unknown),
+    /// and the daemon's parent is that app's own executable.
+    static func isRunningFastlight(helper: String, parent: ProcessDetails?, ownBundleID: String?,
+                                   bundleID: (String) -> String?) -> Bool {
+        guard let app = appBundle(ofHelper: helper), let parent else { return false }
+        let isFastlight: Bool
+        if let ownBundleID, let id = bundleID(app) {
+            isFastlight = id == ownBundleID
+        } else {
+            isFastlight = (app as NSString).lastPathComponent == "Fastlight.app"
+        }
+        return isFastlight && canonical(parent.executable).hasPrefix(app + "/Contents/MacOS/")
+    }
+
+    /// `/x/Fastlight.app` for `/x/Fastlight.app/Contents/Helpers/fsearch`.
+    static func appBundle(ofHelper helper: String) -> String? {
+        let suffix = "/Contents/Helpers/fsearch"
+        guard helper.hasSuffix(suffix) else { return nil }
+        let app = String(helper.dropLast(suffix.count))
+        return app.hasSuffix(".app") ? app : nil
+    }
+
+    public static func bundleID(ofApp app: String) -> String? {
+        let info = URL(fileURLWithPath: app).appendingPathComponent("Contents/Info.plist")
+        guard let data = try? Data(contentsOf: info),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        else { return nil }
+        return plist["CFBundleIdentifier"] as? String
     }
 
     static func canonical(_ path: String) -> String {
@@ -127,10 +190,13 @@ public final class DaemonSupervisor: @unchecked Sendable {
     public var stopTimeout: TimeInterval = 5
     var log: (String) -> Void = { NSLog("Fastlight: %@", $0) }
 
+    public let ownBundleID: String?
+
     public init(dataDir: URL, bundle: URL = Bundle.main.bundleURL, home: String = FSearchClient.home) {
         self.dataDir = dataDir
         let helper = DaemonLauncher.bundledBinary(in: bundle).path
         ownBinary = FileManager.default.isExecutableFile(atPath: helper) ? helper : nil
+        ownBundleID = DaemonOwnership.bundleID(ofApp: bundle.path)
         launchAgentPlist = URL(fileURLWithPath: home).appendingPathComponent("Library/LaunchAgents/\(Self.launchAgentLabel).plist")
     }
 
@@ -138,10 +204,12 @@ public final class DaemonSupervisor: @unchecked Sendable {
     public func currentDecision() -> DaemonOwnership.Decision {
         let held = DaemonLock.isHeld(in: dataDir)
         let pid = held ? DaemonLock.pid(in: dataDir) : nil
+        let process = pid.flatMap(ProcessDetails.of)
+        let parent = process.flatMap { $0.parentPID > 1 ? ProcessDetails.of($0.parentPID) : nil }
         return DaemonOwnership.decide(
-            lockHeld: held, pid: pid, process: pid.flatMap(ProcessDetails.of),
+            lockHeld: held, pid: pid, process: process, parent: parent,
             ownBinary: ownBinary, ownBinaryChanged: ownBinary.flatMap(Self.changeTime),
-            launchAgentProgram: launchAgentProgram())
+            ownBundleID: ownBundleID, launchAgentProgram: launchAgentProgram())
     }
 
     /// Called before connecting: stops a daemon that isn't ours, so the
