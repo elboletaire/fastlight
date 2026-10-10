@@ -42,7 +42,7 @@ public final class FSearchClient: @unchecked Sendable {
     /// ...and how long before one that didn't is started again.
     var relaunchDelay: TimeInterval = 10
     private var lastLaunch: Date?
-    var launch: (URL) throws -> Void = DaemonLauncher.start
+    var launch: (URL) throws -> Void = { try DaemonLauncher.start(dataDir: $0) }
 
     /// $HOME first, as fsearch derives its data dir from it; that also lets
     /// a test run point both at a scratch home.
@@ -184,8 +184,11 @@ public enum DaemonLauncher {
         candidates(bundle: bundle).first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    static func start(dataDir: URL) throws {
-        guard let bin = binary() else { throw FSearchError.notInstalled }
+    /// `bin` defaults to the first candidate found; tests pass a stand-in,
+    /// and wait on the process returned.
+    @discardableResult
+    static func start(dataDir: URL, binary bin: String? = binary()) throws -> Process {
+        guard let bin else { throw FSearchError.notInstalled }
         try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
         let logPath = dataDir.appendingPathComponent("daemon.log").path
         rotateLog(at: logPath)
@@ -208,6 +211,7 @@ public enum DaemonLauncher {
         } catch {
             throw FSearchError.unreachable("could not start \(bin): \(error.localizedDescription)")
         }
+        return p
     }
 
     /// The log is appended to by every daemon we start, so it would only
