@@ -150,6 +150,21 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         }
     }
 
+    /// Year-month dates, a date being typed, and phone-number-like pairs
+    /// were answered as subtractions and took the Top Hit.
+    @Test func leavesYearMonthsAndNumberPairsAlone() throws {
+        for q in ["2024-05", "2024-5", "12-2025", "1-2025", "2024-0", "2024-", "2024-1", "555-1234", "123-456",
+                  "2024-05-1", "100-200", "2024-123"] {
+            #expect(!Calculator.looksLikeMath(q), "\(q)")
+        }
+        for q in ["10-3", "99-1", "100-5", "5-100", "2024 - 5", "2024-5*2", "12-345", "(2024)-05"] {
+            #expect(Calculator.looksLikeMath(q), "\(q)")
+        }
+        // Keyword mode still does the math.
+        #expect(try value("2024-05") == 2019)
+        #expect(try value("555-1234") == -679)
+    }
+
     @Test func leavesSearchesAlone() {
         for q in ["2026", "-5", "pi", "e", "safari", "ext:pdf", "invoice 2026", "x", "1 2", "1/0", "2026-10-10",
                   "10/10/2026", "10.10.26", "readme.md", "v1.2.3", "3", "(1+", "sqrt(-1)", ".zshrc"] {
