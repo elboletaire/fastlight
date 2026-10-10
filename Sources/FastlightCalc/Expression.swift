@@ -62,9 +62,8 @@ enum Token: Equatable {
 }
 
 struct Lexer {
-    /// The locale's decimal separator. "." always works; "," does too where
-    /// it is the decimal separator, and elsewhere only as thousands grouping
-    /// ("1,000,000").
+    /// The locale's decimal separator; see NumberSyntax for how "." and ","
+    /// read with it.
     let decimal: Character
 
     func tokens(_ s: String) throws -> [Token] {
@@ -144,34 +143,18 @@ struct Lexer {
     }
 
     private func number(_ chars: [Character], from start: Int) throws -> (Double, Int) {
-        var digits = ""
+        func digit(_ k: Int) -> Bool { k < chars.count && chars[k].isASCII && chars[k].isNumber }
+        var raw = ""
         var i = start
-        var sawPoint = false
-        var groups: [Int] = [] // lengths of ","-separated digit groups
-        var run = 0
-        while i < chars.count {
-            let c = chars[i]
-            if c.isASCII, c.isNumber {
-                digits.append(c)
-                run += 1
-            } else if (c == "." || c == decimal), !sawPoint, i + 1 < chars.count, chars[i + 1].isNumber {
-                sawPoint = true
-                if !groups.isEmpty { groups.append(run) }
-                run = 0
-                digits.append(".")
-            } else if c == ",", decimal != ",", !sawPoint, i + 1 < chars.count, chars[i + 1].isNumber {
-                groups.append(run)
-                run = 0
-            } else {
-                break
-            }
+        // Digits, and "." or "," between digits; NumberSyntax says which
+        // is the decimal point and which groups.
+        while i < chars.count, digit(i) || (chars[i] == "." || chars[i] == ",") && digit(i + 1) {
+            raw.append(chars[i])
             i += 1
         }
-        if !groups.isEmpty, !sawPoint { groups.append(run) }
-        if !groups.isEmpty {
-            // Grouping must look like grouping: 1–3 digits, then threes.
-            let ok = (1...3).contains(groups[0]) && groups.dropFirst().allSatisfy { $0 == 3 }
-            if !ok { throw CalcError.unexpected(",") }
+        guard var digits = NumberSyntax.normalized(raw, decimal: decimal) else {
+            let group: Character = decimal == "," ? "." : ","
+            throw CalcError.unexpected(raw.contains(group) ? String(group) : raw)
         }
         // Scientific notation: 1.5e3.
         if i + 1 < chars.count, chars[i] == "e" || chars[i] == "E" {
@@ -193,7 +176,6 @@ struct Lexer {
                 i = j
             }
         }
-        if digits.hasPrefix(".") { digits = "0" + digits }
         guard let v = Double(digits) else { throw CalcError.unexpected(String(chars[start..<i])) }
         // "1e400" overflows before anything is computed.
         guard v.isFinite else { throw CalcError.tooLarge }
