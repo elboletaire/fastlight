@@ -73,6 +73,15 @@ import Testing
         #expect(try reply(ext(), "1.000,5 m in cm").isEmpty)
     }
 
+    /// Parsing 800 KB took over a second, far past global search's budget.
+    @Test func hugeQueriesAreNotParsed() throws {
+        let huge = String(repeating: "10 km ", count: 150_000) + "in mi"
+        let start = Date()
+        #expect(try reply(ext(), huge).isEmpty)
+        #expect(try reply(ext(), huge, mode: "keyword").map { $0["id"] as? String } == ["none"])
+        #expect(Date().timeIntervalSince(start) < 2)
+    }
+
     @Test func spotlightExamples() throws {
         let e = ext()
         let cases: [(String, [String])] = [

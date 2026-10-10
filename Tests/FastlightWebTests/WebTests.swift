@@ -231,6 +231,19 @@ import Testing
 
     func actions(_ item: [String: Any]?) -> [[String: Any]] { item?["actions"] as? [[String: Any]] ?? [] }
 
+    /// Six engines repeated a huge query, past the 1 MiB line limit, and
+    /// the host killed the helper for it.
+    @Test func hugeQueriesGetNoRows() throws {
+        let huge = String(repeating: "é ", count: 400_000)
+        for global in [true, false] { #expect(ext.items(for: huge, global: global).isEmpty) }
+        let line = try #require(ext.handle(#"{"id":1,"type":"search","query":"\#(huge)","mode":"keyword","limit":50}"#))
+        #expect(line.utf8.count < 100)
+        let longest = String(repeating: "é", count: WebExtension.maxQueryLength / 2)
+        let reply = try #require(ext.handle(#"{"id":1,"type":"search","query":"\#(longest)","mode":"keyword","limit":50}"#))
+        #expect(reply.utf8.count < 1 << 20)
+        #expect(ext.items(for: longest, global: false).count == 6)
+    }
+
     @Test func globalModeOffersAddressesAsTheTopHit() throws {
         let found = try items("github.com/elboletaire", "global")
         #expect(found.count == 1)

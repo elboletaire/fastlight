@@ -88,6 +88,18 @@ import Testing
 
     func items(_ r: [String: Any]) -> [[String: Any]] { r["items"] as? [[String: Any]] ?? [] }
 
+    /// A huge query kept the helper busy for 20 seconds.
+    @Test func hugeQueriesFindNothingQuickly() throws {
+        let (e, _) = try ext()
+        let huge = String(repeating: "a ", count: 400_000)
+        let start = Date()
+        #expect(e.search(huge, global: false, limit: 50).isEmpty)
+        #expect(e.search(huge, global: true, limit: 3).isEmpty)
+        #expect(Date().timeIntervalSince(start) < 1)
+        #expect(e.search(String(repeating: "a", count: EmojiExtension.maxQueryLength + 1), global: false, limit: 5).isEmpty)
+        #expect(!e.search("joy", global: false, limit: 5).isEmpty)
+    }
+
     @Test func answersSearches() throws {
         let (e, _) = try ext()
         let r = try reply(e, #"{"id":4,"type":"search","query":"joy","mode":"keyword","limit":50}"#)

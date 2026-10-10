@@ -46,7 +46,13 @@ public final class WebExtension {
     /// Global search: an address to open, or nothing; never a "search the
     /// web" row on every query (`web <query>` is for that). Keyword mode:
     /// the address if it is one, then each engine, the default first.
+    /// Every engine's row repeats the query, encoded, so a huge one would
+    /// make a reply over the protocol's 1 MiB line limit, and get the
+    /// helper killed. Addresses are capped at 2,048 too.
+    public static let maxQueryLength = 2048
+
     public func items(for query: String, global: Bool, limit: Int = 50) -> [[String: Any]] {
+        guard query.utf8.count <= Self.maxQueryLength else { return [] }
         let q = query.trimmingCharacters(in: .whitespaces)
         if global {
             guard let url = WebAddress.url(from: q) else { return [] }
