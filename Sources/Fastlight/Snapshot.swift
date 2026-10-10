@@ -111,9 +111,15 @@ enum Snapshot {
 
     /// The About window and its search syntax reference.
     private static func renderAbout(into dir: URL) {
-        // Not bundled here: the icon comes from the source tree.
-        let icon = NSImage(contentsOfFile: "Resources/AppIcon.icns") ?? NSApp.applicationIconImage!
-        let info = AboutInfo(version: "0.2.1", build: "4", copyright: "Copyright © 2026 Òscar Casajuana. MIT License.", icon: icon)
+        // Not bundled here: the icon and Info.plist come from the source tree.
+        let resources = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../Resources").standardizedFileURL
+        let plist = (try? Data(contentsOf: resources.appendingPathComponent("Info.plist")))
+            .flatMap { try? PropertyListSerialization.propertyList(from: $0, format: nil) as? [String: Any] } ?? [:]
+        let info = AboutInfo(version: plist["CFBundleShortVersionString"] as? String ?? AppInfo.version,
+                             build: plist["CFBundleVersion"] as? String ?? AppInfo.build,
+                             copyright: plist["NSHumanReadableCopyright"] as? String ?? "",
+                             icon: NSImage(contentsOf: resources.appendingPathComponent("AppIcon.icns")) ?? NSApp.applicationIconImage)
         for dark in [false, true] {
             let file = dir.appendingPathComponent("about-\(dark ? "dark" : "light").png")
             renderWindow(AboutView(info: info), dark: dark, to: file)

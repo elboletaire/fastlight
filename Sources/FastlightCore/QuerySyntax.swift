@@ -34,15 +34,24 @@ public enum QuerySyntax {
         }
     }
 
-    /// Words narrow results down by name.
+    /// Words narrow results down by name, and by the folders above it.
     public static let operators: [Entry] = [
         Entry("word", "Fuzzy, and words of 5 letters or more survive one typo", examples: ["invoce"]),
-        Entry("'exact", "The word as typed, no fuzziness"),
+        Entry("'exact", "No fuzziness"),
         Entry("^prefix", "Name starts with it"),
         Entry("suffix$", "Name ends with it"),
-        Entry("!word", "Leave out names that contain it"),
+        // fsearch drops a path when a negated word is in its name or any
+        // folder on it, and takes ', ^ and $ after the !.
+        Entry("!word", "Leave out paths with it in the name or a folder; works with ', ^ and $ too",
+              examples: ["!node_modules", "!.bak$"]),
         Entry("\"two words\"", "Quotes keep spaces in one word or value", examples: ["in:\"~/My Notes\""]),
+        // A word can be met by a parent folder, as long as one is in the name.
+        Entry("folder/name", "Words can match folders on the path too, as long as one is in the name; / splits words",
+              examples: ["src readme", "src/readme"]),
     ]
+
+    /// Said once rather than on every entry.
+    public static let caseNote = "Matching ignores case, except sym: and grep: or regex: patterns with capitals."
 
     /// `type:` values, `app` included.
     public static let types = ["image", "video", "audio", "doc", "code", "archive", "font", "app"]
@@ -64,15 +73,16 @@ public enum QuerySyntax {
         Filter(key: "kind", aliases: [],
                meaning: "\(kinds.map { ([$0.name] + $0.aliases).joined(separator: "/") }.joined(separator: ", "))",
                examples: ["kind:dir"], listed: true),
-        Filter(key: "in", aliases: [], meaning: "Only under a folder", examples: ["in:~/src"], listed: true),
+        Filter(key: "in", aliases: [], meaning: "Only under a folder, absolute or ~", examples: ["in:~/src"], listed: true),
         Filter(key: "size", aliases: [], meaning: "Size, with a range", examples: ["size:>5mb", "size:1m..10m"], listed: true),
         Filter(key: "mtime", aliases: ["modified"], meaning: "Modified within (<) or longer ago than (>)",
                examples: ["mtime:<7d", "mtime:>1y"], listed: true),
-        Filter(key: "re", aliases: [], meaning: "Regex over the name", examples: ["re:^IMG_\\d+"], listed: true),
-        Filter(key: "path", aliases: [], meaning: "Regex over the full path", examples: ["path:/tests?/"], listed: true),
+        Filter(key: "re", aliases: [], meaning: "Regex over the name, ignoring case", examples: ["re:^IMG_\\d+"], listed: true),
+        Filter(key: "path", aliases: [], meaning: "Regex over the full path, ignoring case", examples: ["path:/tests?/"], listed: true),
         Filter(key: "grep", aliases: ["content"], meaning: "Text inside files; ignores case unless it has capitals",
                examples: ["grep:TODO"], listed: true),
-        Filter(key: "regex", aliases: [], meaning: "Regex inside files", examples: ["regex:fn\\s+main"], listed: true),
+        Filter(key: "regex", aliases: [], meaning: "Regex inside files; ignores case unless it has capitals",
+               examples: ["regex:fn\\s+main"], listed: true),
         Filter(key: "sym", aliases: ["symbol"], meaning: "Where a symbol is defined, case and all",
                examples: ["sym:applyFilter"], listed: true),
         Filter(key: "limit", aliases: [], meaning: "How many results fsearch returns", examples: [], listed: false),
@@ -83,8 +93,9 @@ public enum QuerySyntax {
         Entry(">x  >=x", "More than"),
         Entry("<x  <=x", "Less than"),
         Entry("a..b", "Between", examples: ["size:1m..10m"]),
-        Entry("x", "Exactly"),
-        Entry("Units", "size: \(sizeUnits.joined(separator: " ")); mtime: \(ageUnits.joined(separator: " "))"),
+        Entry("x", "Exactly, for size:"),
+        Entry("Units", "size: \(sizeUnits.joined(separator: " ")), 1 kb = 1000 bytes, bytes if left out; "
+              + "mtime: \(ageUnits.joined(separator: " ")), days if left out"),
     ]
 
     /// Every key fsearch reads as a filter, aliases included.

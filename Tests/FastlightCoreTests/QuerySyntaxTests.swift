@@ -18,12 +18,23 @@ import Testing
         return s
     }
 
-    /// The text of the Rust function `name`, up to the next top-level item.
+    /// The text of the Rust function `name`, up to its closing brace: the
+    /// first `}` line indented like the `fn` line, so a method stops at its
+    /// own end rather than its impl's.
     static func function(_ name: String, in source: String) throws -> String {
         let start = try #require(source.range(of: "fn \(name)("))
+        let lineStart = source[..<start.lowerBound].lastIndex(of: "\n").map(source.index(after:)) ?? source.startIndex
+        let indent = source[lineStart..<start.lowerBound].prefix { $0 == " " }
         let rest = source[start.lowerBound...]
-        let end = rest.range(of: "\n}\n")?.upperBound ?? rest.range(of: "\n    }\n")?.upperBound ?? rest.endIndex
-        return String(rest[..<end])
+        let end = try #require(rest.range(of: "\n\(indent)}\n"), "no end for fn \(name)")
+        return String(rest[..<end.upperBound])
+    }
+
+    /// The fsearch submodule is checked out. CI always has it, so there a
+    /// missing one fails; a plain local clone skips these instead.
+    static var hasFsearch: Bool {
+        FileManager.default.fileExists(atPath: root.appendingPathComponent("third_party/fsearch/src/query.rs").path)
+            || ProcessInfo.processInfo.environment["CI"] != nil
     }
 
     static func quoted(_ s: Substring) -> [String] {
@@ -32,21 +43,21 @@ import Testing
 
     static var queryRS: String { get throws { try read("third_party/fsearch/src/query.rs") } }
 
-    @Test func filterKeysMatchFsearch() throws {
+    @Test(.enabled(if: hasFsearch)) func filterKeysMatchFsearch() throws {
         // `Query::filter` matches the key in an outer `match k` whose arms
-        // sit at one indent; nested matches (kind values) sit deeper.
+        // start at one indent; nested matches (kind values) sit deeper. An
+        // arm's alternatives may wrap onto continuation lines.
         let body = try Self.function("filter", in: Self.queryRS)
         var keys = Set<String>()
-        for line in body.split(separator: "\n") where line.hasPrefix("            \"") && !line.hasPrefix("             ") {
-            guard let arrow = line.range(of: "=>") else { continue }
-            keys.formUnion(Self.quoted(line[..<arrow.lowerBound]))
+        for m in body.matches(of: /(?m)^ {12}("\w+"(?:\s*\|\s*"\w+")*)\s*=>/) {
+            keys.formUnion(Self.quoted(m.1))
         }
         #expect(keys.count > 5, "couldn't read filter keys out of query.rs")
         #expect(QuerySyntax.filterKeys == keys)
         #expect(ResultFilter.filterKeys == keys)
     }
 
-    @Test func typesMatchFsearch() throws {
+    @Test(.enabled(if: hasFsearch)) func typesMatchFsearch() throws {
         let src = try Self.queryRS
         let table = try #require(src.range(of: "const TYPES"))
         let tableEnd = try #require(src[table.upperBound...].range(of: "];"))
@@ -57,7 +68,7 @@ import Testing
         #expect(Set(QuerySyntax.types) == types)
     }
 
-    @Test func kindsMatchFsearch() throws {
+    @Test(.enabled(if: hasFsearch)) func kindsMatchFsearch() throws {
         let filter = try Self.function("filter", in: Self.queryRS)
         let arm = try #require(filter.range(of: "\"kind\" =>"))
         let end = try #require(filter[arm.upperBound...].range(of: "})"))
@@ -74,7 +85,7 @@ import Testing
         for (name, canonical) in ours { #expect(kinds[name] == kinds[canonical], "\(name) isn't the same kind as \(canonical)") }
     }
 
-    @Test func unitsMatchFsearch() throws {
+    @Test(.enabled(if: hasFsearch)) func unitsMatchFsearch() throws {
         let src = try Self.queryRS
         func units(_ fn: String) throws -> Set<String> {
             let body = try Self.function(fn, in: src)

@@ -238,7 +238,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         self.model = model
         let host = NSHostingController(rootView: SettingsView(model: model))
         host.sizingOptions = .preferredContentSize
-        let window = SettingsWindow(contentViewController: host)
+        let window = ClosableWindow(contentViewController: host)
         window.title = "Fastlight Settings"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
@@ -272,7 +272,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
 }
 
-private final class SettingsWindow: NSWindow {
+/// A menu-bar app has no main menu to send ⌘W, so its windows close on ⌘W
+/// and Esc by themselves.
+final class ClosableWindow: NSWindow {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
            event.charactersIgnoringModifiers == "w" {
