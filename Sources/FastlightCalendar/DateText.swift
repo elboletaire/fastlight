@@ -85,15 +85,27 @@ public struct DateText: Sendable {
             let last = lastDay(e)
             if calendar.isDate(e.start, inSameDayAs: last) { return L("%@, all day", day(e.start)) }
             // Started already: what matters is when it ends.
-            return e.start < now ? L("Until %@", inlineDay(last)) : "\(day(e.start)) – \(inlineDay(last))"
+            return e.start < now ? until(last) : "\(day(e.start)) – \(inlineDay(last))"
         }
         let sameDay = calendar.isDate(e.start, inSameDayAs: e.end)
         if e.start <= now, now < e.end {
             if calendar.isDate(e.end, inSameDayAs: now) { return L("Now, until %@", time(e.end)) }
+            if days(to: e.end) == 1 { return L("Now, until Tomorrow, %@", time(e.end)) }
             return L("Now, until %1$@, %2$@", inlineDay(e.end), time(e.end))
         }
         if sameDay { return "\(day(e.start)), \(time(e.start)) – \(time(e.end))" }
         return "\(day(e.start)), \(time(e.start)) – \(inlineDay(e.end)), \(time(e.end))"
+    }
+
+    /// "Until Tomorrow", "Until Monday". Whole phrases for today and
+    /// tomorrow, as a named day takes an article where they don't
+    /// ("Hasta mañana", "Hasta el lunes").
+    func until(_ d: Date) -> String {
+        switch days(to: d) {
+        case 0: L("Until Today")
+        case 1: L("Until Tomorrow")
+        default: L("Until %@", inlineDay(d))
+        }
     }
 
     /// The same, with absolute dates, for the clipboard.

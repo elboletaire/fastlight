@@ -94,6 +94,7 @@ func targets(_ item: [String: Any]) -> [String] {
         #expect(text.when(e(at(9, 0), at(9, 23, 59).addingTimeInterval(59), allDay: true)) == "Today, all day")
         #expect(text.when(e(at(12, 0), at(15, 0), allDay: true)) == "Monday – Wednesday")
         #expect(text.when(e(at(7, 0), at(11, 0), allDay: true)) == "Until Tomorrow")
+        #expect(text.when(e(at(7, 0), at(13, 0), allDay: true)) == "Until Monday")
         #expect(text.fullWhen(e(at(9, 10), at(9, 10, 30))) == "Friday, 9 October 2026, 10:00 – 10:30")
         #expect(text.fullWhen(e(at(12, 0), at(14, 0), allDay: true)) == "Monday, 12 October 2026 – Tuesday, 13 October 2026")
     }
