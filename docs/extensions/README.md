@@ -210,7 +210,7 @@ extension's stderr goes to `~/Library/Logs/Fastlight/Extensions/<id>.log`
 | `id` | yes | Lowercase reverse-DNS, like `com.example.bc`. Unique. |
 | `name` | yes | Up to 40 characters. Shown on the pill, the section and the menu. |
 | `version` | yes | Semantic version, like `1.0.0` or `1.1.0-beta.1`. |
-| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`, `convert`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
+| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`, `convert`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~` `"`, or with a search filter (`ext:`, `in:`, `type:`…), so `in:~` or `type:image` are refused: those stay file searches. |
 | `command` | yes | Executable and arguments. Relative paths are inside the folder (and must be executable: `chmod +x`); absolute ones are for interpreters (`/bin/sh`, `/usr/bin/osascript`). Runs with the folder as working directory. |
 | `description` | | Up to 200 characters; shown when asking for approval. |
 | `author` | | Up to 100 characters. |

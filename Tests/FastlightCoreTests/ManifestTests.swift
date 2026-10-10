@@ -81,6 +81,7 @@ import Testing
         #expect(message(try variant("keywords", ["x", 1])) == "keywords[1]: must be a string")
         #expect(message(try variant("keywords", ["x", "X"])) == "keywords: must not repeat a keyword")
         #expect(message(try variant("keywords", ["ext:"])) == "keywords[0]: \"ext:\" is a search filter")
+        #expect(message(try variant("keywords", ["in:~"])) == "keywords[0]: \"in:~\" starts with the search filter in:")
         #expect(message(try variant("keywords", ["!x"]))?.hasPrefix("keywords[0]: must not start with !") == true)
         #expect(message(try variant("command", [])) == "command: must name an executable")
         #expect(message(try variant("command", "run.sh")) == "command: must be an array")

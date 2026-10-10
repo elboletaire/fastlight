@@ -127,8 +127,10 @@ A keyword that ends in a letter or digit needs a space after it (`emoji `,
 `gh `), so typing `emojis` is still a normal search. A keyword that ends in a
 symbol triggers straight away (`:` → `:smile`, `=` → `=2+2`). Matching is
 case-insensitive and the longest trigger wins. Keywords that would shadow
-search syntax are rejected: anything starting with `'`, `^`, `!`, `.`, `/` or
-`~`, and fsearch filter names (`ext:`, `in:`, …). A keyword already taken by
+search syntax are rejected: anything starting with `'`, `^`, `!`, `.`, `/`,
+`~` or `"`, and anything starting with an fsearch filter (`ext:`, `in:~`,
+`type:image`, …), so documented queries like `in:~/src readme` stay file
+searches. A keyword already taken by
 an earlier extension is ignored for the later one (reported, not fatal).
 
 In keyword mode the keyword turns into a pill in the search bar and the rest
