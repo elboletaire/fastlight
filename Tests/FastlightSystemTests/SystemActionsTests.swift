@@ -201,7 +201,7 @@ import Testing
         #expect(none?["actions"] == nil)
         #expect(throws: RunError.self) { try light.run("perform", item: "ejectAll") }
         let (disks, _) = ext(volumes: [Self.disk, Volume(name: "Stick", path: "/Volumes/Stick")])
-        #expect(disks.items(for: "eject", global: true, limit: 3).first?["subtitle"] as? String == "Backup, Stick")
+        #expect(disks.items(for: "eject", global: true, limit: 3).first?["subtitle"] as? String == "Ejects Backup, Stick")
     }
 
     @Test func protocolReplies() throws {

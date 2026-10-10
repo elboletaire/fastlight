@@ -114,7 +114,7 @@ public struct SystemAction: Sendable, Equatable {
         SystemAction(id: .logOut, title: "Log Out", aliases: ["logout", "log off", "sign out"],
                      symbol: "rectangle.portrait.and.arrow.right", subtitle: "Quits all apps and logs you out", confirm: true, verb: "log out"),
         SystemAction(id: .restart, title: "Restart", aliases: ["reboot", "restart mac"],
-                     symbol: "restart", subtitle: "Quits all apps and restarts the Mac", confirm: true, verb: "restart"),
+                     symbol: "arrow.clockwise.circle", subtitle: "Quits all apps and restarts the Mac", confirm: true, verb: "restart"),
         SystemAction(id: .shutDown, title: "Shut Down", aliases: ["shutdown", "power off", "turn off", "turn off mac"],
                      symbol: "power", subtitle: "Quits all apps and turns the Mac off", confirm: true, verb: "shut down"),
     ]
@@ -299,7 +299,7 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
                 item["subtitle"] = "No disks to eject"
                 return item
             }
-            item["subtitle"] = v.map(\.name).joined(separator: ", ")
+            item["subtitle"] = "Ejects " + v.map(\.name).joined(separator: ", ")
         default:
             break
         }
