@@ -41,6 +41,8 @@ Status: implemented in protocol version **1**. Author-facing docs live in
    the bundled emoji picker, a normal protocol-1 extension
  Sources/FastlightCalc + Sources/fastlight-calc
    the bundled calculator, likewise
+ Sources/FastlightConvert + Sources/fastlight-convert
+   the bundled conversions (units, clocks, dates), likewise
 ```
 
 Apps, files and extensions all implement `ResultProvider`:
@@ -364,6 +366,33 @@ parser and an evaluator, so answers take microseconds.
   (`1920 × 1080 =`). ↵ copies the answer without grouping, so it pastes
   into code and spreadsheets; ⌘↵ pastes it, as in Raycast.
 
+## Conversions
+
+`Sources/fastlight-convert` is the third built-in (`id
+com.elboletaire.fastlight.convert`, keyword `convert`, global with one
+result). `FastlightConvert` parses three kinds of question, in this order:
+dates, clocks, units. Everything is in-process and offline; a reply takes
+well under a millisecond once the tables are built, which happens before
+the handshake.
+
+- Units: Foundation `Dimension`s and their converters, redefined with the
+  exact factor where Foundation rounds (a pound, US cups, km/h). Aliases
+  are folded (case, diacritics, `²`, `µ`), numbers are split from units
+  (`10km`, `72°f`, `5'11"`), and an amount may have several terms of one
+  kind (`3 ft 4 in`, `1 h 30 min`). Numbers follow the locale like the
+  calculator's, and so does formatting, at six significant digits.
+- Clocks: every city in `TimeZone.knownTimeZoneIdentifiers`, minus
+  Antarctica and names that are everyday words (`christmas`, `easter`),
+  plus a small table of countries, big cities and abbreviations. `PST`
+  means Pacific time, so it reads PDT in summer. Offsets (`utc+5:30`) work.
+- Dates: on calendar days in the local time zone, so DST never shifts an
+  answer. A day without a year is the next one (the last one for `since`);
+  weeks are ISO 8601.
+- Global search answers only when the query clearly is one (see the
+  extension guide), so it never competes with the calculator: units, places
+  and date words are unknown names to it, and plain math has no unit.
+  Keyword mode also takes a place, a day or an ambiguous unit on its own.
+
 ## Testing
 
 All in `Tests/` with Swift Testing, deterministic and offline:
@@ -383,11 +412,14 @@ All in `Tests/` with Swift Testing, deterministic and offline:
 - Calculator: precedence and associativity, operator spellings, numbers and
   locales, percentages, functions, every error, formatting, the
   "looks like math" rule, and its protocol replies.
+- Conversions: units, aliases and exact factors, parsing variants and
+  locales, places and offsets, DST on fixed dates, date math against a fixed
+  "now", strict global gating, and the boundary with the calculator.
 - The shipped manifests and examples load together without problems.
 
 The UI is checked with `scripts/snapshot.sh`, which renders keyword mode,
-global sections and the consent notice with the real emoji and calculator
-extensions running through the real host.
+global sections and the consent notice with the real emoji, calculator and
+conversions extensions running through the real host.
 
 ## Not in this version
 
