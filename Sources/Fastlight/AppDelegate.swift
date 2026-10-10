@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var hotKey: GlobalShortcut!
     private var settings: SettingsWindowController?
+    private var aboutWindow: AboutWindowController?
     private let showItem = NSMenuItem(title: "Show Fastlight", action: #selector(toggle), keyEquivalent: "")
     private lazy var extensions = ExtensionCenter()
     private lazy var panel = PanelController(model: SearchModel(extensions: extensions))
@@ -210,7 +211,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func about() {
-        NSApp.activate()
-        NSApp.orderFrontStandardAboutPanel(nil)
+        let controller = aboutWindow ?? AboutWindowController(info: .current)
+        aboutWindow = controller
+        controller.show()
     }
 }

@@ -104,6 +104,21 @@ enum Snapshot {
             }
         }
         renderSettings(into: dir, suite: suite)
+        renderAbout(into: dir)
+    }
+
+    // MARK: About
+
+    /// The About window and its search syntax reference.
+    private static func renderAbout(into dir: URL) {
+        // Not bundled here: the icon comes from the source tree.
+        let icon = NSImage(contentsOfFile: "Resources/AppIcon.icns") ?? NSApp.applicationIconImage!
+        let info = AboutInfo(version: "0.2.1", build: "4", copyright: "Copyright © 2026 Òscar Casajuana. MIT License.", icon: icon)
+        for dark in [false, true] {
+            let file = dir.appendingPathComponent("about-\(dark ? "dark" : "light").png")
+            renderWindow(AboutView(info: info), dark: dark, to: file)
+            print(file.path)
+        }
     }
 
     // MARK: Settings
