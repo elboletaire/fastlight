@@ -13,6 +13,7 @@ enum Metrics {
     static let rowHeight: CGFloat = 38
     static let topHitHeight: CGFloat = 54
     static let noticeHeight: CGFloat = 46
+    static let actionBarHeight: CGFloat = 34
     /// About Spotlight's: a Top Hit, a few apps and files, then it scrolls.
     static let maxCardHeight: CGFloat = 352
     static let barRadius: CGFloat = barHeight / 2
@@ -21,7 +22,10 @@ enum Metrics {
 
 /// A message in place of (or under) results.
 struct Notice: Hashable {
-    enum Action: Hashable { case fullDiskAccess }
+    enum Action: Hashable {
+        case fullDiskAccess
+        case reviewConsent(String)
+    }
     var symbol: String
     var text: String
     var busy = false
@@ -32,27 +36,43 @@ struct Notice: Hashable {
 enum Card: Equatable {
     case none
     case notice(Notice)
-    case results([ResultSection], footer: Notice?)
+    /// `actions`: keyword mode's bar naming what ↵ and ⌘↵ do.
+    case results([ResultSection], footer: Notice?, actions: Bool = false)
 
     var height: CGFloat {
         switch self {
         case .none: return 0
         case .notice: return Metrics.noticeHeight + Metrics.cardPadding * 2
-        case .results(let sections, let footer):
+        case .results(let sections, let footer, let actions):
             var h = Metrics.cardPadding * 2
             for s in sections {
-                h += Metrics.headerHeight
+                if !s.title.isEmpty { h += Metrics.headerHeight }
                 h += s.kind == .topHit ? Metrics.topHitHeight : CGFloat(s.items.count) * Metrics.rowHeight
             }
             if footer != nil { h += Metrics.headerHeight + Metrics.noticeHeight }
-            return min(h, Metrics.maxCardHeight)
+            let bar = actions ? Metrics.actionBarHeight : 0
+            return min(h, Metrics.maxCardHeight - bar) + bar
         }
     }
 }
 
 extension SearchModel {
     var card: Card {
+        if let scope {
+            if let scopeNotice { return .notice(scopeNotice) }
+            if sections.isEmpty {
+                return loading ? .notice(Notice(symbol: "hourglass", text: "Asking \(scope.ext.name)…", busy: true)) : .none
+            }
+            return .results(sections, footer: nil, actions: true)
+        }
         let typed = !query.trimmingCharacters(in: .whitespaces).isEmpty
+        // New or changed extensions waiting for a yes, before anything else.
+        if !typed, let ext = extensions.awaitingConsent.first {
+            let others = extensions.awaitingConsent.count - 1
+            let text = others > 0 ? "“\(ext.name)” and \(others) more extension\(others == 1 ? "" : "s") need your permission to run."
+                : "The “\(ext.name)” extension needs your permission to run."
+            return .notice(Notice(symbol: "puzzlepiece.extension", text: text, action: .reviewConsent(ext.id)))
+        }
         let fileNotice: Notice? = switch fileState {
         case .indexing:
             Notice(symbol: "internaldrive", text: "Indexing your disk… Files will show up here when it's done.", busy: true)
@@ -110,20 +130,32 @@ struct SearchView: View {
         .onAppear { focused = true }
     }
 
+    private var placeholder: String {
+        model.scope.map { "Search \($0.ext.name)" } ?? Self.placeholder
+    }
+
     private var bar: some View {
         HStack(spacing: 11) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 19, weight: .medium))
                 .foregroundStyle(.secondary)
+            if let scope = model.scope {
+                ScopePill(ext: scope.ext)
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
             if snapshot {
-                SnapshotField(text: model.query, placeholder: Self.placeholder)
+                SnapshotField(text: model.query, placeholder: placeholder)
             } else {
-                TextField(Self.placeholder, text: $model.query)
+                TextField(placeholder, text: $model.query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 21))
                     .focused($focused)
             }
+            if model.loading, !model.sections.isEmpty, !snapshot {
+                ProgressView().controlSize(.small)
+            }
         }
+        .animation(.easeOut(duration: 0.12), value: model.scope)
         .padding(.leading, 19)
         .padding(.trailing, 16)
         .frame(height: Metrics.barHeight)
@@ -131,6 +163,29 @@ struct SearchView: View {
     }
 
     static let placeholder = "Fastlight Search"
+}
+
+/// The extension that owns the results, as a token before the text, like
+/// a Spotlight or Raycast scope. ⌫ on an empty field removes it.
+private struct ScopePill: View {
+    let ext: LoadedExtension
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ItemIconView(icon: ext.icon, size: 15, selected: false, fallback: "puzzlepiece.extension")
+                .frame(width: 17, height: 17)
+            Text(ext.name)
+                .font(.system(size: 15, weight: .semibold))
+                .lineLimit(1)
+        }
+        .padding(.leading, 7)
+        .padding(.trailing, 10)
+        .frame(height: 28)
+        .background(Capsule().fill(Color.accentColor.opacity(0.16)))
+        .overlay(Capsule().strokeBorder(Color.accentColor.opacity(0.28), lineWidth: 0.5))
+        .foregroundStyle(Color.accentColor)
+        .fixedSize()
+    }
 }
 
 /// The text field as a picture: real text fields don't render offscreen.
@@ -167,34 +222,43 @@ private struct CardView: View {
         case .none:
             EmptyView()
         case .notice(let n):
-            NoticeRow(notice: n)
+            NoticeRow(notice: n, onReview: review)
                 .padding(Metrics.cardPadding)
-        case .results(let sections, let footer):
-            if snapshot {
-                list(sections, footer: footer)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .clipped()
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        list(sections, footer: footer)
+        case .results(let sections, let footer, let actions):
+            VStack(spacing: 0) {
+                if snapshot {
+                    list(sections, footer: footer)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .clipped()
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            list(sections, footer: footer)
+                        }
+                        .scrollIndicators(.automatic)
+                        .onChange(of: model.selection) { _, i in
+                            proxy.scrollTo(i)
+                            // A section's first row brings its title along. Row
+                            // first, so going down the title lands above it.
+                            if let s = sections.first(where: { $0.offset == i }), !s.title.isEmpty { proxy.scrollTo(s.id) }
+                        }
                     }
-                    .scrollIndicators(.automatic)
-                    .onChange(of: model.selection) { _, i in
-                        proxy.scrollTo(i)
-                        // A section's first row brings its title along. Row
-                        // first, so going down the title lands above it.
-                        if let s = sections.first(where: { $0.offset == i }) { proxy.scrollTo(s.id) }
-                    }
+                }
+                if actions {
+                    ActionBar(ext: model.scope?.ext, item: model.selected)
                 }
             }
         }
     }
 
+    private func review(_ id: String) {
+        if let ext = model.extensions.library.extension(id: id) { model.onReviewConsent?(ext) }
+    }
+
     private func list(_ sections: [ResultSection], footer: Notice?) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(sections) { s in
-                SectionHeader(title: s.title).id(s.id)
+                if !s.title.isEmpty { SectionHeader(title: s.title).id(s.id) }
                 ForEach(Array(s.items.enumerated()), id: \.element.id) { j, item in
                     let i = s.offset + j
                     ResultRow(item: item, icon: icon(item), top: s.kind == .topHit, selected: i == model.selection)
@@ -209,20 +273,42 @@ private struct CardView: View {
             }
             if let footer {
                 SectionHeader(title: "Files")
-                NoticeRow(notice: footer)
+                NoticeRow(notice: footer, onReview: review)
             }
         }
         .padding(Metrics.cardPadding)
     }
 
-    private func icon(_ item: ResultItem) -> NSImage {
+    private func icon(_ item: ResultItem) -> RowIcon {
         switch item {
         // Through the link: Safari's /Applications entry is a symlink, whose
         // icon would carry an alias arrow.
-        case .app(let a): model.icon(for: (a.path as NSString).resolvingSymlinksInPath)
-        case .file(let f): model.icon(for: f.path, isDirectory: f.isDirectory)
+        case .app(let a): .image(model.icon(for: (a.path as NSString).resolvingSymlinksInPath))
+        case .file(let f): .image(model.icon(for: f.path, isDirectory: f.isDirectory))
+        case .ext(let r):
+            switch r.item.icon {
+            case .emoji(let e): .glyph(e)
+            case .symbol(let s): .symbol(s)
+            case .path(let p): .image(model.image(at: p))
+            case .app(let id): model.appIcon(bundleID: id).map(RowIcon.image) ?? .symbol("app.dashed")
+            case nil:
+                // The extension's own icon, unless that's a picture.
+                switch model.extensions.library.extension(id: r.extensionID)?.icon {
+                case .emoji(let e): .glyph(e)
+                case .symbol(let s): .symbol(s)
+                case .path(let p): .image(model.image(at: p))
+                default: .symbol("puzzlepiece.extension")
+                }
+            }
         }
     }
+}
+
+/// What a row shows on its left.
+enum RowIcon {
+    case image(NSImage)
+    case glyph(String)
+    case symbol(String)
 }
 
 private struct SectionHeader: View {
@@ -238,18 +324,47 @@ private struct SectionHeader: View {
     }
 }
 
+/// An extension icon at a given size.
+private struct ItemIconView: View {
+    let icon: ItemIcon?
+    let size: CGFloat
+    let selected: Bool
+    var fallback = "puzzlepiece.extension"
+
+    var body: some View {
+        switch icon {
+        case .emoji(let e):
+            Text(e).font(.system(size: size * 0.92))
+        case .symbol(let s):
+            Image(systemName: s).font(.system(size: size * 0.8, weight: .medium))
+        case .path(let p):
+            Image(nsImage: NSImage(contentsOfFile: p) ?? NSWorkspace.shared.icon(forFile: p))
+                .resizable().interpolation(.high).frame(width: size, height: size)
+        case .app(let id):
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                    .resizable().interpolation(.high).frame(width: size, height: size)
+            } else {
+                Image(systemName: fallback).font(.system(size: size * 0.8))
+            }
+        case nil:
+            Image(systemName: fallback).font(.system(size: size * 0.8, weight: .medium))
+        }
+    }
+}
+
 private struct ResultRow: View {
     let item: ResultItem
-    let icon: NSImage
+    let icon: RowIcon
     let top: Bool
     let selected: Bool
 
+    private var iconSize: CGFloat { top ? 38 : 24 }
+
     var body: some View {
         HStack(spacing: top ? 12 : 10) {
-            Image(nsImage: icon)
-                .resizable()
-                .interpolation(.high)
-                .frame(width: top ? 38 : 24, height: top ? 38 : 24)
+            iconView
+                .frame(width: iconSize, height: iconSize)
             VStack(alignment: .leading, spacing: top ? 2 : 1) {
                 HStack(spacing: 4) {
                     Text(title)
@@ -267,7 +382,7 @@ private struct ResultRow: View {
                         .font(monoSubtitle ? .system(size: 11, design: .monospaced) : .system(size: top ? 12 : 11))
                         .foregroundStyle(subtle)
                         .lineLimit(1)
-                        .truncationMode(.middle)
+                        .truncationMode(monoSubtitle || isPath ? .middle : .tail)
                 }
             }
             Spacer(minLength: 8)
@@ -292,12 +407,32 @@ private struct ResultRow: View {
         }
     }
 
+    @ViewBuilder private var iconView: some View {
+        switch icon {
+        case .image(let img):
+            Image(nsImage: img).resizable().interpolation(.high)
+        case .glyph(let g):
+            // Emoji glyphs carry their own padding; a touch larger reads as
+            // the same size as an app icon.
+            Text(g).font(.system(size: iconSize * 0.84)).fixedSize()
+        case .symbol(let s):
+            Image(systemName: s)
+                .font(.system(size: iconSize * 0.62, weight: .medium))
+                .foregroundStyle(selected ? Color.white : Color.accentColor)
+        }
+    }
+
     private var subtle: Color { selected ? .white.opacity(0.82) : .secondary }
+
+    private var isPath: Bool {
+        if case .file = item { true } else { false }
+    }
 
     private var title: String {
         switch item {
         case .app(let a): a.name
         case .file(let f): f.name
+        case .ext(let r): r.item.title
         }
     }
 
@@ -313,6 +448,8 @@ private struct ResultRow: View {
             if let s = f.snippet { return s }
             let parent = Format.path(f.parent)
             return top ? "\(Format.kind(f)) — \(parent)" : parent
+        case .ext(let r):
+            return r.item.subtitle
         }
     }
 
@@ -326,12 +463,66 @@ private struct ResultRow: View {
             let date = Format.date(m)
             if top, let size = f.size { return "\(Format.size(size))  ·  \(date)" }
             return date
+        case .ext(let r):
+            return r.item.accessory
         }
+    }
+}
+
+/// Keyword mode's footer: whose results these are, and what ↵ and ⌘↵ do.
+private struct ActionBar: View {
+    let ext: LoadedExtension?
+    let item: ResultItem?
+
+    var body: some View {
+        HStack(spacing: 14) {
+            if let ext {
+                HStack(spacing: 6) {
+                    ItemIconView(icon: ext.icon, size: 13, selected: false)
+                        .frame(width: 15, height: 15)
+                    Text(ext.name)
+                }
+                .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            ForEach(Array(actions.enumerated()), id: \.offset) { i, a in
+                HStack(spacing: 5) {
+                    Text(a.displayTitle)
+                        .foregroundStyle(i == 0 ? .primary : .secondary)
+                    KeyCap(i == 0 ? "↵" : "⌘↵")
+                }
+            }
+        }
+        .font(.system(size: 12, weight: .medium))
+        .padding(.horizontal, 16)
+        .frame(height: Metrics.actionBarHeight)
+        .background(Color.primary.opacity(0.035))
+        .overlay(alignment: .top) { Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 0.5) }
+    }
+
+    private var actions: [ItemAction] {
+        if case .ext(let r) = item { return Array(r.item.actions.prefix(2)) }
+        return []
+    }
+}
+
+private struct KeyCap: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 5)
+            .frame(minWidth: 20, minHeight: 18)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.primary.opacity(0.08)))
     }
 }
 
 private struct NoticeRow: View {
     let notice: Notice
+    var onReview: (String) -> Void = { _ in }
     @Environment(\.snapshot) private var snapshot
 
     var body: some View {
@@ -351,7 +542,8 @@ private struct NoticeRow: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
-            if notice.action == .fullDiskAccess {
+            switch notice.action {
+            case .fullDiskAccess:
                 Button("Open Settings") {
                     let url = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
                     if let u = URL(string: url) { NSWorkspace.shared.open(u) }
@@ -359,6 +551,13 @@ private struct NoticeRow: View {
                 .controlSize(.small)
                 .buttonStyle(.bordered)
                 .snapshotSafe(snapshot, title: "Open Settings")
+            case .reviewConsent(let id):
+                Button("Review…") { onReview(id) }
+                    .controlSize(.small)
+                    .buttonStyle(.bordered)
+                    .snapshotSafe(snapshot, title: "Review…")
+            case nil:
+                EmptyView()
             }
         }
         .padding(.horizontal, 10)

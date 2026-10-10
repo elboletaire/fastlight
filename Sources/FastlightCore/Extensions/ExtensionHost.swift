@@ -133,6 +133,12 @@ public final class ExtensionHost: @unchecked Sendable {
         }
     }
 
+    /// Starts an extension that is allowed to run, without asking it
+    /// anything yet.
+    public func prewarm(_ ext: LoadedExtension) {
+        (try? slot(for: ext))?.process.start()
+    }
+
     /// Tells a running extension the user picked one of its items.
     public func picked(_ ext: LoadedExtension, item: String, action: String) {
         lock.withLock { slots[ext.id] }?.process.notify(.picked(item: item, action: action))

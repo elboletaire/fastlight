@@ -6,37 +6,46 @@ import UniformTypeIdentifiers
 enum ResultItem: Identifiable, Hashable {
     case app(AppEntry)
     case file(FileItem)
+    case ext(ExtensionResult)
 
     var id: String {
         switch self {
         case .app(let a): "app:\(a.path)"
         case .file(let f): f.line.map { "file:\(f.path):\($0)" } ?? "file:\(f.path)"
+        case .ext(let r): "ext:\(r.extensionID):\(r.item.id)"
         }
     }
 
-    var path: String {
+    /// The file behind the row, for Quick Look, Reveal and Copy Path.
+    var path: String? {
         switch self {
         case .app(let a): a.path
         case .file(let f): f.path
+        case .ext(let r):
+            r.item.actions.lazy.compactMap { a -> String? in
+                switch a.kind {
+                case .reveal(let p): (p as NSString).expandingTildeInPath
+                case .open(let t) where t.hasPrefix("/") || t.hasPrefix("~/"): (t as NSString).expandingTildeInPath
+                default: nil
+                }
+            }.first
         }
     }
 }
 
 struct ResultSection: Identifiable, Hashable {
-    enum Kind: Hashable { case topHit, apps, files }
+    enum Kind: Hashable {
+        case topHit, apps, files
+        case ext(String)
+    }
+
     var kind: Kind
+    var title: String
     var items: [ResultItem]
     /// Index of the first item in the flat, keyboard-navigable list.
     var offset: Int
 
     var id: Kind { kind }
-    var title: String {
-        switch kind {
-        case .topHit: "Top Hit"
-        case .apps: "Applications"
-        case .files: "Files"
-        }
-    }
 }
 
 /// What the file side can deliver right now. Apps never depend on it.
@@ -50,18 +59,34 @@ enum FileSearchState: Equatable {
     case unavailable(String)
 }
 
+/// Keyword mode: an extension owns the results. `trigger` is what was typed
+/// to get here (":" or "emoji "), to give back on ⌫.
+struct Scope: Equatable {
+    var ext: LoadedExtension
+    var trigger: String
+}
+
 @MainActor
 final class SearchModel: ObservableObject {
-    @Published var query = "" { didSet { if query != oldValue { search() } } }
+    @Published var query = "" { didSet { if query != oldValue { queryChanged() } } }
+    @Published private(set) var scope: Scope?
     @Published private(set) var sections: [ResultSection] = []
     @Published var selection = 0
     @Published var fileState: FileSearchState = .unknown
     /// fsearch failed for this query; shown in place of the Files section.
     @Published private(set) var fileError: String?
+    /// Keyword mode couldn't get results: why.
+    @Published private(set) var scopeNotice: Notice?
+    /// Keyword mode is waiting on its extension (shown after a moment).
+    @Published private(set) var loading = false
+    /// Some provider hasn't answered the current query yet.
+    private(set) var isSearching = false
 
     /// Called after sections or notices change, so the panel can resize.
     var onLayoutChange: (() -> Void)?
     var onOpen: (() -> Void)?
+    /// The "Review…" button of the consent notice.
+    var onReviewConsent: ((LoadedExtension) -> Void)?
 
     static let maxApps = 5
     static let maxFiles = 40
@@ -69,32 +94,53 @@ final class SearchModel: ObservableObject {
     nonisolated static let fetchLimit = 200
 
     let apps: AppIndex
+    let extensions: ExtensionCenter
     private let client = FSearchClient.forApp()
     private var fdaRestarts = FDARestartPolicy()
     // Every request goes through this queue, so the client sees one caller.
     private let queue = DispatchQueue(label: "fastlight.fsearch", qos: .userInteractive)
-    private let latest = Latest()
-    private var generation = 0
-    private var filesArrived = false
+    private lazy var fileProvider = FileProvider(client: client, queue: queue, fetchLimit: Self.fetchLimit,
+                                                 maxItems: Self.maxFiles)
+    private let fanout = SearchFanout()
     private var icons: [String: NSImage] = [:]
     private var polling = false
+    private var loadingTimer: Task<Void, Never>?
+    /// The fan-out generation last shown, to tell a late section of the same
+    /// query (keep the selection) from a new query (back to the top).
+    private var shownGeneration = -1
     var isVisible = false
-    /// Snapshots feed results by hand and never talk to fsearch.
+    /// Snapshots never talk to fsearch...
     var offline = false
+    /// ...and bring their own files instead.
+    var filesOverride: (any ResultProvider)?
 
-    init(apps: AppIndex = AppIndex()) {
+    init(apps: AppIndex = AppIndex(), extensions: ExtensionCenter) {
         self.apps = apps
+        self.extensions = extensions
+        fanout.onUpdate = { [weak self] in self?.apply($0) }
     }
 
     var items: [ResultItem] { sections.flatMap(\.items) }
     var selected: ResultItem? { items.indices.contains(selection) ? items[selection] : nil }
-    var isEmptyResult: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty && sections.isEmpty }
+    var selectedExtension: LoadedExtension? {
+        if case .ext(let r) = selected { return extensions.library.extension(id: r.extensionID) }
+        return nil
+    }
 
     func reset() {
+        scope = nil
         query = ""
+        clear()
+    }
+
+    private func clear() {
+        fanout.cancel()
+        isSearching = false
         sections = []
         selection = 0
         fileError = nil
+        scopeNotice = nil
+        setLoading(false)
         onLayoutChange?()
     }
 
@@ -125,6 +171,48 @@ final class SearchModel: ObservableObject {
         }
         icons[path] = i
         return i
+    }
+
+    /// An image file (an extension's own artwork) or else its Finder icon.
+    func image(at path: String) -> NSImage {
+        let key = "img:\(path)"
+        if let i = icons[key] { return i }
+        let type = UTType(filenameExtension: (path as NSString).pathExtension)
+        let i = type?.conforms(to: .image) == true ? NSImage(contentsOfFile: path) ?? icon(for: path) : icon(for: path)
+        icons[key] = i
+        return i
+    }
+
+    func appIcon(bundleID: String) -> NSImage? {
+        let key = "app:\(bundleID)"
+        if let i = icons[key] { return i }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return nil }
+        let i = NSWorkspace.shared.icon(forFile: url.path)
+        icons[key] = i
+        return i
+    }
+
+    // MARK: Keyword mode
+
+    /// Typing an extension's keyword turns it into the scope pill.
+    private func queryChanged() {
+        if scope == nil, let m = extensions.router.match(query), let ext = extensions.library.extension(id: m.extensionID) {
+            scope = Scope(ext: ext, trigger: m.trigger)
+            sections = []
+            // Assigning inside didSet doesn't call didSet again.
+            query = m.remainder
+        }
+        search()
+    }
+
+    /// ⌫ on an empty field: drop the pill and give back the keyword, minus
+    /// the character just deleted.
+    func leaveScope() {
+        guard let s = scope else { return }
+        scope = nil
+        clear()
+        query = String(s.trigger.dropLast())
+        search()
     }
 
     // MARK: Daemon status
@@ -170,7 +258,7 @@ final class SearchModel: ObservableObject {
             onLayoutChange?()
         }
         // The crawl just finished: rerun the query so files show up.
-        if wasIndexing, case .ready = state, !query.isEmpty { search() }
+        if wasIndexing, case .ready = state, !query.isEmpty, scope == nil { search() }
         guard isVisible else { return }
         switch state {
         case .indexing, .restarting, .unavailable, .unknown:
@@ -209,87 +297,143 @@ final class SearchModel: ObservableObject {
 
     /// Runs the current query again, e.g. after the app list changed.
     func rerun() {
-        if !query.isEmpty { search() }
+        if !query.isEmpty || scope != nil { search() }
     }
 
+    /// Apps, files and global extensions answer through the same fan-out.
     /// fsearch answers in about a millisecond, so there is no debounce: every
     /// keystroke searches, and replies to older keystrokes are dropped.
     private func search() {
-        generation += 1
-        let gen = generation
-        latest.value = gen
-        filesArrived = false
+        if let scope {
+            searchScope(scope)
+            return
+        }
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else {
+            clear()
+            return
+        }
+        var providers: [any ResultProvider] = [AppProvider(index: apps, limit: Self.maxApps + 1)]
+        if let filesOverride {
+            providers.append(filesOverride)
+        } else if !offline {
+            providers.append(fileProvider)
+        }
+        // Filters are fsearch syntax: the user wants files.
+        if !ResultFilter(query: q).explicit {
+            providers += extensions.globalProviders(for: q) as [any ResultProvider]
+        }
+        isSearching = true
+        fanout.search(ProviderQuery(text: q, mode: .global), providers: providers)
+    }
+
+    private func searchScope(_ scope: Scope) {
+        let ext = scope.ext
+        guard extensions.isEnabled(ext), extensions.consent.need(ext) == nil else {
+            fanout.cancel()
+            isSearching = false
             sections = []
-            selection = 0
-            fileError = nil
+            scopeNotice = Notice(symbol: "hand.raised", text: "\(ext.name) needs your permission before it can run.",
+                                 action: .reviewConsent(ext.id))
             onLayoutChange?()
             return
         }
-        let filter = ResultFilter(query: q)
-        // Filters are fsearch syntax; apps don't have an extension or a size.
-        let appHits = filter.explicit ? [] : apps.search(q, limit: Self.maxApps + 1)
-
-        // Wait briefly for files so the list doesn't jump twice per
-        // keystroke, but don't let a slow daemon hold back the apps.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            guard let self, gen == self.generation, !self.filesArrived else { return }
-            self.publish(apps: appHits, files: [])
-        }
-
-        guard !offline else { return }
-        let latest = self.latest
-        queue.async { [client] in
-            // Typing faster than a slow daemon answers: skip stale queries.
-            guard latest.value == gen else { return }
-            let outcome = Result { try client.search(q, limit: Self.fetchLimit) }
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated { self.apply(outcome, apps: appHits, filter: filter, gen: gen) }
-            }
+        // Waiting for every answer (no early paint) keeps the old list up
+        // instead of flashing an empty one.
+        isSearching = true
+        fanout.search(ProviderQuery(text: query, mode: .keyword),
+                      providers: [ExtensionProvider(ext: ext, host: extensions.host, mode: .keyword)], firstPaint: nil)
+        // A spinner only when it's slow enough to notice.
+        loadingTimer?.cancel()
+        let gen = fanout.generation
+        loadingTimer = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, let self, self.fanout.generation == gen else { return }
+            self.setLoading(true)
         }
     }
 
-    private func apply(_ outcome: Result<SearchResponse, Error>, apps: [AppMatch], filter: ResultFilter, gen: Int) {
-        guard gen == generation else { return }
-        filesArrived = true
-        switch outcome {
-        case .success(let resp):
-            fileError = nil
-            // It answered, so it's no longer crawling or down; ask for details.
-            if case .ready = fileState {} else { refreshStatus() }
-            publish(apps: apps, files: Self.files(from: resp, filter: filter))
-        case .failure(let err):
-            if let e = err as? FSearchError {
-                fileState = Self.state(for: e)
-                fileError = nil
-            } else {
-                fileError = err.localizedDescription
-            }
-            publish(apps: apps, files: [])
+    private func setLoading(_ on: Bool) {
+        if !on { loadingTimer?.cancel() }
+        if loading != on { loading = on }
+    }
+
+    private func apply(_ u: SearchFanout.Update) {
+        isSearching = !u.isFinal
+        if let scope {
+            applyScope(u, scope)
+            return
         }
+        var appMatches: [AppMatch] = []
+        var files: [FileItem] = []
+        var extSections: [(LoadedExtension, [ExtensionResult])] = []
+        for (id, outcome) in u.outcomes {
+            if id == "apps" {
+                appMatches = outcome.entries.compactMap { if case .app(let m) = $0 { m } else { nil } }
+            } else if id == "files" {
+                files = outcome.entries.compactMap { if case .file(let f) = $0 { f } else { nil } }
+                applyFileOutcome(outcome)
+            }
+        }
+        for ext in extensions.extensions {
+            guard let outcome = u.outcomes["ext:\(ext.id)"] else { continue }
+            let found = outcome.entries.compactMap { if case .ext(let r) = $0 { r } else { nil } }
+            if !found.isEmpty { extSections.append((ext, found)) }
+        }
+        let sameQuery = u.query.generation == shownGeneration
+        shownGeneration = u.query.generation
+        publish(apps: appMatches, files: files, extensions: extSections, keepSelection: sameQuery)
         if icons.count > 2000 { icons.removeAll() }
     }
 
-    static func files(from resp: SearchResponse, filter: ResultFilter) -> [FileItem] {
-        var out: [FileItem] = []
-        for h in resp.hits ?? [] where filter.keeps(h.path) {
-            out.append(FileItem(path: h.path, isDirectory: h.kind == "dir", size: h.kind == "dir" ? nil : h.size,
-                                modified: h.mtime > 0 ? Date(timeIntervalSince1970: TimeInterval(h.mtime)) : nil))
+    private func applyFileOutcome(_ outcome: ProviderOutcome) {
+        switch outcome {
+        case .results:
+            fileError = nil
+            // It answered, so it's no longer crawling or down; ask for details.
+            if case .ready = fileState {} else { refreshStatus() }
+        case .failed(let err as FSearchError):
+            fileState = Self.state(for: err)
+            fileError = nil
+        case .failed(is CancellationError):
+            break
+        case .failed(let err):
+            fileError = err.localizedDescription
+        case .timedOut:
+            break
         }
-        for f in resp.files ?? [] where filter.keeps(f.path) {
-            if f.matches.isEmpty { out.append(FileItem(path: f.path, isDirectory: false)) }
-            for m in f.matches {
-                out.append(FileItem(path: f.path, isDirectory: false, line: m.line,
-                                    snippet: m.text.trimmingCharacters(in: .whitespaces)))
+    }
+
+    private func applyScope(_ u: SearchFanout.Update, _ scope: Scope) {
+        guard let outcome = u.outcomes["ext:\(scope.ext.id)"] else { return }
+        setLoading(false)
+        switch outcome {
+        case .results(let entries):
+            scopeNotice = nil
+            let items = entries.compactMap { if case .ext(let r) = $0 { ResultItem.ext(r) } else { nil } }
+            sections = items.isEmpty ? [] : [ResultSection(kind: .ext(scope.ext.id), title: "", items: items, offset: 0)]
+            if sections.isEmpty {
+                let what = query.isEmpty ? "Nothing to show yet" : "No results for “\(query)”"
+                scopeNotice = Notice(symbol: "magnifyingglass", text: what)
             }
+        case .failed(let e):
+            if e is CancellationError || (e as? ExtensionError) == .superseded { return }
+            sections = []
+            let why = (e as? LocalizedError)?.errorDescription ?? e.localizedDescription
+            let text = (e as? ExtensionError).map { if case .reported = $0 { why } else { "\(scope.ext.name) \(why)." } } ?? why
+            scopeNotice = Notice(symbol: "exclamationmark.triangle", text: text)
+        case .timedOut:
+            return
         }
-        return Array(out.prefix(maxFiles))
+        selection = 0
+        onLayoutChange?()
     }
 
     /// Top Hit is the best app when it matches well (an acronym or better),
-    /// otherwise the best file, otherwise whatever app matched.
-    func publish(apps matches: [AppMatch], files: [FileItem]) {
+    /// otherwise the best file, otherwise whatever app matched. Extension
+    /// results get their own sections and are never the Top Hit.
+    func publish(apps matches: [AppMatch], files: [FileItem], extensions found: [(LoadedExtension, [ExtensionResult])] = [],
+                 keepSelection: Bool = false) {
         var apps = matches.map(\.entry)
         var files = files
         let top: ResultItem?
@@ -304,26 +448,19 @@ final class SearchModel: ObservableObject {
         }
         var out: [ResultSection] = []
         var offset = 0
-        func add(_ kind: ResultSection.Kind, _ items: [ResultItem]) {
+        func add(_ kind: ResultSection.Kind, _ title: String, _ items: [ResultItem]) {
             guard !items.isEmpty else { return }
-            out.append(ResultSection(kind: kind, items: items, offset: offset))
+            out.append(ResultSection(kind: kind, title: title, items: items, offset: offset))
             offset += items.count
         }
-        if let top { add(.topHit, [top]) }
-        add(.apps, apps.prefix(Self.maxApps - 1).map(ResultItem.app))
-        add(.files, files.map(ResultItem.file))
+        if let top { add(.topHit, "Top Hit", [top]) }
+        add(.apps, "Applications", apps.prefix(Self.maxApps - 1).map(ResultItem.app))
+        for (ext, results) in found { add(.ext(ext.id), ext.name, results.map(ResultItem.ext)) }
+        add(.files, "Files", files.map(ResultItem.file))
+        // A late section of the same query keeps the selection on its row.
+        let previous = keepSelection ? selected?.id : nil
         sections = out
-        selection = 0
+        selection = previous.flatMap { id in items.firstIndex { $0.id == id } } ?? 0
         onLayoutChange?()
-    }
-}
-
-/// The newest query generation, readable from the fsearch queue.
-final class Latest: @unchecked Sendable {
-    private let lock = NSLock()
-    private var v = 0
-    var value: Int {
-        get { lock.withLock { v } }
-        set { lock.withLock { v = newValue } }
     }
 }
