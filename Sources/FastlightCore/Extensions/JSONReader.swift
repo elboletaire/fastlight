@@ -67,6 +67,12 @@ struct JSONReader {
         return s
     }
 
+    func bool(_ key: String) throws -> Bool? {
+        guard has(key) else { return nil }
+        guard let n = object[key] as? NSNumber, Self.isBool(n) else { throw ValidationError(at(key), "must be true or false") }
+        return n.boolValue
+    }
+
     func int(_ key: String, required: Bool = false, range: ClosedRange<Int>? = nil) throws -> Int? {
         guard has(key) else {
             if required { throw ValidationError(at(key), "is required") }

@@ -436,13 +436,18 @@ final class SearchModel: ObservableObject {
 
     /// Top Hit is the best app when it matches well (an acronym or better),
     /// otherwise the best file, otherwise whatever app matched. Extension
-    /// results get their own sections and are never the Top Hit.
+    /// results get their own sections; only a built-in's answer marked
+    /// `topHit` (a calculation) goes first.
     func publish(apps matches: [AppMatch], files: [FileItem], extensions found: [(LoadedExtension, [ExtensionResult])] = [],
                  keepSelection: Bool = false) {
         var apps = matches.map(\.entry)
         var files = files
+        var found = found
         let top: ResultItem?
-        if let best = matches.first, best.kind >= .acronym {
+        // A built-in's answer (a calculation) beats any name match.
+        if let i = found.firstIndex(where: { $0.0.builtIn && $0.1.first?.item.topHit == true }) {
+            top = .ext(found[i].1.removeFirst())
+        } else if let best = matches.first, best.kind >= .acronym {
             top = .app(apps.removeFirst())
         } else if let first = files.first, first.line == nil {
             top = .file(files.removeFirst())
@@ -460,7 +465,7 @@ final class SearchModel: ObservableObject {
         }
         if let top { add(.topHit, "Top Hit", [top]) }
         add(.apps, "Applications", apps.prefix(Self.maxApps - 1).map(ResultItem.app))
-        for (ext, results) in found { add(.ext(ext.id), ext.name, results.map(ResultItem.ext)) }
+        for (ext, results) in found where !results.isEmpty { add(.ext(ext.id), ext.name, results.map(ResultItem.ext)) }
         add(.files, "Files", files.map(ResultItem.file))
         // A late section of the same query keeps the selection on its row.
         let previous = keepSelection ? selected?.id : nil
