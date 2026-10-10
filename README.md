@@ -153,6 +153,8 @@ make            # build/Fastlight.app, with fsearch embedded
 | `make test` | Run the test suite |
 | `make clean` | Remove build output |
 
+`make dmg` lays out the DMG window (background, icon positions) with [dmgbuild](https://github.com/dmgbuild/dmgbuild), which it runs through [uv](https://docs.astral.sh/uv/) (`brew install uv`) or Python 3.10+. Without either it builds a plain DMG and warns.
+
 `UNIVERSAL=1 make dmg` builds for both Apple Silicon and Intel, and `CODESIGN_IDENTITY="Developer ID Application: …"` signs with a real identity and the hardened runtime. The [release workflow](.github/workflows/release.yml) does both on `v*` tags, and notarizes when the secrets listed at its top are set.
 
 Releasing is merging a version bump: when `CFBundleShortVersionString` in `Resources/Info.plist` changes on `main` to a version with no tag yet, [`tag-release.yml`](.github/workflows/tag-release.yml) tags it and runs the release workflow. Tags aren't pushed by hand.
