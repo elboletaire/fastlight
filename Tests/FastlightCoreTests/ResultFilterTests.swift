@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import FastlightCore
 
@@ -37,5 +38,26 @@ import Testing
         let f = ResultFilter(query: "notes in:/Applications", home: home)
         #expect(f.keeps("/Applications/Notes.app"))
         #expect(f.keeps("/Users/me/.config/notes"))
+    }
+
+    /// fsearch reports real paths; a home reached through a symlink must be
+    /// matched where it really is.
+    @Test func matchesAHomeReachedThroughASymlink() throws {
+        let dir = try FakeDaemon.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let real = dir.appendingPathComponent("real").path
+        let link = dir.appendingPathComponent("home").path
+        try FileManager.default.createDirectory(atPath: real, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: real)
+        // /tmp is itself a link to /private/tmp, which is how fsearch sees it.
+        let reported = try #require(ResultFilter.realPath(real))
+        #expect(reported.hasPrefix("/private/"))
+
+        let f = ResultFilter(query: "notes", home: link)
+        #expect(f.keeps("\(reported)/Library/Mobile Documents/com~apple~CloudDocs/notes.md"))
+        #expect(!f.keeps("\(reported)/Library/Caches/notes"))
+        // As given, too.
+        #expect(f.keeps("\(link)/Library/CloudStorage/Dropbox/notes.md"))
+        #expect(!f.keeps("\(link)/Library/Caches/notes"))
     }
 }
