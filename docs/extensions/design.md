@@ -380,7 +380,9 @@ parser and an evaluator, so answers take microseconds.
   bare number (`2026`), a constant alone (`pi`), dates (`2026-10-10`,
   `10/10/2026`) and anything that doesn't parse are left alone. Then it is
   the Top Hit. Keyword mode always answers or says why not.
-- Display: rounded to 12 significant digits (0.1 + 0.2 = 0.3), at most 10
+- Display: integers a Double holds exactly (below 2⁵³) as they are
+  (`1234567890123 + 1` = 1,234,567,890,124), anything else rounded to 12
+  significant digits (0.1 + 0.2 = 0.3), at most 10
   decimals, the locale's grouping (`2,073,600`), and `1.5 × 10²⁰` beyond
   10¹⁵ or below 10⁻⁹. The subtitle is the expression as understood
   (`1920 × 1080 =`). ↵ copies the answer without grouping, so it pastes

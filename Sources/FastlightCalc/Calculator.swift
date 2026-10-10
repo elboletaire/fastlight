@@ -6,9 +6,15 @@ public enum CalcFormat {
     static let large = 1e15
     static let small = 1e-9
 
+    /// Every integer below this is exact in a Double (2⁵³).
+    static let exactIntegers = 9_007_199_254_740_992.0
+
     /// Twelve significant digits hide binary rounding: 0.1 + 0.2 is 0.3.
+    /// Integers that a Double holds exactly are shown as they are, so
+    /// 1234567890123 + 1 is 1234567890124, not 1234567890120.
     static func rounded(_ v: Double) -> Double {
-        Double(String(format: "%.12g", v)) ?? v
+        if v == v.rounded(), abs(v) < exactIntegers { return v }
+        return Double(String(format: "%.12g", v)) ?? v
     }
 
     /// For errors: no grouping, "." decimals.
