@@ -68,9 +68,15 @@ public struct KeywordRouter: Sendable {
         if let first = keyword.first, "'^!./~".contains(first) {
             return "must not start with \(first) (it would shadow search syntax or paths)"
         }
+        if keyword.first == "\"" {
+            return "must not start with \" (it would shadow quoted search terms)"
+        }
+        // `in:` and anything after it (`in:~`, `type:image`, `mtime:<`):
+        // those are documented queries, and must stay searches.
         let lower = keyword.lowercased()
-        if lower.hasSuffix(":"), ResultFilter.filterKeys.contains(String(lower.dropLast())) {
-            return "\"\(keyword)\" is a search filter"
+        if let key = QuerySyntax.filterKeys.sorted().first(where: { lower.hasPrefix($0 + ":") }) {
+            return lower == key + ":" ? "\"\(keyword)\" is a search filter"
+                : "\"\(keyword)\" starts with the search filter \(key):"
         }
         return nil
     }

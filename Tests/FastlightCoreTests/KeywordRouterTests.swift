@@ -52,4 +52,18 @@ import Testing
         #expect(KeywordRouter.problem(with: "^") != nil)
         #expect(KeywordRouter.problem(with: "") != nil)
     }
+
+    /// A keyword that starts with a filter would take documented queries
+    /// (`in:~/src readme`, `type:image cat`) away from file search.
+    @Test func rejectsKeywordsThatStartWithAFilter() {
+        for k in ["in:~", "IN:~/src", "type:image", "mtime:<", "modified:>1", "ext:pdf", "grep:x", "regex:", "content:"] {
+            #expect(KeywordRouter.problem(with: k) != nil, "\(k)")
+        }
+        #expect(KeywordRouter.problem(with: "\"") != nil)
+        #expect(KeywordRouter.problem(with: "\"quoted") != nil)
+        // A filter's name without its colon, or a colon elsewhere, is fine.
+        for k in ["in", "inbox:", "types", "gh:", "x:in:", "re", "ref:"] {
+            #expect(KeywordRouter.problem(with: k) == nil, "\(k)")
+        }
+    }
 }
