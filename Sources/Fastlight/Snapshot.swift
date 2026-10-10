@@ -36,8 +36,11 @@ enum Snapshot {
         }
     }
 
-    /// `live` adds scenes for real queries against the running daemon.
-    static func run(into dir: URL, live: [String] = []) {
+    /// `live` adds scenes for real queries against the running daemon;
+    /// `only`, when not empty, keeps scenes whose names start with one of
+    /// its prefixes ("settings", "about" and "convert", say).
+    static func run(into dir: URL, live: [String] = [], only: [String] = []) {
+        let wanted = { (name: String) in only.isEmpty || only.contains { name.hasPrefix($0) } }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let started = Date()
         let found = AppIndex().scan()
@@ -92,7 +95,7 @@ enum Snapshot {
             let slug = q.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }
             all.append(Scene(name: "live-\(String(slug))", query: q, files: files))
         }
-        for scene in all {
+        for scene in all where wanted(scene.name) {
             try? scene.access.write(to: accessFile, atomically: true, encoding: .utf8)
             for ext in library.extensions where !ext.builtIn {
                 if scene.pending { consent.revoke(ext.id) } else { consent.approve(ext) }
@@ -120,8 +123,8 @@ enum Snapshot {
                 print(file.path)
             }
         }
-        renderSettings(into: dir, suite: suite)
-        renderAbout(into: dir)
+        if wanted("settings") { renderSettings(into: dir, suite: suite) }
+        if wanted("about") { renderAbout(into: dir) }
     }
 
     /// Sample shortcuts, so snapshots don't show the user's own: a cache

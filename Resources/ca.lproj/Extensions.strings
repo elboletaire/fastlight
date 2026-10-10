@@ -1,0 +1,24 @@
+/* Built-in extensions' names and descriptions, keyed by the English in
+   their extension.json. The app looks these up for built-ins only. */
+"Calculator" = "Calculadora";
+"Answers arithmetic as you type: 1920*1080, 2^10, sqrt(2), 15% of 80." = "Resol càlculs mentre escrius: 1920*1080, 2^10, sqrt(2), 15% of 80.";
+"Calendar" = "Calendari";
+"Today's agenda and your events for the next two weeks. Reads Calendar on this Mac once you allow it." = "L’agenda d’avui i els teus esdeveniments de les dues setmanes vinents. Llegeix el Calendari d’aquest Mac un cop li ho permetis.";
+"Contacts" = "Contactes";
+"Find people by name, company, email or phone, and email, call or message them. Reads Contacts on this Mac once you allow it." = "Troba persones pel nom, l’empresa, el correu electrònic o el telèfon, i escriu-los, truca’ls o envia’ls un missatge. Llegeix els Contactes d’aquest Mac un cop li ho permetis.";
+"Conversions" = "Conversions";
+"Converts units, tells the time around the world and counts days: 10 km in mi, time in tokyo, days until dec 25." = "Converteix unitats, diu l’hora arreu del món i compta dies: 10 km in mi, time in tokyo, days until dec 25.";
+"Dictionary" = "Diccionari";
+"Definitions from the dictionaries built into macOS, offline: define serendipity." = "Definicions dels diccionaris integrats al macOS, sense connexió: define serendipity.";
+"Emoji" = "Emojis";
+"Find an emoji by name or keyword and paste it into the app you were using." = "Troba un emoji pel nom (en anglès) o una paraula clau i enganxa’l a l’app que feies servir.";
+"Reminders" = "Recordatoris";
+"What's due, overdue first, and any reminder that isn't done yet. Reads Reminders on this Mac once you allow it." = "El que venç, primer el que ha vençut, i qualsevol recordatori pendent. Llegeix els Recordatoris d’aquest Mac un cop li ho permetis.";
+"System Settings" = "Configuració del Sistema";
+"Opens System Settings panes and pages: Bluetooth, Wi‑Fi, Displays, Full Disk Access…" = "Obre panells i pàgines de la Configuració del Sistema: Bluetooth, Wi‑Fi, Pantalles, Accés complet al disc…";
+"Shortcuts" = "Dreceres";
+"Runs your shortcuts from the Shortcuts app, with what you type after the name as input." = "Executa les dreceres de l’app Dreceres, amb el que escriguis després del nom com a entrada.";
+"System" = "Sistema";
+"Lock Screen, Sleep, Toggle Dark Mode, Empty Trash, Restart, Shut Down and more. The disruptive ones ask first." = "Bloqueja la pantalla, Repòs, Activa o desactiva el mode fosc, Buida la paperera, Reinicia, Apaga i més. Les que interrompen pregunten abans.";
+"Web" = "Web";
+"Opens web addresses you type, and searches the web with web <query>." = "Obre les adreces web que escriguis i cerca a internet amb web <cerca>.";

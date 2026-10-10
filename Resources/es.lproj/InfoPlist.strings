@@ -1,0 +1,4 @@
+/* Permission prompts. The keywords stay in English: Fastlight reads them as typed. */
+"NSCalendarsFullAccessUsageDescription" = "Fastlight muestra tus próximos eventos cuando escribes “cal” o buscas uno. Se leen en este Mac y nunca salen de él.";
+"NSContactsUsageDescription" = "Fastlight encuentra personas de tus contactos cuando escribes “contact” o buscas un nombre. Tus contactos se leen en este Mac y nunca salen de él.";
+"NSRemindersFullAccessUsageDescription" = "Fastlight muestra tus recordatorios cuando escribes “remind” o buscas uno. Se leen en este Mac y nunca salen de él.";

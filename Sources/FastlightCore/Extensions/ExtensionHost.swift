@@ -1,3 +1,4 @@
+import FastlightL10n
 import Foundation
 
 /// Runs extensions: one `ExtensionProcess` each, started on first use and
@@ -64,6 +65,8 @@ public final class ExtensionHost: @unchecked Sendable {
             "FASTLIGHT_VERSION": appVersion,
             "FASTLIGHT_EXTENSION_ID": ext.id,
             "FASTLIGHT_DATA_DIR": data.path,
+            // The language Fastlight speaks, so extensions can match it.
+            Localizer.environmentKey: Localizer.current.language,
         ]
         for k in ["HOME", "USER", "LOGNAME", "TMPDIR", "LANG", "LC_ALL", "SHELL"] {
             if let v = env[k] { out[k] = v }

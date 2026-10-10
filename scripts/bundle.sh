@@ -60,6 +60,13 @@ for d in Extensions/*/; do
   ditto --norsrc --noextattr "$d" "$app/Contents/Resources/Extensions/$(basename "$d")"
 done
 
+# Strings: <lang>.lproj per language, each module's tables and the
+# permission prompts (InfoPlist.strings). The app and its helpers read them
+# from here (see Sources/FastlightL10n).
+for d in Resources/*.lproj; do
+  ditto --norsrc --noextattr "$d" "$app/Contents/Resources/$(basename "$d")"
+done
+
 # Artwork is optional so the bundle still builds without it.
 for f in AppIcon.icns MenuBarIcon.png MenuBarIcon@2x.png; do
   if [ -f "Resources/$f" ]; then cp "Resources/$f" "$app/Contents/Resources/$f"; fi

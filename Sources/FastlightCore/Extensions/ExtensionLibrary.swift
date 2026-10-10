@@ -1,4 +1,5 @@
 import CryptoKit
+import FastlightL10n
 import Foundation
 
 /// An extension that passed validation and can be started.
@@ -13,7 +14,14 @@ public struct LoadedExtension: Sendable, Hashable, Identifiable {
     public var fingerprint: String
 
     public var id: String { manifest.id }
-    public var name: String { manifest.name }
+    /// Built-ins' names and descriptions are translated from the
+    /// Extensions table, keyed by their English manifest text; anyone
+    /// else's are shown as their manifest has them.
+    public var name: String { builtIn ? Localizer.current.string(manifest.name, table: "Extensions") : manifest.name }
+    public var summary: String? {
+        guard let d = manifest.description else { return nil }
+        return builtIn ? Localizer.current.string(d, table: "Extensions") : d
+    }
     public var icon: ItemIcon? { manifest.icon?.resolved(in: directory) }
 
     public init(manifest: ExtensionManifest, directory: URL, executable: URL, arguments: [String],

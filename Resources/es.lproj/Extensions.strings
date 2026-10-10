@@ -1,0 +1,24 @@
+/* Built-in extensions' names and descriptions, keyed by the English in
+   their extension.json. The app looks these up for built-ins only. */
+"Calculator" = "Calculadora";
+"Answers arithmetic as you type: 1920*1080, 2^10, sqrt(2), 15% of 80." = "Resuelve cálculos mientras escribes: 1920*1080, 2^10, sqrt(2), 15% of 80.";
+"Calendar" = "Calendario";
+"Today's agenda and your events for the next two weeks. Reads Calendar on this Mac once you allow it." = "La agenda de hoy y tus eventos de las próximas dos semanas. Lee el Calendario de este Mac una vez que lo permitas.";
+"Contacts" = "Contactos";
+"Find people by name, company, email or phone, and email, call or message them. Reads Contacts on this Mac once you allow it." = "Busca personas por nombre, empresa, correo electrónico o teléfono, y escríbeles, llámalas o envíales un mensaje. Lee los Contactos de este Mac una vez que lo permitas.";
+"Conversions" = "Conversiones";
+"Converts units, tells the time around the world and counts days: 10 km in mi, time in tokyo, days until dec 25." = "Convierte unidades, da la hora en todo el mundo y cuenta días: 10 km in mi, time in tokyo, days until dec 25.";
+"Dictionary" = "Diccionario";
+"Definitions from the dictionaries built into macOS, offline: define serendipity." = "Definiciones de los diccionarios integrados en macOS, sin conexión: define serendipity.";
+"Emoji" = "Emojis";
+"Find an emoji by name or keyword and paste it into the app you were using." = "Busca un emoji por nombre (en inglés) o palabra clave y pégalo en la app que estabas usando.";
+"Reminders" = "Recordatorios";
+"What's due, overdue first, and any reminder that isn't done yet. Reads Reminders on this Mac once you allow it." = "Lo que vence, primero lo atrasado, y cualquier recordatorio pendiente. Lee los Recordatorios de este Mac una vez que lo permitas.";
+"System Settings" = "Ajustes del Sistema";
+"Opens System Settings panes and pages: Bluetooth, Wi‑Fi, Displays, Full Disk Access…" = "Abre paneles y páginas de Ajustes del Sistema: Bluetooth, Wi‑Fi, Pantallas, Acceso total al disco…";
+"Shortcuts" = "Atajos";
+"Runs your shortcuts from the Shortcuts app, with what you type after the name as input." = "Ejecuta tus atajos de la app Atajos, con lo que escribas después del nombre como entrada.";
+"System" = "Sistema";
+"Lock Screen, Sleep, Toggle Dark Mode, Empty Trash, Restart, Shut Down and more. The disruptive ones ask first." = "Bloquear pantalla, Reposo, Activar o desactivar el modo oscuro, Vaciar papelera, Reiniciar, Apagar equipo y más. Las que interrumpen preguntan antes.";
+"Web" = "Web";
+"Opens web addresses you type, and searches the web with web <query>." = "Abre las direcciones web que escribas y busca en internet con web <búsqueda>.";

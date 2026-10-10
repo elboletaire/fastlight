@@ -20,36 +20,39 @@ let package = Package(
     targets: [
         // Search providers, the fsearch client and the extension host. No
         // AppKit, so it can be tested on its own.
-        .target(name: "FastlightCore"),
-        .executableTarget(name: "Fastlight", dependencies: ["FastlightCore"]),
+        // Strings in the user's language, for the app and the helpers.
+        .target(name: "FastlightL10n"),
+        .target(name: "FastlightCore", dependencies: ["FastlightL10n"]),
+        .executableTarget(name: "Fastlight", dependencies: ["FastlightCore", "FastlightL10n"]),
         // The emoji extension's logic, apart from its stdin loop for tests.
-        .target(name: "FastlightEmoji"),
+        .target(name: "FastlightEmoji", dependencies: ["FastlightL10n"]),
         .executableTarget(name: "fastlight-emoji", dependencies: ["FastlightEmoji"]),
         // The bundled calculator: the expression parser, and its stdin loop.
-        .target(name: "FastlightCalc"),
+        .target(name: "FastlightCalc", dependencies: ["FastlightL10n"]),
         .executableTarget(name: "fastlight-calc", dependencies: ["FastlightCalc"]),
         // Units, world clocks and date math; numbers formatted like the calculator's.
-        .target(name: "FastlightConvert", dependencies: ["FastlightCalc"]),
+        .target(name: "FastlightConvert", dependencies: ["FastlightCalc", "FastlightL10n"]),
         .executableTarget(name: "fastlight-convert", dependencies: ["FastlightConvert"]),
         // System Settings panes, Shortcuts and system actions: three bundled
         // extensions served by one executable.
-        .target(name: "FastlightSystem"),
+        .target(name: "FastlightSystem", dependencies: ["FastlightL10n"]),
         .executableTarget(name: "fastlight-system", dependencies: ["FastlightSystem"]),
         // Contacts, Calendar and Reminders: the logic in libraries behind a
         // store protocol (tested with fakes), the framework calls in the
         // executables. FastlightPIM is what they share: access states,
         // permission items, the background loader.
-        .target(name: "FastlightPIM"),
-        .target(name: "FastlightContacts", dependencies: ["FastlightPIM"]),
+        .target(name: "FastlightPIM", dependencies: ["FastlightL10n"]),
+        .target(name: "FastlightContacts", dependencies: ["FastlightPIM", "FastlightL10n"]),
         .executableTarget(name: "fastlight-contacts", dependencies: ["FastlightContacts", "FastlightPIM"]),
-        .target(name: "FastlightCalendar", dependencies: ["FastlightPIM"]),
+        .target(name: "FastlightCalendar", dependencies: ["FastlightPIM", "FastlightL10n"]),
         .executableTarget(name: "fastlight-calendar", dependencies: ["FastlightCalendar", "FastlightPIM"]),
         // The dictionary: DictionaryServices' text shaped into senses.
-        .target(name: "FastlightDictionary"),
+        .target(name: "FastlightDictionary", dependencies: ["FastlightL10n"]),
         .executableTarget(name: "fastlight-dict", dependencies: ["FastlightDictionary"]),
         // Web addresses and web search: URL detection, engines, settings.
-        .target(name: "FastlightWeb"),
+        .target(name: "FastlightWeb", dependencies: ["FastlightL10n"]),
         .executableTarget(name: "fastlight-web", dependencies: ["FastlightWeb"]),
+        .testTarget(name: "FastlightL10nTests", dependencies: ["FastlightL10n"]),
         .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
