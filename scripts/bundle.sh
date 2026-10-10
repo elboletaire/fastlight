@@ -40,6 +40,7 @@ fi
 swift build "${swift_flags[@]}" --product Fastlight
 # Built-in extensions' executables (Extensions/<name>/extension.json names them).
 helpers=(fastlight-emoji fastlight-calc)
+helpers+=(fastlight-dict fastlight-web)
 for h in "${helpers[@]}"; do swift build "${swift_flags[@]}" --product "$h"; done
 bindir="$(swift build "${swift_flags[@]}" --show-bin-path)"
 bin="$bindir/Fastlight"
