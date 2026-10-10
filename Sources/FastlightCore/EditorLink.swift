@@ -17,6 +17,8 @@ public enum EditorLink {
         "com.vscodium": .fileHost("vscodium"),
         "com.todesktop.230313mzl4w4u92": .fileHost("cursor"),
         "dev.zed.Zed": .fileHost("zed"),
+        "dev.zed.Zed-Preview": .fileHost("zed"),
+        "dev.zed.Zed-Dev": .fileHost("zed"),
         "com.barebones.bbedit": .openQuery("x-bbedit"),
         "com.macromates.TextMate": .openQuery("txmt"),
     ]

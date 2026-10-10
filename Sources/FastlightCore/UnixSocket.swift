@@ -8,7 +8,7 @@ final class UnixSocket {
     private var buffer = Data()
 
     /// `timeout` bounds each read and write, so a hung peer can't block
-    /// the caller forever; nil waits as long as it takes.
+    /// the caller forever; nil (or not positive) waits as long as it takes.
     init(path: String, timeout: TimeInterval? = nil) throws {
         fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw Self.posixError("socket") }
@@ -37,7 +37,7 @@ final class UnixSocket {
         // Don't let a dead daemon kill us with SIGPIPE.
         var on: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
-        if let timeout {
+        if let timeout, timeout > 0 {
             let secs = Int(timeout)
             var tv = timeval(tv_sec: secs, tv_usec: Int32((timeout - Double(secs)) * 1_000_000))
             let size = socklen_t(MemoryLayout<timeval>.size)

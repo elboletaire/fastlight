@@ -6,7 +6,9 @@ import Testing
 
     @Test func findsFilterKeys() {
         #expect(ResultFilter.filterKeys(in: "invoice ext:pdf mtime:<30d") == ["ext", "mtime"])
-        #expect(ResultFilter.filterKeys(in: "!in:~/Library foo") == ["in"])
+        // fsearch has no negated filters, and its keys are lowercase.
+        #expect(ResultFilter.filterKeys(in: "!in:~/Library foo") == [])
+        #expect(ResultFilter.filterKeys(in: "EXT:pdf") == [])
         #expect(ResultFilter.filterKeys(in: "http://example") == [])
         // Aliases count too.
         #expect(ResultFilter.filterKeys(in: "content:TODO symbol:main modified:<1d re:^a limit:5")

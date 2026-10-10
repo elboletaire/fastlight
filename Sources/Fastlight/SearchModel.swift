@@ -450,7 +450,9 @@ final class SearchModel: ObservableObject {
             if case .ready = fileState {} else { refreshStatus() }
         case .failed(let err as FSearchError) where err.isQueryError:
             // It answered, so it's up: the query is at fault (a bad filter).
+            // Drop a stale "down" state too, or its notice would win.
             fileError = err.localizedDescription
+            if case .ready = fileState {} else { refreshStatus() }
         case .failed(let err as FSearchError):
             fileState = Self.state(for: err)
             fileError = nil
@@ -490,9 +492,9 @@ final class SearchModel: ObservableObject {
 
     /// Top Hit is the best app when it matches well (an acronym or better),
     /// otherwise the best file. A loose app match never is: files arrive
-    /// after apps, and would push it out of the Top Hit a moment later. Extension
-    /// results get their own sections; only a built-in's answer marked
-    /// `topHit` (a calculation) goes first.
+    /// after apps, and would push it out of the Top Hit a moment later.
+    /// Extension results get their own sections; only a built-in's answer
+    /// marked `topHit` (a calculation) goes first.
     func publish(apps matches: [AppMatch], files: [FileItem], extensions found: [(LoadedExtension, [ExtensionResult])] = [],
                  keepSelection: Bool = false) {
         var apps = matches.map(\.entry)
