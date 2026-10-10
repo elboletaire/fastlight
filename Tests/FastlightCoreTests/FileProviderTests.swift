@@ -41,15 +41,14 @@ import Testing
     }
 
     @Test func asksTheDaemonAndSkipsStaleQueries() async throws {
-        let dir = try FakeDaemon.tempDir()
         let calls = Counter()
-        let daemon = try FakeDaemon(dir: dir) { req in
+        let daemon = try FakeDaemon { req in
             calls.bump()
             return hitReply(req)
         }
         defer { daemon.stop() }
 
-        let p = FileProvider(client: FSearchClient(dataDir: dir), queue: DispatchQueue(label: "test.files"), fetchLimit: 10, maxItems: 10)
+        let p = FileProvider(client: FSearchClient(dataDir: daemon.dir), queue: DispatchQueue(label: "test.files"), fetchLimit: 10, maxItems: 10)
         let fresh = try await p.results(for: ProviderQuery(text: "new", generation: 2))
         #expect(fresh == [.file(FileItem(path: "/tmp/new", isDirectory: false, size: 1))])
         // An older keystroke reaching the queue late isn't sent at all.
@@ -62,21 +61,19 @@ import Testing
 
 @Suite struct ClientStatusTests {
     @Test func readsTheDaemonsStatus() throws {
-        let dir = try FakeDaemon.tempDir()
-        let daemon = try FakeDaemon(dir: dir) { req in
+        let daemon = try FakeDaemon { req in
             req["op"] as? String == "status"
                 ? #"{"ok":true,"entries":1200,"dirs":30,"full_disk_access":false,"content_pending":4}"#
                 : nil
         }
         defer { daemon.stop() }
-        #expect(try FSearchClient(dataDir: dir).status() == DaemonStatus(entries: 1200, fullDiskAccess: false, contentPending: 4))
+        #expect(try FSearchClient(dataDir: daemon.dir).status() == DaemonStatus(entries: 1200, fullDiskAccess: false, contentPending: 4))
     }
 
     @Test func indexingIsADaemonErrorButNotAQueryError() throws {
-        let dir = try FakeDaemon.tempDir()
-        let daemon = try FakeDaemon(dir: dir) { _ in #"{"ok":false,"error":"indexing (first crawl), try again shortly"}"# }
+        let daemon = try FakeDaemon { _ in #"{"ok":false,"error":"indexing (first crawl), try again shortly"}"# }
         defer { daemon.stop() }
-        let error = #expect(throws: FSearchError.self) { try FSearchClient(dataDir: dir).status() }
+        let error = #expect(throws: FSearchError.self) { try FSearchClient(dataDir: daemon.dir).status() }
         #expect(error == .daemon("indexing (first crawl), try again shortly"))
         #expect(error?.isQueryError == false)
     }
