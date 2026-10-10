@@ -379,6 +379,11 @@ enum Snapshot {
             Scene(name: "calendar-agenda", query: "cal "),
             Scene(name: "reminders-keyword", query: "remind "),
             Scene(name: "reminders-denied", query: "remind ", access: "denied"),
+            Scene(name: "dictionary-keyword", query: "define serendipity"),
+            Scene(name: "web-keyword", query: "web swift concurrency"),
+            Scene(name: "web-global", query: "github.com/elboletaire/fastlight", files: [
+                f("src/fastlight", dir: true, ago: 3600),
+            ]),
         ]
     }
 }

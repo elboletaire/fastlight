@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.web",
+  "name": "Web",
+  "version": "1.0.0",
+  "description": "Opens web addresses you type, and searches the web with web <query>.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "globe",
+  "keywords": ["web"],
+  "command": ["fastlight-web"],
+  "global": { "maxResults": 1, "minQueryLength": 4 }
+}

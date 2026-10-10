@@ -35,6 +35,8 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 - **System actions.** Lock Screen, Sleep, Toggle Dark Mode, Eject All Disks, and Empty Trash, Log Out, Restart and Shut Down, which ask for a second ↵ first.
 - **Contacts.** Type a name, company, email or number and the person shows up; `contact ` lists them with their addresses and numbers, one ↵ away from an email, a call, a message or FaceTime.
 - **Calendar and Reminders.** `cal ` is today's agenda and the next two weeks, `remind ` what's due, overdue first; type a few letters of an event or reminder and it shows up in normal search too. Read-only, and only once you allow it.
+- **Dictionary.** Type `define serendipity` for definitions from the dictionaries built into macOS, offline. Only after `define `/`dict `, so normal search stays apps and files. ↵ opens it in Dictionary.app.
+- **Web.** Type `github.com` or `localhost:3000` and opening it is the Top Hit. Type `web ` and anything to search Google (or DuckDuckGo, Wikipedia…; the default is [configurable](docs/extensions/README.md)) in your browser.
 - **Extensions in any language.** A folder with a manifest and a script or binary that speaks JSON lines. See [Extensions](#extensions).
 - **Feels native.** A floating panel that looks and behaves like Spotlight, with Liquid Glass on macOS 26 and later, Quick Look, and Reveal in Finder.
 - **Private.** Everything runs locally. No network access, no accounts, no telemetry. Contacts, Calendar and Reminders are read from this Mac's own stores, only after you allow it, and never written to. (Extensions you install can do whatever their code does.)
@@ -139,7 +141,7 @@ cp -R examples/extensions/bc ~/Library/Application\ Support/Fastlight/Extensions
 
 Then type `bc 2*21`. Fastlight asks before running a new or changed extension for the first time, since it runs with Fastlight's permissions. The menu bar icon › Extensions turns them on and off and opens their folder and logs.
 
-The built-in extensions (emoji, calculator, conversions, System Settings, Shortcuts, System, Contacts, Calendar and Reminders) are bundled and built the same way. Write your own with [the extension guide](docs/extensions/README.md); the design is in [docs/extensions/design.md](docs/extensions/design.md).
+The built-in extensions (emoji, calculator, conversions, dictionary, web, System Settings, Shortcuts, System, Contacts, Calendar and Reminders) are bundled and built the same way. Write your own with [the extension guide](docs/extensions/README.md); the design is in [docs/extensions/design.md](docs/extensions/design.md).
 
 ## Build from source
 
@@ -184,6 +186,8 @@ Fastlight is a menu-bar app in Swift. It registers a global hotkey and shows a f
 | `Sources/FastlightSystem`, `Sources/fastlight-system` | The bundled System Settings, Shortcuts and System extensions: one helper, three manifests in `Extensions/settings`, `shortcuts` and `system`. |
 | `Sources/FastlightContacts`, `Sources/fastlight-contacts` | The bundled Contacts extension: search and actions, and the Contacts framework behind a protocol. |
 | `Sources/FastlightCalendar`, `Sources/fastlight-calendar` | The bundled Calendar and Reminders extensions, one EventKit helper for both. `Sources/FastlightPIM` is what they share with Contacts: access states, permission items, the background loader. |
+| `Sources/FastlightDictionary`, `Sources/fastlight-dict` | The bundled dictionary extension, on DictionaryServices. |
+| `Sources/FastlightWeb`, `Sources/fastlight-web` | The bundled web extension: address detection and web search. |
 | `examples/extensions` | Example extensions in sh and Python. |
 | `third_party/fsearch` | fsearch, as a git submodule pinned to a known commit, moved forward weekly by a PR. |
 | `scripts/` | Build, bundle, DMG, test and snapshot scripts, driven by the `Makefile`. |

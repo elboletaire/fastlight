@@ -101,6 +101,49 @@ Contacts…** (or Calendars…, Reminders…), which is what the keyword shows
 until then. Typing in normal search never asks; those sections just stay
 empty without access. If you said no, the keyword shows a shortcut to
 System Settings › Privacy & Security, where Fastlight's switch is.
+- **Dictionary.** Type `define ` or `dict ` and a word (`define serendipity`)
+  for its senses, from the dictionaries macOS ships, offline. ↵ opens the word
+  in Dictionary.app, ⌘↵ copies the definition. It uses the dictionaries
+  turned on in Dictionary › Settings, in their order, like Look Up: the first
+  one that has the word answers, so a bilingual dictionary gives
+  translations. Definitions only show after `define ` or `dict `, never in
+  normal search, which stays apps and files: most words have an entry, and
+  a definition under every query would push your files down.
+- **Web.** Type a web address in normal search (`github.com`,
+  `example.org/path`, `localhost:3000`, `https://…`) and opening it is the
+  Top Hit. Type `web ` and anything to search the web: ↵ searches with the
+  default engine, and the rows below it search with the others (DuckDuckGo,
+  Bing, Ecosia, Wikipedia in your language, YouTube). ⌘↵ copies the link.
+  There's no "search the web" row in normal search, where it would sit
+  above your files; `web ` is for that. Fastlight makes no requests: your
+  browser opens the page.
+
+Address detection is strict so file names stay file names: a domain needs a
+TLD from a short list of common ones (`.com`, `.org`, `.io`, `.dev`, country
+codes…). TLDs that are also file extensions (`.app`, `.sh`, `.zip`, `.ai`,
+`.so`, `.pl`, `.cc`, `.in`, `.mov`) also need `www.`, a port or a path
+(`brew.sh/`), and any other one needs the scheme (`https://my-nas.local`).
+So `notes.md`, `main.swift` and `Safari.app` are never addresses.
+
+The default engine is Google, as in Safari. To change it, or add engines,
+pick **Default Search Engine** after typing `web ` (it creates the file and
+opens it), or edit
+`~/Library/Application Support/Fastlight/ExtensionData/com.elboletaire.fastlight.web/settings.json`:
+
+```json
+{
+  "engine": "duckduckgo",
+  "engines": [
+    {"id": "kagi", "name": "Kagi", "url": "https://kagi.com/search?q=%s"}
+  ]
+}
+```
+
+`engine` is the id of the default: `google`, `duckduckgo`, `bing`, `ecosia`,
+`wikipedia`, `youtube`, or one of yours. `engines` adds engines (or replaces a
+built-in with the same id); `%s` is where the query goes, percent-encoded.
+Both keys are optional, changes apply on the next search, and problems show
+up as a row in `web ` results while the rest still works.
 
 <img src="images/emoji-keyword-light.jpg" width="640" alt="Keyword mode: the Emoji pill in the search bar, results for “joy”, and an action bar naming Paste Emoji and Copy Emoji">
 

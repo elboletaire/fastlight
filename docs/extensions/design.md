@@ -45,6 +45,9 @@ Status: implemented in protocol version **1**. Author-facing docs live in
    the bundled conversions (units, clocks, dates), likewise
  Sources/FastlightSystem + Sources/fastlight-system
    System Settings, Shortcuts and System: three built-ins, one helper
+ Sources/FastlightDictionary + Sources/fastlight-dict
+ Sources/FastlightWeb + Sources/fastlight-web
+   the bundled dictionary and web addresses/search, likewise
 ```
 
 Apps, files and extensions all implement `ResultProvider`:
@@ -557,6 +560,74 @@ calls lives in `FastlightContacts` and `FastlightCalendar` behind
   file. `scripts/snapshot.sh` runs the built-ins that way, so it never
   touches (or asks for) the real stores.
 
+## The dictionary
+
+`Sources/fastlight-dict` (`id com.elboletaire.fastlight.dictionary`,
+keywords `define` and `dict`, keyword mode only). The logic is the
+`FastlightDictionary` library.
+
+- Source: the public `DCSCopyTextDefinition` with no dictionary, which asks
+  the dictionaries turned on in Dictionary › Settings in their order, like
+  Look Up. Offline. The private DictionaryServices calls
+  (`DCSGetActiveDictionaries`, `DCSCopyRecordsForSearchString`,
+  `DCSRecordCopyData`) would give each dictionary's name, every dictionary's
+  entry and structured HTML instead of one flattened line, but they are
+  undocumented and could change with any macOS release, so they're not used.
+  The cost: one entry (the first dictionary's) and a text to shape.
+- Shaping (`DefinitionText`): the headword (the query when the entry starts
+  with it, else the entry's first word: `flies` finds `fly`), the
+  pronunciation between the first pipes, then senses split on sense numbers
+  (`1`, `2`…, `①`) and parts of speech in the languages macOS ships
+  dictionaries for most (`noun`, `transitive verb`, `nom masculí`,
+  `feminine noun`…). Each sense is cut at its examples (`:`), sub-senses
+  (`•`), phrases (`▸`) and second sentence; `ORIGIN`, `DERIVATIVES` and the
+  like are dropped. Every dictionary flattens entries differently, so this
+  is a heuristic tested against real entries from the Oxford, bilingual,
+  Larousse and Japanese dictionaries. The lookup sits behind a
+  `DefinitionSource` protocol, so tests don't depend on what's installed;
+  one test uses the real API and is skipped when nothing answers.
+- Rows: the sense is the title, since it's what you came for, and
+  `headword · part of speech · pronunciation` the subtitle. ↵ opens
+  `dict://word` in Dictionary.app, ⌘↵ copies the sense. Keyword mode shows
+  up to 8 senses, or says there's no entry.
+- Not in normal search: a definition matches most common words
+  (`invoice`, `party`), and its row would sit above Files on each of them.
+  Normal search stays apps and files; `define ` is one word away.
+- Timing: the first lookup in a process loads the dictionaries, 30–60 ms;
+  after that a lookup takes 1–3 ms. Keyword searches have 3 s, so there's
+  no warm-up: it would cost the same on the first request.
+
+## The web extension
+
+`Sources/fastlight-web` (`id com.elboletaire.fastlight.web`, keyword `web`,
+global with one result). The logic is the `FastlightWeb` library. It never
+makes a request: `open` actions hand the URL to the default browser, whose
+icon the address row shows.
+
+- Addresses (`WebAddress`): `http(s)://` and a host as typed; `localhost`
+  with a port or path, and IPv4 addresses, with `http://`; otherwise a
+  domain of valid labels whose TLD is in a short list of common ones, with
+  an optional port and path, with `https://`. TLDs that double as file
+  extensions (`app`, `sh`, `zip`, `mov`, `pl`, `cc`, `ai`, `so`, `in`) also
+  need `www.`, a port or a path; other TLDs need the scheme. No spaces, no
+  `@`, no other schemes. In global mode an address is the Top Hit (the web
+  extension is a built-in): typing one and pressing ↵ goes there.
+- Search: `web <query>` lists every engine, the default first, as
+  `Search Google for “query”`. The query is percent-encoded as one opaque
+  value (everything but `A–Z a–z 0–9 - . _ ~`, spaces as `%20`), so it is
+  safe in a query string or a path. If the query is also an address,
+  opening it comes first. Per-engine keywords (`g `, `ddg `) would need the
+  search request to say which keyword was typed; one engine list under one
+  keyword doesn't, and keeps one-letter keywords from shadowing searches.
+- Settings: `settings.json` in `FASTLIGHT_DATA_DIR`, read on every keyword
+  search so edits apply at once. `engine` picks the default, `engines` adds
+  or replaces engines (`id`, `name`, an `http(s)` `url` with `%s`). Problems
+  are listed as rows and the valid parts still apply. The **Default Search
+  Engine** row, shown for an empty query, is a `run` action that writes a
+  starting file if there's none and opens it with `open -t`.
+- Normal search never gets a "search the web" row: it would sit above
+  Files on every query.
+
 ## Testing
 
 All in `Tests/` with Swift Testing, deterministic and offline:
@@ -592,13 +663,18 @@ All in `Tests/` with Swift Testing, deterministic and offline:
   state and that nothing asks or reads without access, URL construction,
   date formatting and the 14-day window with a fixed clock, time zone and
   locale, the background loader's staleness and time bounds.
+- Dictionary: shaping real entries from several kinds of dictionary, the
+  `dict://` links, protocol replies, and one lookup
+  through the real DictionaryServices (skipped when no dictionary answers).
+- Web: addresses and many file names and filters that aren't, query
+  encoding, engines, settings parsing and its problems, protocol replies.
 - The shipped manifests and examples load together without problems.
 
 The UI is checked with `scripts/snapshot.sh`, which renders keyword mode,
-global sections and the consent notice with the real emoji, calculator and
-conversions extensions running through the real host. The System Settings,
-Shortcuts (with sample shortcuts) and System scenes include the Confirm
-Shut Down? step.
+global sections and the consent notice with the real built-in extensions
+running through the real host. The System Settings, Shortcuts (with sample
+shortcuts) and System scenes include the Confirm Shut Down? step, and
+Contacts, Calendar and Reminders answer from sample data.
 
 ## Not in this version
 

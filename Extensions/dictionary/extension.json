@@ -1,0 +1,12 @@
+{
+  "id": "com.elboletaire.fastlight.dictionary",
+  "name": "Dictionary",
+  "version": "1.0.0",
+  "description": "Definitions from the dictionaries built into macOS, offline: define serendipity.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": { "app": "com.apple.Dictionary" },
+  "keywords": ["define", "dict"],
+  "command": ["fastlight-dict"]
+}

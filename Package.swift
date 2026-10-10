@@ -14,6 +14,8 @@ let package = Package(
         // Contacts, and Calendar + Reminders (one helper, two extensions).
         .executable(name: "fastlight-contacts", targets: ["fastlight-contacts"]),
         .executable(name: "fastlight-calendar", targets: ["fastlight-calendar"]),
+        .executable(name: "fastlight-dict", targets: ["fastlight-dict"]),
+        .executable(name: "fastlight-web", targets: ["fastlight-web"]),
     ],
     targets: [
         // Search providers, the fsearch client and the extension host. No
@@ -42,6 +44,12 @@ let package = Package(
         .executableTarget(name: "fastlight-contacts", dependencies: ["FastlightContacts", "FastlightPIM"]),
         .target(name: "FastlightCalendar", dependencies: ["FastlightPIM"]),
         .executableTarget(name: "fastlight-calendar", dependencies: ["FastlightCalendar", "FastlightPIM"]),
+        // The dictionary: DictionaryServices' text shaped into senses.
+        .target(name: "FastlightDictionary"),
+        .executableTarget(name: "fastlight-dict", dependencies: ["FastlightDictionary"]),
+        // Web addresses and web search: URL detection, engines, settings.
+        .target(name: "FastlightWeb"),
+        .executableTarget(name: "fastlight-web", dependencies: ["FastlightWeb"]),
         .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
@@ -49,5 +57,7 @@ let package = Package(
         .testTarget(name: "FastlightSystemTests", dependencies: ["FastlightSystem"]),
         .testTarget(name: "FastlightContactsTests", dependencies: ["FastlightContacts", "FastlightPIM"]),
         .testTarget(name: "FastlightCalendarTests", dependencies: ["FastlightCalendar", "FastlightPIM"]),
+        .testTarget(name: "FastlightDictionaryTests", dependencies: ["FastlightDictionary"]),
+        .testTarget(name: "FastlightWebTests", dependencies: ["FastlightWeb"]),
     ]
 )
