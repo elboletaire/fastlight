@@ -68,7 +68,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         model.onReviewConsent = { [weak self] in self?.review($0) }
         refreshApps()
         // Connect once at launch (on the fsearch queue), so the bundled
-        // daemon starts and its first crawl runs before the first ⌥Space.
+        // daemon starts and its first crawl runs before the first hotkey press.
         model.refreshStatus()
     }
 
