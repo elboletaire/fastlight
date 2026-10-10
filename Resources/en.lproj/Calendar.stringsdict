@@ -18,5 +18,53 @@
 			<string>Nothing on your calendars in the next %d days</string>
 		</dict>
 	</dict>
+	<key>Now, until %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@hour@</string>
+		<key>hour</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Now, until %@</string>
+			<key>other</key>
+			<string>Now, until %@</string>
+		</dict>
+	</dict>
+	<key>Now, until Tomorrow, %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@hour@</string>
+		<key>hour</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Now, until Tomorrow, %@</string>
+			<key>other</key>
+			<string>Now, until Tomorrow, %@</string>
+		</dict>
+	</dict>
+	<key>Now, until %1$@, %2$@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@hour@</string>
+		<key>hour</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Now, until %1$@, %2$@</string>
+			<key>other</key>
+			<string>Now, until %1$@, %2$@</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

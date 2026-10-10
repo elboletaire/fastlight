@@ -12,10 +12,7 @@
 "Tomorrow" = "Tomorrow";
 "Yesterday" = "Yesterday";
 "%@, all day" = "%@, all day";
-"Now, until %@" = "Now, until %@";
 "Overdue · %@" = "Overdue · %@";
 "Until %@" = "Until %@";
-"Now, until %1$@, %2$@" = "Now, until %1$@, %2$@";
 "Until Today" = "Until Today";
 "Until Tomorrow" = "Until Tomorrow";
-"Now, until Tomorrow, %@" = "Now, until Tomorrow, %@";
