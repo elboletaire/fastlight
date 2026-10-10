@@ -53,8 +53,11 @@ final class FakeDaemon: @unchecked Sendable {
     }
 
     init(dir: URL, reply: @escaping @Sendable ([String: Any]) -> String) throws {
-        path = dir.appendingPathComponent("fsearch.sock").path
-        fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        // Locals, not self: the accept thread below needs fd before init ends.
+        let path = dir.appendingPathComponent("fsearch.sock").path
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        self.path = path
+        self.fd = fd
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
         withUnsafeMutableBytes(of: &addr.sun_path) { raw in
@@ -66,7 +69,6 @@ final class FakeDaemon: @unchecked Sendable {
         }
         guard bound == 0, listen(fd, 4) == 0 else { throw FSearchError.unreachable("bind") }
 
-        let fd = self.fd
         Thread.detachNewThread {
             while true {
                 let conn = accept(fd, nil, nil)
