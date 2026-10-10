@@ -10,6 +10,9 @@ public enum ExtensionError: Error, LocalizedError, Equatable, Sendable {
     case launch(String)
     case timeout
     case crashed(String)
+    /// Fastlight stopped it on purpose (Reload, its files changed, quit)
+    /// while a request waited.
+    case stopped
     /// A newer query took this one's place.
     case superseded
     /// A reply that breaks the protocol.
@@ -25,6 +28,7 @@ public enum ExtensionError: Error, LocalizedError, Equatable, Sendable {
         case .launch(let why): "couldn't start: \(why)"
         case .timeout: "didn't answer in time"
         case .crashed(let why): "stopped unexpectedly (\(why))"
+        case .stopped: "was stopped before it answered"
         case .superseded: "superseded by a newer query"
         case .badReply(let why): "sent an invalid reply: \(why)"
         case .reported(let msg): msg
@@ -41,6 +45,7 @@ public enum ExtensionError: Error, LocalizedError, Equatable, Sendable {
         case .launch(let why): L("%@ couldn’t start: %@", name, why)
         case .timeout: L("%@ didn’t answer in time.", name)
         case .crashed(let why): L("%@ stopped unexpectedly (%@).", name, why)
+        case .stopped: L("%@ was stopped before it answered.", name)
         case .superseded: L("%@ was superseded by a newer query.", name)
         case .badReply(let why): L("%@ sent an invalid reply: %@", name, why)
         case .reported(let msg): msg
@@ -309,7 +314,7 @@ public final class ExtensionProcess: @unchecked Sendable {
         idleTimer?.cancel()
         idleTimer = nil
         guard let p = process else {
-            failAll(.crashed(reason))
+            failAll(crash ? .crashed(reason) : .stopped)
             return
         }
         killReason = reason
@@ -327,7 +332,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             queue.asyncAfter(deadline: .now() + 1) { if p.isRunning { Darwin.kill(pid, SIGKILL) } }
         }
         // Waiters shouldn't sit through the grace period.
-        failAll(crash ? .crashed(reason) : .crashed(L("stopped")))
+        failAll(crash ? .crashed(reason) : .stopped)
         process = nil
         if case .failed = _state {} else { _state = .stopped }
         if crash { recordCrash() }

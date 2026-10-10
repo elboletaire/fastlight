@@ -56,7 +56,7 @@
 "%@ was superseded by a newer query." = "%@ was superseded by a newer query.";
 "%@ sent an invalid reply: %@" = "%@ sent an invalid reply: %@";
 "it didn’t say it was ready within %d s" = "it didn’t say it was ready within %d s";
-"stopped" = "stopped";
+"%@ was stopped before it answered." = "%@ was stopped before it answered.";
 "It crashed %d times in a row. Reload extensions to try again." = "It crashed %d times in a row. Reload extensions to try again.";
 "it wrote a line longer than %d KiB" = "it wrote a line longer than %d KiB";
 "It speaks protocol %d, but this Fastlight supports %@." = "It speaks protocol %d, but this Fastlight supports %@.";

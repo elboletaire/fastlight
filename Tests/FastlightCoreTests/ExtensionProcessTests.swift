@@ -177,9 +177,8 @@ import Testing
         async let slow = p.ask(.search(query: "slow", mode: .keyword, limit: 1))
         #expect(await eventually { p.state == .ready })
         p.stop(graceful: false)
-        guard case .failure(.crashed) = await slow else {
-            Issue.record("expected the pending request to fail")
-            return
-        }
+        // On purpose, so not "stopped unexpectedly".
+        #expect(await slow == .failure(.stopped))
+        #expect(ExtensionError.stopped.message(for: "Bc") == "Bc was stopped before it answered.")
     }
 }

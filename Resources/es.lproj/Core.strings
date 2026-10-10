@@ -56,7 +56,7 @@
 "%@ was superseded by a newer query." = "Una búsqueda más reciente ha sustituido a %@.";
 "%@ sent an invalid reply: %@" = "%@ ha enviado una respuesta no válida: %@";
 "it didn’t say it was ready within %d s" = "no ha avisado de que estaba lista en %d s";
-"stopped" = "se ha detenido";
+"%@ was stopped before it answered." = "%@ se ha detenido antes de responder.";
 "It crashed %d times in a row. Reload extensions to try again." = "Ha fallado %d veces seguidas. Vuelve a cargar las extensiones para intentarlo de nuevo.";
 "it wrote a line longer than %d KiB" = "ha escrito una línea de más de %d KiB";
 "It speaks protocol %d, but this Fastlight supports %@." = "Usa el protocolo %d, pero este Fastlight admite el %@.";
