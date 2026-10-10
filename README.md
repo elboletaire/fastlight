@@ -60,7 +60,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 > Releases are signed ad hoc until there is a Developer ID, so each update has a new signature and macOS drops the Full Disk Access grant. After updating, remove Fastlight from the Full Disk Access list and add it again.
 
 > [!TIP]
-> With Homebrew, `brew upgrade --cask fastlight` updates it (quitting and reopening it), and `brew uninstall --cask fastlight` removes it and stops its search daemon. `brew uninstall --zap --cask fastlight` also deletes its settings, extensions and logs, and fsearch's index unless a standalone fsearch is installed.
+> With Homebrew, `brew upgrade --cask fastlight` updates it (quitting and reopening it), and `brew uninstall --cask fastlight` removes it and stops its search daemon. `brew uninstall --zap --cask fastlight` also deletes its settings, logs and extension data (extensions you installed stay), and fsearch's index unless a standalone fsearch is installed.
 
 > [!TIP]
 > Want another shortcut? Pick one in **Settings…** from the menu bar icon. For **⌘Space**, see [Replace Spotlight](#replace-spotlight).

@@ -40,7 +40,9 @@ cask "fastlight" do
         must_succeed: false,
       },
       trash:  [
-        "~/Library/Application Support/Fastlight",
+        # Not ~/Library/Application Support/Fastlight/Extensions: those are
+        # extensions the user installed, which zap shouldn't delete.
+        "~/Library/Application Support/Fastlight/ExtensionData",
         "~/Library/Caches/com.elboletaire.fastlight",
         "~/Library/HTTPStorages/com.elboletaire.fastlight",
         "~/Library/Logs/Fastlight",
