@@ -21,29 +21,44 @@ import Testing
         var c = Confirmation()
         c.arm(.shutDown, now: t0)
         let ok1 = c.confirm(.shutDown, now: t0.addingTimeInterval(2))
-        #expect(ok1)
+        #expect(ok1 == .confirmed)
         let ok2 = c.confirm(.shutDown, now: t0.addingTimeInterval(2))
-        #expect(!ok2)
+        #expect(ok2 == .notArmed)
     }
 
     @Test func onlyTheArmedActionAndNotTooLate() {
         var c = Confirmation()
         c.arm(.logOut, now: t0)
         let ok3 = c.confirm(.restart, now: t0)
-        #expect(!ok3)
+        #expect(ok3 == .notArmed)
         // The wrong guess disarmed it too.
         let ok4 = c.confirm(.logOut, now: t0)
-        #expect(!ok4)
+        #expect(ok4 == .notArmed)
 
         c.arm(.logOut, now: t0)
         let ok5 = c.confirm(.logOut, now: t0.addingTimeInterval(6))
-        #expect(!ok5)
+        #expect(ok5 == .notArmed)
 
         c.arm(.logOut, now: t0)
         c.arm(.emptyTrash, now: t0) // arming another replaces it
         #expect(!c.isArmed(.logOut, now: t0))
         c.disarm()
         #expect(!c.isArmed(.emptyTrash, now: t0))
+    }
+
+    /// A held ↵ arms, then its auto-repeat lands on "Confirm Restart?".
+    @Test func tooQuickIsNotASecondPress() {
+        var c = Confirmation()
+        c.arm(.restart, now: t0)
+        let quick = c.confirm(.restart, now: t0.addingTimeInterval(Confirmation.minimum - 0.05))
+        #expect(quick == .tooSoon)
+        // Used up: a held key can't try again.
+        let again = c.confirm(.restart, now: t0.addingTimeInterval(Confirmation.minimum + 0.1))
+        #expect(again == .notArmed)
+
+        c.arm(.restart, now: t0)
+        let deliberate = c.confirm(.restart, now: t0.addingTimeInterval(Confirmation.minimum + 0.01))
+        #expect(deliberate == .confirmed)
     }
 }
 
@@ -148,6 +163,12 @@ import Testing
         try e.run("arm", item: "logOut")
         try e.run("disarm", item: "logOut")
         #expect(throws: RunError.self) { try e.run("confirm", item: "logOut") }
+
+        // Straight after arming: a held ↵, not a decision.
+        try e.run("arm", item: "restart")
+        clock.advance(0.1)
+        let q = try #require(e.handle(#"{"id":4,"type":"run","name":"confirm","item":"restart","data":"restart"}"#))
+        #expect(q.contains("Confirmed too quickly"))
         #expect(x.executed.isEmpty)
         // Arming is for disruptive actions only, confirming too.
         #expect(throws: RunError.self) { try e.run("arm", item: "sleep") }

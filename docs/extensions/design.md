@@ -503,7 +503,10 @@ menu. Nothing needs Accessibility.
   now reads "Confirm Restart?", comes first in keyword mode and is the
   Top Hit in normal search (a built-in may), so the next ↵ lands on it:
   `run "confirm"`, which runs the command only if that same action was
-  armed in the last 5 seconds, and uses the arming up either way. ⌘↵ is
+  armed in the last 5 seconds, but not in the first 0.4 (a held ↵
+  repeating, not a second press), and uses the arming up either way. The
+  panel never repeats ↵, ⌘↵ or the other action keys of a held key
+  either, only ↑↓ and Tab. ⌘↵ is
   `disarm`. `perform` (the one-step action) refuses disruptive actions,
   so no reply shape can skip the second step.
 
