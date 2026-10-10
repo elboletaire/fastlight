@@ -232,7 +232,7 @@ import Testing
         // ...unless a foreign daemon was just stopped: then ours starts now.
         let foreign = try LockHolder(dir: dir)
         defer { foreign.kill() }
-        #expect(try client.search("b").results.map(\.path) == ["/tmp/b"])
+        #expect(try client.search("b").hits?.map(\.path) == ["/tmp/b"])
         #expect(launches.value == 2)
         #expect(!DaemonLock.isHeld(in: dir))
     }
@@ -256,7 +256,7 @@ import Testing
         #expect(!DaemonLock.isHeld(in: dir))
         // Started again at once, despite the hour-long backoff.
         #expect(launches.value == 2)
-        #expect(try client.search("c").results.map(\.path) == ["/tmp/c"])
+        #expect(try client.search("c").hits?.map(\.path) == ["/tmp/c"])
         #expect(launches.value == 2)
     }
 

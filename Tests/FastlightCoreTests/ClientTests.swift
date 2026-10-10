@@ -14,9 +14,9 @@ import Testing
         defer { daemon.stop() }
 
         let client = FSearchClient(dataDir: dir)
-        #expect(try client.search("one").results.map(\.path) == ["/tmp/one"])
+        #expect(try client.search("one").hits?.map(\.path) == ["/tmp/one"])
         // Same connection, second request.
-        #expect(try client.search("two").results.map(\.path) == ["/tmp/two"])
+        #expect(try client.search("two").hits?.map(\.path) == ["/tmp/two"])
     }
 
     @Test func surfacesDaemonErrors() throws {
@@ -151,12 +151,12 @@ final class FakeDaemon: @unchecked Sendable {
         defer { daemon.stop() }
 
         let client = FSearchClient(dataDir: dir)
-        #expect(try client.search("one").results.map(\.path) == ["/tmp/one"])
-        #expect(try client.search("two").results.map(\.path) == ["/tmp/two"])
+        #expect(try client.search("one").hits?.map(\.path) == ["/tmp/one"])
+        #expect(try client.search("two").hits?.map(\.path) == ["/tmp/two"])
         #expect(calls.value == 3)
         #expect(daemon.connections.value == 2)
         // And it stays on the new connection.
-        #expect(try client.search("three").results.map(\.path) == ["/tmp/three"])
+        #expect(try client.search("three").hits?.map(\.path) == ["/tmp/three"])
         #expect(daemon.connections.value == 2)
     }
 
@@ -165,14 +165,14 @@ final class FakeDaemon: @unchecked Sendable {
         let calls = Counter()
         let old = try FakeDaemon(dir: dir) { calls.next() == 1 ? hitReply($0, tag: "old") : nil }
         let client = FSearchClient(dataDir: dir)
-        #expect(try client.search("a").results.map(\.path) == ["/tmp/old/a"])
+        #expect(try client.search("a").hits?.map(\.path) == ["/tmp/old/a"])
 
         // A new daemon takes over the socket path; the old one hangs up on
         // the connection the client still holds.
         old.stop()
         let new = try FakeDaemon(dir: dir) { hitReply($0, tag: "new") }
         defer { new.stop() }
-        #expect(try client.search("b").results.map(\.path) == ["/tmp/new/b"])
+        #expect(try client.search("b").hits?.map(\.path) == ["/tmp/new/b"])
         #expect(calls.value == 2)
     }
 
@@ -207,7 +207,7 @@ final class FakeDaemon: @unchecked Sendable {
         #expect(throws: FSearchError.timedOut) { try client.search("slow") }
         client.timeout = 5
         // A new connection: never the stale "/tmp/slow".
-        #expect(try client.search("fast").results.map(\.path) == ["/tmp/fast"])
+        #expect(try client.search("fast").hits?.map(\.path) == ["/tmp/fast"])
         #expect(daemon.connections.value == 2)
     }
 
