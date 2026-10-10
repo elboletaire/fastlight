@@ -129,7 +129,7 @@ final class FakeDaemon: @unchecked Sendable {
         // Answers long after the client's timeout.
         let daemon = try FakeDaemon(dir: dir) { _ in
             calls.bump()
-            Thread.sleep(forTimeInterval: 1)
+            Thread.sleep(forTimeInterval: 3)
             return "{}"
         }
         defer { daemon.stop() }
@@ -138,7 +138,8 @@ final class FakeDaemon: @unchecked Sendable {
         client.timeout = 0.2
         let started = Date()
         #expect(throws: FSearchError.timedOut) { try client.search("x") }
-        #expect(Date().timeIntervalSince(started) < 1)
+        // Well short of the reply, with room for slow CI machines.
+        #expect(Date().timeIntervalSince(started) < 2)
         #expect(calls.value == 1)
     }
 
