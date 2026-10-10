@@ -190,6 +190,92 @@ import Testing
         #expect(supervisor.currentDecision() == .start)
     }
 
+    /// A bundle whose helper is `target`, or an empty executable.
+    func bundle(in dir: URL, helperLinkingTo target: String? = nil) throws -> URL {
+        let bundle = dir.appendingPathComponent("Fastlight.app")
+        let helper = DaemonLauncher.bundledBinary(in: bundle)
+        try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let target {
+            try FileManager.default.createSymbolicLink(atPath: helper.path, withDestinationPath: target)
+        } else {
+            FileManager.default.createFile(atPath: helper.path, contents: Data(), attributes: [.posixPermissions: 0o755])
+        }
+        return bundle
+    }
+
+    /// A client whose first launch never binds (arming the relaunch backoff)
+    /// and whose later ones start a fake daemon.
+    func client(_ dir: URL, bundle: URL, launches: Counter, daemons: FakeDaemons) -> FSearchClient {
+        let supervisor = DaemonSupervisor(dataDir: dir, bundle: bundle, home: dir.path)
+        supervisor.log = { _ in }
+        let client = FSearchClient(dataDir: dir, supervisor: supervisor)
+        client.bindWait = 0.05
+        client.relaunchDelay = 3600
+        client.launch = { dir in
+            if launches.next() > 1 { try daemons.start(in: dir) }
+        }
+        return client
+    }
+
+    @Test func startsItsOwnAtOnceAfterStoppingAForeignDaemon() throws {
+        let dir = try FakeDaemon.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let launches = Counter(), daemons = FakeDaemons()
+        defer { daemons.stop() }
+        let client = client(dir, bundle: try bundle(in: dir), launches: launches, daemons: daemons)
+
+        #expect(throws: FSearchError.self) { try client.search("a") }
+        // The backoff holds the next launch back...
+        #expect(throws: FSearchError.unreachable("the daemon isn't listening yet")) { try client.search("a") }
+        #expect(launches.value == 1)
+
+        // ...unless a foreign daemon was just stopped: then ours starts now.
+        let foreign = try LockHolder(dir: dir)
+        defer { foreign.kill() }
+        #expect(try client.search("b").results.map(\.path) == ["/tmp/b"])
+        #expect(launches.value == 2)
+        #expect(!DaemonLock.isHeld(in: dir))
+    }
+
+    @Test func restartingItsOwnDaemonSkipsTheBackoff() throws {
+        let dir = try FakeDaemon.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let launches = Counter(), daemons = FakeDaemons()
+        defer { daemons.stop() }
+        // The helper resolves to /bin/sleep, which is what LockHolder runs:
+        // the lock holder is "our" daemon.
+        let client = client(dir, bundle: try bundle(in: dir, helperLinkingTo: "/bin/sleep"), launches: launches, daemons: daemons)
+        let own = try LockHolder(dir: dir)
+        defer { own.kill() }
+        #expect(client.daemonIsOwn)
+
+        #expect(throws: FSearchError.self) { try client.status() }
+        #expect(launches.value == 1)
+
+        #expect(client.restartOwnDaemon())
+        #expect(!DaemonLock.isHeld(in: dir))
+        // Started again at once, despite the hour-long backoff.
+        #expect(launches.value == 2)
+        #expect(try client.search("c").results.map(\.path) == ["/tmp/c"])
+        #expect(launches.value == 2)
+    }
+
+    @Test func restartLeavesOtherDaemonsAlone() throws {
+        let dir = try FakeDaemon.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let launches = Counter(), daemons = FakeDaemons()
+        defer { daemons.stop() }
+        let client = client(dir, bundle: try bundle(in: dir), launches: launches, daemons: daemons)
+        let foreign = try LockHolder(dir: dir)
+        defer { foreign.kill() }
+
+        #expect(!client.restartOwnDaemon())
+        #expect(DaemonLock.isHeld(in: dir))
+        #expect(launches.value == 0)
+        // Nor without a supervisor at all.
+        #expect(!FSearchClient(dataDir: dir).restartOwnDaemon())
+    }
+
     @Test func leavesTheLoginAgentsDaemonAlone() throws {
         let dir = try FakeDaemon.tempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -255,5 +341,20 @@ final class LockHolder {
         Darwin.kill(pid, SIGKILL)
         var status: Int32 = 0
         waitpid(pid, &status, 0)
+    }
+}
+
+/// Fake daemons started by a test's `launch`, stopped together.
+final class FakeDaemons: @unchecked Sendable {
+    private let lock = NSLock()
+    private var all: [FakeDaemon] = []
+
+    func start(in dir: URL) throws {
+        let d = try FakeDaemon(dir: dir) { hitReply($0) }
+        lock.withLock { all.append(d) }
+    }
+
+    func stop() {
+        lock.withLock { all.forEach { $0.stop() } }
     }
 }
