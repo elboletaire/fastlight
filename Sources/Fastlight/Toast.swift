@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import FastlightCore
 import SwiftUI
 
 /// A short confirmation at the bottom of the screen ("Copied"), like the
@@ -101,7 +102,8 @@ enum Paster {
         // Give the app a moment to take focus back before the keystroke.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             let source = CGEventSource(stateID: .combinedSessionState)
-            let v: CGKeyCode = 9 // kVK_ANSI_V
+            // ⌘ plus whatever key types V here, not the ANSI V position.
+            let v = CGKeyCode(KeyboardLayout.pasteKeyCode())
             let down = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: true)
             let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false)
             down?.flags = .maskCommand
