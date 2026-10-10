@@ -11,6 +11,9 @@ public enum DateQuery: Sendable, Equatable {
     case week(Int, of: Date)
     /// "dec 25", "next friday": keyword mode only.
     case day(Date)
+    /// "days between jan 1 and dec 31": counted from the first day, not
+    /// from today. `days` is negative when the second comes first.
+    case between(days: Int, unit: CountUnit, from: Date, to: Date)
 
     public enum CountUnit: Sendable, Equatable {
         case days, weeks
@@ -54,10 +57,12 @@ public struct DateParser {
             if m[1].isEmpty { return .week(isoWeek(today), of: today) }
             return day(m[1], .nearest).map { .week(isoWeek($0), of: $0) }
         }
-        // Days between two days, counted from the first, not from today.
+        // Days between two days, counted from the first, not from today. A
+        // second day with no year is the first one on or after the first
+        // day: "between jan 1 and dec 31" is 364 days, whatever today is.
         if let m = Regex.match(#"^(?:how many\s+)?(days|weeks)\s+(?:between|from)\s+(.+?)\s+(?:and|to|until)\s+(.+)$"#, q),
-           let a = day(m[2], .nearest), let b = day(m[3], .nearest) {
-            return .count(days: days(from: a, to: b), unit: m[1] == "weeks" ? .weeks : .days, to: b)
+           let a = day(m[2], .nearest), let b = day(m[3], .onOrAfter(a)) {
+            return .between(days: days(from: a, to: b), unit: m[1] == "weeks" ? .weeks : .days, from: a, to: b)
         }
         // Days until or since.
         if let m = Regex.match(#"^(?:how many\s+)?(days|weeks)\s+(until|till|til|to|before|since|from|after)\s+(.+)$"#, q)
@@ -88,8 +93,10 @@ public struct DateParser {
 
     // MARK: Days
 
-    enum Direction {
+    enum Direction: Equatable {
         case future, past, nearest
+        /// The first one on or after this day.
+        case onOrAfter(Date)
     }
 
     /// A day: "today", "2026-12-25", "dec 25", "25 december 2026", "friday",
@@ -108,6 +115,10 @@ public struct DateParser {
         }
         if let (month, d) = Self.holidays[s] { return recurring(month, d, dir) }
         if let wd = weekday(s) {
+            if case .onOrAfter(let start) = dir {
+                let delta = (wd - calendar.component(.weekday, from: start) + 7) % 7
+                return calendar.date(byAdding: .day, value: delta, to: calendar.startOfDay(for: start))
+            }
             // "friday" on a Friday is a week away, looking forward or back.
             let today = calendar.component(.weekday, from: self.today)
             var delta = (wd - today + 7) % 7
@@ -143,13 +154,15 @@ public struct DateParser {
     /// Month and day with no year: this year's, or the next (or previous)
     /// one that exists, so Feb 29 waits for a leap year.
     func recurring(_ month: Int, _ d: Int, _ dir: Direction) -> Date? {
-        let y = calendar.component(.year, from: today)
+        var from = today
+        if case .onOrAfter(let start) = dir { from = calendar.startOfDay(for: start) }
+        let y = calendar.component(.year, from: from)
         let years = dir == .past ? Array((y - 8...y).reversed()) : Array(y...y + 8)
         return years.lazy.compactMap { self.date($0, month, d) }.first { day in
             switch dir {
-            case .future: day > today
-            case .nearest: day >= today
-            case .past: day < today
+            case .future: day > from
+            case .nearest, .onOrAfter: day >= from
+            case .past: day < from
             }
         }
     }

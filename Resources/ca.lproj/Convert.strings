@@ -21,6 +21,7 @@
 "Today, %@" = "Avui, %@";
 "until %@" = "fins al %@";
 "since %@" = "des del %@";
+"from %@ to %@" = "del %@ al %@";
 "in %@" = "d’aquí a %@";
 "%@ ago" = "fa %@";
 "Week %d" = "Setmana %d";

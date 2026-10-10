@@ -21,6 +21,7 @@
 "Today, %@" = "Today, %@";
 "until %@" = "until %@";
 "since %@" = "since %@";
+"from %@ to %@" = "from %@ to %@";
 "in %@" = "in %@";
 "%@ ago" = "%@ ago";
 "Week %d" = "Week %d";
