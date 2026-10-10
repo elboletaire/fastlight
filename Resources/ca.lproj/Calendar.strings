@@ -12,7 +12,10 @@
 "Tomorrow" = "Demà";
 "Yesterday" = "Ahir";
 "%@, all day" = "%@, tot el dia";
-"Until %@" = "Fins a %@";
 "Now, until %@" = "Ara, fins a les %@";
-"Now, until %1$@, %2$@" = "Ara, fins a %1$@, a les %2$@";
 "Overdue · %@" = "Vençut · %@";
+"Until %@" = "Fins al %@";
+"Now, until %1$@, %2$@" = "Ara, fins al %1$@, a les %2$@";
+"Until Today" = "Fins avui";
+"Until Tomorrow" = "Fins a demà";
+"Now, until Tomorrow, %@" = "Ara, fins a demà, a les %@";

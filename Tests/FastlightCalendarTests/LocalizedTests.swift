@@ -24,6 +24,10 @@ import Testing
             #expect(t.when(e(at(9, 8, 30), at(9, 9, 15))) == "Ara, fins a les 9:15")
             #expect(t.when(e(at(8, 20), at(10, 8))) == "Ara, fins a demà, a les 8:00")
             #expect(t.when(e(at(7, 0), at(11, 0), allDay: true)) == "Fins a demà")
+            // A named day takes the article; today and tomorrow don't.
+            #expect(t.when(e(at(7, 0), at(13, 0), allDay: true)) == "Fins al dilluns")
+            #expect(t.when(e(at(7, 0), at(10, 0), allDay: true)) == "Fins avui")
+            #expect(t.when(e(at(8, 20), at(12, 10))) == "Ara, fins al dilluns, a les 10:00")
             #expect(t.when(e(at(12, 0), at(15, 0), allDay: true)) == "Dilluns – dimecres")
             #expect(t.due(Reminder(id: "a", title: "A", due: at(8, 0))) == "Vençut · Ahir")
             let none = RemindersExtension(source: FakeCalendar(), clock: fixedClock).items(for: "", global: false, limit: 5)
@@ -39,6 +43,10 @@ import Testing
             let t = DateText(calendar: cal("es_ES"), now: nine)
             #expect(t.when(e(at(10, 0), at(11, 0), allDay: true)) == "Mañana, todo el día")
             #expect(t.when(e(at(7, 0), at(11, 0), allDay: true)) == "Hasta mañana")
+            #expect(t.when(e(at(7, 0), at(13, 0), allDay: true)) == "Hasta el lunes")
+            #expect(t.when(e(at(7, 0), at(10, 0), allDay: true)) == "Hasta hoy")
+            #expect(t.when(e(at(8, 20), at(10, 8))) == "Ahora, hasta mañana, a las 8:00")
+            #expect(t.when(e(at(8, 20), at(12, 10))) == "Ahora, hasta el lunes, a las 10:00")
             #expect(t.due(Reminder(id: "a", title: "A", due: at(9, 8), dueHasTime: true)) == "Atrasado · Hoy, 8:00")
             #expect(PIMDomain.calendars.accessItem(for: .denied)?["subtitle"] as? String
                 == "Activa Fastlight en Ajustes del Sistema › Privacidad y seguridad › Calendarios")
