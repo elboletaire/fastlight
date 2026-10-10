@@ -16,14 +16,14 @@ struct FakeProvider: ResultProvider {
     }
 }
 
-/// Sleeps a second without ever checking for cancellation.
+/// Sleeps five seconds without ever checking for cancellation.
 struct Stubborn: ResultProvider {
     var id: String
     var budget: Duration?
 
     func results(for query: ProviderQuery) async throws -> [ResultEntry] {
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-            DispatchQueue.global().asyncAfter(deadline: .now() + 1) { c.resume() }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 5) { c.resume() }
         }
         return []
     }
@@ -50,7 +50,9 @@ struct Stubborn: ResultProvider {
     }
 
     @Test func paintsOnceWhenEveryoneIsFast() async {
-        let r = await run(SearchFanout(), "q", [FakeProvider(id: "a"), FakeProvider(id: "b")]) { !$0.updates.isEmpty }
+        // A first paint far away, so a slow machine can't hit it first.
+        let r = await run(SearchFanout(), "q", [FakeProvider(id: "a"), FakeProvider(id: "b")],
+                          firstPaint: .seconds(2)) { !$0.updates.isEmpty }
         try? await Task.sleep(for: .milliseconds(100))
         #expect(r.updates.count == 1)
         #expect(r.updates[0].isFinal)
@@ -96,7 +98,7 @@ struct Stubborn: ResultProvider {
         fanout.search(ProviderQuery(text: "old"), providers: [slow], firstPaint: nil)
         try? await Task.sleep(for: .milliseconds(50))
         fanout.search(ProviderQuery(text: "new"), providers: [slow], firstPaint: nil)
-        try? await Task.sleep(for: .milliseconds(600))
+        try? await Task.sleep(for: .milliseconds(1000))
         #expect(r.updates.map(\.query.text) == ["new"])
         #expect(paths(r.updates.first?.outcomes["p"]) == ["/p/new"])
     }
@@ -116,7 +118,8 @@ struct Stubborn: ResultProvider {
         let stubborn = Stubborn(id: "ext", budget: .milliseconds(80))
         let started = Date()
         let r = await run(SearchFanout(), "q", [stubborn]) { $0.updates.last?.isFinal == true }
-        #expect(Date().timeIntervalSince(started) < 0.6)
+        // Generous for slow CI machines; without the race it takes 5 s.
+        #expect(Date().timeIntervalSince(started) < 2.5)
         guard case .timedOut = r.updates.last?.outcomes["ext"] else {
             Issue.record("expected a timeout")
             return

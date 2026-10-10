@@ -197,12 +197,13 @@ import Testing
         let (host, ext, _) = try setup()
         host.consent.approve(ext)
         defer { host.stopAll(graceful: false) }
-        let t = Task { try await host.search(ext, query: "slow", mode: .keyword, limit: 5) }
+        let t = Task { try await host.search(ext, query: "slower", mode: .keyword, limit: 5) }
         try await Task.sleep(for: .milliseconds(200))
         t.cancel()
         let started = Date()
         await #expect(throws: CancellationError.self) { try await t.value }
-        #expect(Date().timeIntervalSince(started) < 0.5)
+        // Not waiting for the 3 s reply (generous for slow CI machines).
+        #expect(Date().timeIntervalSince(started) < 1.5)
         // The extension is free again once it answered the dropped query.
         #expect(try await host.search(ext, query: "next", mode: .keyword, limit: 5).map(\.title) == ["next"])
     }
@@ -250,16 +251,16 @@ import Testing
         let (host, ext, _) = try setup()
         host.consent.approve(ext)
         defer { host.stopAll(graceful: false) }
-        let busy = Task { try await host.search(ext, query: "slow", mode: .keyword, limit: 5) }
+        let busy = Task { try await host.search(ext, query: "slower", mode: .keyword, limit: 5) }
         try await Task.sleep(for: .milliseconds(200))
         let waiting = Task { try await host.search(ext, query: "w", mode: .keyword, limit: 5) }
         try await Task.sleep(for: .milliseconds(50))
         let started = Date()
         waiting.cancel()
         await #expect(throws: CancellationError.self) { try await waiting.value }
-        // Without waiting for "slow" to finish.
-        #expect(Date().timeIntervalSince(started) < 0.5)
-        #expect(try await busy.value.map(\.title) == ["slow"])
+        // Without waiting for "slower" to finish.
+        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(try await busy.value.map(\.title) == ["slower"])
     }
 
     @Test func stopsChangedExtensions() async throws {
