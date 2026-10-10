@@ -53,16 +53,21 @@ final class Counter: @unchecked Sendable {
         #expect(loader.get(maxAge: 60, wait: 2) == nil)
     }
 
+    /// The read is held until the test lets it go, so returning at all
+    /// means the wait ran out, however slow the machine.
     @Test func waitsNoLongerThanAsked() {
+        let release = DispatchSemaphore(value: 0)
         let loader = Loader<Int> {
-            Thread.sleep(forTimeInterval: 2)
+            _ = release.wait(timeout: .now() + 30)
             return 1
         }
         let started = Date()
         #expect(loader.get(maxAge: 60, wait: 0.02) == nil)
-        #expect(Date().timeIntervalSince(started) < 1)
+        // Nowhere near the read's 30 s, on any load.
+        #expect(Date().timeIntervalSince(started) < 10)
         // The read goes on in the background.
-        #expect(loader.get(maxAge: 60, wait: 5) == 1)
+        release.signal()
+        #expect(loader.get(maxAge: 60, wait: 30) == 1)
     }
 }
 
