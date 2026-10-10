@@ -16,6 +16,19 @@ enum Snapshot {
         var files: [FileItem] = []
         var state: FileSearchState = .ready(fullDiskAccess: true)
         var selection = 0
+        /// Leave the example extensions unapproved, to show the notice.
+        var pending = false
+    }
+
+    /// Sample files, in place of fsearch.
+    struct SampleFiles: ResultProvider {
+        var files: [FileItem]
+        var id: String { "files" }
+        var budget: Duration? { nil }
+
+        func results(for query: ProviderQuery) async throws -> [ResultEntry] {
+            files.map(ResultEntry.file)
+        }
     }
 
     /// `live` adds scenes for real queries against the running daemon.
@@ -32,32 +45,74 @@ enum Snapshot {
         defaults.removePersistentDomain(forName: suite)
         let apps = AppIndex(entries: found, usage: AppUsage(defaults: defaults))
 
+        // Real extensions through the real host, but with throwaway consent,
+        // data and logs: the built-ins, plus the examples as user extensions.
+        let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("fastlight-snapshot-\(getpid())")
+        let userRoot = scratch.appendingPathComponent("Extensions")
+        try? FileManager.default.createDirectory(at: userRoot, withIntermediateDirectories: true)
+        if let examples = ExtensionCenter.builtInRoot()?.deletingLastPathComponent().appendingPathComponent("examples/extensions"),
+           let names = try? FileManager.default.contentsOfDirectory(atPath: examples.path) {
+            for n in names where !n.hasPrefix(".") {
+                try? FileManager.default.copyItem(at: examples.appendingPathComponent(n), to: userRoot.appendingPathComponent(n))
+            }
+        }
+        let exe = Bundle.main.executableURL?.deletingLastPathComponent()
+        let library = ExtensionLibrary(builtInRoot: ExtensionCenter.builtInRoot(), userRoot: userRoot,
+                                       helperDirs: [exe].compactMap { $0 }, appVersion: AppInfo.version)
+        defaults.removePersistentDomain(forName: suite + ".consent")
+        let consent = ConsentStore(defaults: UserDefaults(suiteName: suite + ".consent")!)
+        let host = ExtensionHost(appVersion: AppInfo.version, consent: consent,
+                                 dataRoot: scratch.appendingPathComponent("Data"), logRoot: scratch.appendingPathComponent("Logs"))
+        let extensions = ExtensionCenter(library: library, consent: consent, host: host)
+        for issue in library.issues { print("extension problem: \(issue.description)") }
+        defer {
+            host.stopAll(graceful: false)
+            try? FileManager.default.removeItem(at: scratch)
+        }
+        // Global search gives extensions 80 ms; don't spend it on a cold start.
+        extensions.prewarm()
+        spin(until: { library.extensions.filter { $0.manifest.global != nil && consent.mayRun($0) }
+            .allSatisfy { host.state(of: $0.id) == .ready } }, timeout: 3)
+
         var all = scenes
         let client = FSearchClient.forApp()
         for q in live {
             let filter = ResultFilter(query: q)
-            let files = (try? client.search(q, limit: SearchModel.fetchLimit)).map { FileProvider.items(from: $0, filter: filter, limit: SearchModel.maxFiles) } ?? []
+            let files = (try? client.search(q, limit: SearchModel.fetchLimit)).map {
+                FileProvider.items(from: $0, filter: filter, limit: SearchModel.maxFiles)
+            } ?? []
             let slug = q.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }
             all.append(Scene(name: "live-\(String(slug))", query: q, files: files))
         }
         for scene in all {
+            for ext in library.extensions where !ext.builtIn {
+                if scene.pending { consent.revoke(ext.id) } else { consent.approve(ext) }
+            }
+            extensions.refresh()
             for scheme in [ColorScheme.light, .dark] {
-                let model = SearchModel(apps: apps)
+                let model = SearchModel(apps: apps, extensions: extensions)
                 model.offline = true
+                model.filesOverride = SampleFiles(files: scene.files)
                 model.fileState = scene.state
                 model.query = scene.query
-                let q = scene.query.trimmingCharacters(in: .whitespaces)
-                if !q.isEmpty {
-                    let filter = ResultFilter(query: q)
-                    model.publish(apps: filter.explicit ? [] : apps.search(q, limit: SearchModel.maxApps + 1),
-                                  files: scene.files)
-                }
+                // Let the providers (and extension processes) answer.
+                spin(until: { !model.isSearching }, timeout: 3)
                 model.selection = scene.selection
                 let file = dir.appendingPathComponent("\(scene.name)-\(scheme == .dark ? "dark" : "light").png")
                 render(model: model, scheme: scheme, to: file)
                 print(file.path)
             }
         }
+    }
+
+    /// Runs the main loop (where providers report back) until `done`.
+    private static func spin(until done: () -> Bool, timeout: TimeInterval) {
+        let end = Date().addingTimeInterval(timeout)
+        while !done(), Date() < end {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
+        // One more turn so a final update lands before rendering.
+        RunLoop.main.run(until: Date().addingTimeInterval(0.02))
     }
 
     private static func render(model: SearchModel, scheme: ColorScheme, to url: URL) {
@@ -142,6 +197,15 @@ enum Snapshot {
                 g("src/notes/Sources/Notes/Sync.swift", 17, "let retries = 3 // TODO: back off exponentially"),
             ]),
             Scene(name: "full-disk-access", query: "", state: .ready(fullDiskAccess: false)),
+            Scene(name: "emoji-keyword", query: ":joy"),
+            Scene(name: "emoji-browse", query: ":", selection: 3),
+            Scene(name: "emoji-global", query: "party", files: [
+                f("Pictures/Party 2025", dir: true, ago: 200 * day),
+                f("Documents/party-invite.pages", size: 1_204_224, ago: 20 * day),
+            ]),
+            Scene(name: "extension-consent", query: "", pending: true),
+            Scene(name: "extension-calculator", query: "=21*2+0.5"),
+            Scene(name: "calculator-global", query: "1920*1080"),
             Scene(name: "indexing", query: "", state: .indexing),
         ]
     }
