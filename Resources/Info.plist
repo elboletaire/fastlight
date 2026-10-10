@@ -15,22 +15,22 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.3.0</string>
+	<string>0.4.0</string>
 	<key>CFBundleVersion</key>
-	<string>5</string>
+	<string>6</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
-	<true/>
-	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Fastlight shows your upcoming events when you type “cal” or search for one. They are read on this Mac and never leave it.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Fastlight finds people in your contacts when you type “contact” or search for a name. Your contacts are read on this Mac and never leave it.</string>
-	<key>NSRemindersFullAccessUsageDescription</key>
-	<string>Fastlight shows your reminders when you type “remind” or search for one. They are read on this Mac and never leave it.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Òscar Casajuana. MIT License.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Fastlight shows your reminders when you type “remind” or search for one. They are read on this Mac and never leave it.</string>
 </dict>
 </plist>
