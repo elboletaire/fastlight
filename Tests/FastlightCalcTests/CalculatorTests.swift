@@ -126,6 +126,27 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(failure(String(repeating: "(", count: 50) + "1" + String(repeating: ")", count: 50)) == nil)
     }
 
+    /// 100,000 nested parentheses or minus signs overflowed the stack; so
+    /// could evaluating or printing a long chain ("1+1+…").
+    @Test func deepOrLongInputIsRefused() throws {
+        let n = 100_000
+        #expect(failure(String(repeating: "(", count: n) + "1" + String(repeating: ")", count: n)) == .tooLong)
+        #expect(failure(String(repeating: "-", count: n) + "1") == .tooLong)
+        #expect(failure(String(repeating: "1+", count: n) + "1") == .tooLong)
+        #expect(failure(String(repeating: "(", count: 300) + "1" + String(repeating: ")", count: 300)) == .tooDeep)
+        #expect(failure(String(repeating: "-", count: 300) + "1") == .tooDeep)
+        #expect(failure(String(repeating: "2^", count: 300) + "1") == .tooDeep)
+        #expect(failure(String(repeating: "1+", count: 300) + "1") == .tooLong)
+        #expect(failure("3" + String(repeating: "%", count: 300)) == .tooLong)
+        #expect(!Calculator.looksLikeMath(String(repeating: "-", count: n) + "1"))
+        // Up to the limits, it works, printing included.
+        let nested = try Calculator.calculate(String(repeating: "(", count: 90) + "1" + String(repeating: ")", count: 90))
+        #expect(nested.value == 1 && nested.expression.description() == "1")
+        let sum = try Calculator.calculate(String(repeating: "1+", count: 98) + "1")
+        #expect(sum.value == 99 && sum.expression.description().count == 99 * 4 - 3)
+        #expect(try value(String(repeating: "-", count: 98) + "1") == 1)
+    }
+
     @Test func printsTheNormalizedExpression() throws {
         func show(_ s: String) throws -> String { try Parser.parse(s).description() }
         #expect(try show("1920*1080") == "1920 × 1080")

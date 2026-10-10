@@ -16,3 +16,5 @@
 "Division by zero" = "Divisió per zero";
 "%@ isn't defined there" = "%@ no està definit per a aquest valor";
 "The result is too large" = "El resultat és massa gran";
+"The expression is too long" = "L’expressió és massa llarga";
+"The expression is nested too deeply" = "L’expressió té massa nivells d’imbricació";

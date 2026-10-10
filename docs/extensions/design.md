@@ -375,7 +375,9 @@ parser and an evaluator, so answers take microseconds.
   `x` multiplies only between numbers (`3x4`).
 - No result, never a crash, for syntax errors, unknown names, division by
   zero (no "∞": it is almost always a typo), out-of-domain input
-  (`sqrt(-1)`), and anything that overflows.
+  (`sqrt(-1)`), anything that overflows, and input over 1,000 bytes or
+  nested (parentheses, unary minus, `^`) or chained (`1+1+…`) more than
+  100 deep, which would otherwise overflow the stack.
 - Normal search only shows an answer when the query computes something: a
   bare number (`2026`), a constant alone (`pi`), dates (`2026-10-10`,
   `10/10/2026`, `2024-05`, `12-2025`, and `2024-0` while typing one), two

@@ -16,3 +16,5 @@
 "Division by zero" = "División por cero";
 "%@ isn't defined there" = "%@ no está definido para ese valor";
 "The result is too large" = "El resultado es demasiado grande";
+"The expression is too long" = "La expresión es demasiado larga";
+"The expression is nested too deeply" = "La expresión tiene demasiados niveles de anidamiento";
