@@ -92,6 +92,24 @@ import Testing
         #expect(ymd(from) == "2027-01-01" && ymd(to) == "2027-12-31")
     }
 
+    /// Other scripts' digits matched the date patterns' \d and crashed the
+    /// helper on a force unwrap; now they're just not dates.
+    @Test func otherDigitsAreNotDates() {
+        for q in ["days until ٢٠٢٦-01-01", "days until 2026-٠١-01", "days until dec ٢٥", "days until ٢٥ dec",
+                  "days until dec 25 ٢٠٢٦", "today + ٥ days", "٣ days ago"] {
+            #expect(p.parse(q, global: true) == nil, "\(q)")
+            #expect(p.parse(q, global: false) == nil, "\(q)")
+        }
+    }
+
+    /// Dates before year 1 showed as a bare year with no era.
+    @Test func noYearsBeforeOne() {
+        #expect(shifted("today - 99999 years") == nil)
+        #expect(shifted("today - 2026 years") == nil)
+        #expect(shifted("today - 2025 years") == "0001-10-10")
+        #expect(shifted("today + 99999 years") == "102025-10-10")
+    }
+
     @Test func shifts() {
         #expect(shifted("today + 90 days") == "2027-01-08")
         #expect(shifted("today+90d") == "2027-01-08")
