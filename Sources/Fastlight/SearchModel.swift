@@ -57,6 +57,9 @@ enum FileSearchState: Equatable {
     case unknown
     case ready(fullDiskAccess: Bool)
     case indexing
+    /// Our daemon started before Fastlight had Full Disk Access; it's being
+    /// restarted so it sees the protected folders.
+    case restarting
     case unavailable(String)
 }
 
@@ -79,7 +82,8 @@ final class SearchModel: ObservableObject {
     nonisolated static let fetchLimit = 200
 
     let apps: AppIndex
-    private let client = FSearchClient()
+    private let client = FSearchClient.forApp()
+    private var fdaRestarts = FDARestartPolicy()
     // Every request goes through this queue, so the client sees one caller.
     private let queue = DispatchQueue(label: "fastlight.fsearch", qos: .userInteractive)
     private let latest = Latest()
@@ -145,23 +149,35 @@ final class SearchModel: ObservableObject {
         polling = true
         queue.async { [client] in
             let state: FileSearchState
+            // Only looked up when the daemon lacks access; both are cheap.
+            var mismatch: (appHasAccess: Bool, daemonIsOwn: Bool)?
             do {
                 let s = try client.status()
                 state = .ready(fullDiskAccess: s.fullDiskAccess)
+                if !s.fullDiskAccess { mismatch = (FullDiskAccess.granted(), client.daemonIsOwn) }
             } catch let e as FSearchError {
                 state = Self.state(for: e)
             } catch {
                 state = .unavailable(error.localizedDescription)
             }
             DispatchQueue.main.async {
-                MainActor.assumeIsolated { self.applyStatus(state) }
+                MainActor.assumeIsolated { self.applyStatus(state, mismatch: mismatch) }
             }
         }
     }
 
-    private func applyStatus(_ state: FileSearchState) {
+    private func applyStatus(_ state: FileSearchState, mismatch: (appHasAccess: Bool, daemonIsOwn: Bool)? = nil) {
         polling = false
-        let wasIndexing = fileState == .indexing
+        // Fastlight was granted Full Disk Access after its daemon started:
+        // restart the daemon so it rescans with access (with backoff, in
+        // case the restart doesn't help).
+        if case .ready(let daemonHasAccess) = state,
+           fdaRestarts.shouldRestart(appHasAccess: mismatch?.appHasAccess ?? false, daemonHasAccess: daemonHasAccess,
+                                     daemonIsOwn: mismatch?.daemonIsOwn ?? false) {
+            restartDaemon()
+            return
+        }
+        let wasIndexing = fileState == .indexing || fileState == .restarting
         if state != fileState {
             fileState = state
             onLayoutChange?()
@@ -170,12 +186,27 @@ final class SearchModel: ObservableObject {
         if wasIndexing, case .ready = state, !query.isEmpty { search() }
         guard isVisible else { return }
         switch state {
-        case .indexing, .unavailable, .unknown:
+        case .indexing, .restarting, .unavailable, .unknown:
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 guard let self, self.isVisible else { return }
                 self.refreshStatus()
             }
         case .ready: break
+        }
+    }
+
+    private func restartDaemon() {
+        fileState = .restarting
+        onLayoutChange?()
+        polling = true
+        queue.async { [client] in
+            if !client.restartOwnDaemon() { NSLog("Fastlight: could not restart the fsearch daemon") }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self.polling = false
+                    self.refreshStatus()
+                }
+            }
         }
     }
 

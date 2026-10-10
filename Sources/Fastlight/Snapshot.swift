@@ -33,7 +33,7 @@ enum Snapshot {
         let apps = AppIndex(entries: found, usage: AppUsage(defaults: defaults))
 
         var all = scenes
-        let client = FSearchClient()
+        let client = FSearchClient.forApp()
         for q in live {
             let filter = ResultFilter(query: q)
             let files = (try? client.search(q, limit: SearchModel.fetchLimit)).map { SearchModel.files(from: $0, filter: filter) } ?? []

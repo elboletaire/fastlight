@@ -56,6 +56,8 @@ extension SearchModel {
         let fileNotice: Notice? = switch fileState {
         case .indexing:
             Notice(symbol: "internaldrive", text: "Indexing your disk… Files will show up here when it's done.", busy: true)
+        case .restarting:
+            Notice(symbol: "lock.open", text: "Restarting search with Full Disk Access…", busy: true)
         case .unavailable(let why):
             Notice(symbol: "exclamationmark.triangle", text: why)
         case .ready(fullDiskAccess: false) where !typed:
