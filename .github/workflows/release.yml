@@ -1,0 +1,106 @@
+# Builds a universal Fastlight.app, packs it into a DMG and attaches it to the
+# GitHub Release for the pushed tag.
+#
+# Ad-hoc signed by default. To ship a Developer ID signed and notarized DMG,
+# add these repository secrets (signing and notarization are each skipped
+# unless all of their secrets are set):
+#
+#   MACOS_CERTIFICATE           base64 of the "Developer ID Application" .p12
+#   MACOS_CERTIFICATE_PASSWORD  password of that .p12
+#   CODESIGN_IDENTITY           e.g. "Developer ID Application: Name (TEAMID)"
+#   APPLE_ID                    Apple ID email used for notarization
+#   APPLE_TEAM_ID               10-character team ID
+#   APPLE_APP_PASSWORD          app-specific password for that Apple ID
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    env:
+      UNIVERSAL: '1'
+      HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.CODESIGN_IDENTITY != '' }}
+      HAS_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_APP_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Test
+        run: make test
+
+      - name: Import signing certificate
+        if: env.HAS_SIGNING == 'true'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          kc_pass="$(uuidgen)"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kc_pass" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$kc_pass" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kc_pass" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Build app and DMG
+        env:
+          CODESIGN_IDENTITY: ${{ env.HAS_SIGNING == 'true' && secrets.CODESIGN_IDENTITY || '-' }}
+        run: |
+          make dmg
+          lipo -info build/Fastlight.app/Contents/MacOS/Fastlight build/Fastlight.app/Contents/Helpers/fsearch
+          codesign --verify --deep --strict build/Fastlight.app
+
+      - name: Notarize
+        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          dmg="$(ls build/Fastlight-*.dmg)"
+          xcrun notarytool submit "$dmg" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple "$dmg"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dmg="$(ls build/Fastlight-*.dmg)"
+          # A manual run isn't tied to a tag: publish it as a draft release
+          # named after the bundle version, to be reviewed by hand.
+          flags=()
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="v$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
+            flags+=(--draft --target "${GITHUB_SHA}")
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$dmg" --clobber
+          else
+            gh release create "$tag" "$dmg" --title "Fastlight ${tag#v}" --generate-notes "${flags[@]}"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fastlight-dmg
+          path: build/Fastlight-*.dmg

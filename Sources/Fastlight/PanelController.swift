@@ -1,0 +1,226 @@
+import AppKit
+import FastlightCore
+import Quartz
+import SwiftUI
+
+/// A borderless floating panel that takes keyboard focus without activating
+/// a Dock app, like Spotlight's. It's transparent: the bar and the results
+/// card draw their own (glass) backgrounds, with a gap between them.
+final class SearchPanel: NSPanel {
+    weak var controller: PanelController?
+
+    init() {
+        super.init(contentRect: NSRect(x: 0, y: 0, width: Metrics.width, height: Metrics.barHeight),
+                   styleMask: [.borderless, .nonactivatingPanel],
+                   backing: .buffered, defer: true)
+        isMovableByWindowBackground = true
+        isFloatingPanel = true
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        hidesOnDeactivate = false
+        isReleasedWhenClosed = false
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        // The system's zoom-in is slow for something summoned per keystroke;
+        // show() fades in instead.
+        animationBehavior = .none
+    }
+
+    override var canBecomeKey: Bool { true }
+
+    // Quick Look asks the responder chain who supplies its items.
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { true }
+
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        MainActor.assumeIsolated {
+            panel.dataSource = controller
+            panel.delegate = controller
+        }
+    }
+
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        MainActor.assumeIsolated {
+            panel.dataSource = nil
+            panel.delegate = nil
+        }
+    }
+}
+
+@MainActor
+final class PanelController: NSObject, NSWindowDelegate {
+    private let panel = SearchPanel()
+    let model: SearchModel
+    private var keyMonitor: Any?
+
+    init(model: SearchModel = SearchModel()) {
+        self.model = model
+        super.init()
+        panel.controller = self
+        panel.delegate = self
+        panel.contentView = NSHostingView(rootView: SearchView(model: model))
+        model.onLayoutChange = { [weak self] in self?.resize() }
+        model.onOpen = { [weak self] in self?.open() }
+        refreshApps()
+        // Connect once at launch (on the fsearch queue), so the bundled
+        // daemon starts and its first crawl runs before the first ⌥Space.
+        model.refreshStatus()
+    }
+
+    /// Cheap enough to call on every show: it only rescans when stale, and
+    /// reruns the query when an app was (un)installed.
+    private func refreshApps() {
+        model.apps.refreshIfStale { [weak self] in
+            MainActor.assumeIsolated { self?.model.rerun() }
+        }
+    }
+
+    func toggle() {
+        panel.isVisible ? hide() : show()
+    }
+
+    func show() {
+        model.reset()
+        model.isVisible = true
+        model.refreshStatus()
+        refreshApps()
+        resize()
+        position()
+        panel.alphaValue = 0
+        panel.makeKeyAndOrderFront(nil)
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.1
+            panel.animator().alphaValue = 1
+        }
+        NSApp.activate()
+        installKeyMonitor()
+    }
+
+    func hide() {
+        if QLPreviewPanel.sharedPreviewPanelExists(), QLPreviewPanel.shared().isVisible {
+            QLPreviewPanel.shared().orderOut(nil)
+        }
+        model.isVisible = false
+        panel.orderOut(nil)
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+    }
+
+    // Clicking anywhere else dismisses it, like Spotlight.
+    func windowDidResignKey(_ notification: Notification) {
+        if QLPreviewPanel.sharedPreviewPanelExists(), QLPreviewPanel.shared().isVisible { return }
+        hide()
+    }
+
+    /// Centered horizontally, a fifth of the way down the screen with the mouse.
+    private func position() {
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
+        guard let area = screen?.visibleFrame else { return }
+        let top = area.maxY - area.height * 0.2
+        panel.setFrameTopLeftPoint(NSPoint(x: (area.midX - Metrics.width / 2).rounded(), y: top.rounded()))
+    }
+
+    /// Grows downward from a fixed top edge. Instant, like Spotlight: an
+    /// animated window resize would lag behind typing.
+    private func resize() {
+        let card = model.card.height
+        let height = Metrics.barHeight + (card > 0 ? Metrics.gap + card : 0)
+        var frame = panel.frame
+        guard frame.height != height else { return }
+        let top = frame.maxY
+        frame.size.height = height
+        frame.origin.y = top - height
+        panel.setFrame(frame, display: true)
+        // The shadow follows the drawn shapes; recompute it once they're drawn.
+        DispatchQueue.main.async { [panel] in panel.invalidateShadow() }
+    }
+
+    // MARK: Keys
+
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.window === self.panel else { return event }
+            return self.handle(event) ? nil : event
+        }
+    }
+
+    /// ↑↓ move, Tab/⇧Tab or ⌘↓/⌘↑ jump between sections, ↵ open, ⌘↵ reveal
+    /// in Finder, ⌘Y Quick Look, ⌥⌘C copy path, ⎋ clears, then closes.
+    private func handle(_ e: NSEvent) -> Bool {
+        let mods = e.modifierFlags.intersection([.command, .option, .shift, .control])
+        switch (Int(e.keyCode), mods) {
+        case (125, .command): model.jumpSection(1)
+        case (126, .command): model.jumpSection(-1)
+        case (125, _): model.move(1)
+        case (126, _): model.move(-1)
+        case (48, []): model.jumpSection(1)
+        case (48, .shift): model.jumpSection(-1)
+        case (36, .command), (76, .command): reveal()
+        case (36, []), (76, []): open()
+        case (53, _):
+            if model.query.isEmpty { hide() } else { model.query = "" }
+        default:
+            switch (e.charactersIgnoringModifiers?.lowercased(), mods) {
+            case ("y", .command): quickLook()
+            case ("c", [.command, .option]): copyPath()
+            default: return false
+            }
+        }
+        return true
+    }
+
+    private func open() {
+        guard let item = model.selected else { return }
+        hide()
+        switch item {
+        case .app(let app):
+            model.apps.recordLaunch(app)
+            NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: app.path),
+                                               configuration: NSWorkspace.OpenConfiguration())
+        case .file(let f):
+            NSWorkspace.shared.open(URL(fileURLWithPath: f.path))
+        }
+    }
+
+    private func reveal() {
+        guard let item = model.selected else { return }
+        hide()
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: item.path)])
+    }
+
+    private func copyPath() {
+        guard let item = model.selected else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(item.path, forType: .string)
+    }
+
+    private func quickLook() {
+        guard model.selected != nil else { return }
+        let ql = QLPreviewPanel.shared()!
+        if ql.isVisible {
+            ql.orderOut(nil)
+        } else {
+            ql.makeKeyAndOrderFront(nil)
+            ql.reloadData()
+        }
+    }
+}
+
+extension PanelController: @preconcurrency QLPreviewPanelDataSource, @preconcurrency QLPreviewPanelDelegate {
+    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
+        model.selected == nil ? 0 : 1
+    }
+
+    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
+        model.selected.map { URL(fileURLWithPath: $0.path) as NSURL }
+    }
+
+    // Keys typed into Quick Look still drive the list, so ↑↓ browse previews.
+    func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
+        guard event.type == .keyDown, handle(event) else { return false }
+        panel.reloadData()
+        return true
+    }
+}
