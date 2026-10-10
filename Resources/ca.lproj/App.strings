@@ -69,6 +69,7 @@
 "Couldn’t change Spotlight’s shortcut: %@" = "No s’ha pogut canviar la drecera de l’Spotlight: %@";
 "Restored. Spotlight gets ⌘Space back after you log out and back in." = "Restaurat. L’Spotlight recuperarà ⌘Espai quan tanquis la sessió i la tornis a iniciar.";
 "Spotlight has ⌘Space again; Fastlight is back on %@." = "L’Spotlight torna a tenir ⌘Espai; Fastlight torna a fer servir %@.";
+"Spotlight’s shortcut is restored, but Fastlight couldn’t switch to %@: another app has it. Pick another shortcut above." = "S’ha restaurat la drecera de l’Spotlight, però Fastlight no ha pogut passar a %@: la fa servir una altra app. Tria una altra drecera a dalt.";
 "Couldn’t restore Spotlight’s shortcut: %@" = "No s’ha pogut restaurar la drecera de l’Spotlight: %@";
 "macOS uses %@ for “%@”. Turn it off in Keyboard Shortcuts, or Fastlight won’t get it." = "El macOS fa servir %1$@ per a “%2$@”. Desactiva-la a Dreceres de teclat o Fastlight no la rebrà.";
 "%@ is taken by another app. Kept %@." = "Una altra app ja fa servir %1$@. Es manté %2$@.";

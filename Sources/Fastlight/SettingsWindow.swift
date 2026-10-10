@@ -138,12 +138,22 @@ final class SettingsModel: ObservableObject {
     /// Puts Spotlight's shortcut back as it was, and Fastlight back on its
     /// default so the two don't fight.
     func restoreSpotlight() {
+        // Another app may have taken the default meanwhile: Spotlight still
+        // gets its shortcut back, but the note mustn't claim Fastlight moved.
+        var moved = true
+        if hotKey.shortcut == .commandSpace {
+            do { try hotKey.set(.default) } catch { moved = false }
+        }
         do {
-            if hotKey.shortcut == .commandSpace { try? hotKey.set(.default) }
             let outcome = try spotlight.restore(reload: reload)
-            spotlightNote = outcome == .needsLogout
-                ? Message(text: L("Restored. Spotlight gets ⌘Space back after you log out and back in."), tone: .warning)
-                : Message(text: L("Spotlight has ⌘Space again; Fastlight is back on %@.", shortcutText), tone: .info)
+            if !moved {
+                spotlightNote = Message(text: L("Spotlight’s shortcut is restored, but Fastlight couldn’t switch to %@: another app has it. Pick another shortcut above.",
+                                                KeyboardLayout.display(.default)), tone: .warning)
+            } else if outcome == .needsLogout {
+                spotlightNote = Message(text: L("Restored. Spotlight gets ⌘Space back after you log out and back in."), tone: .warning)
+            } else {
+                spotlightNote = Message(text: L("Spotlight has ⌘Space again; Fastlight is back on %@.", shortcutText), tone: .info)
+            }
         } catch {
             spotlightNote = Message(text: L("Couldn’t restore Spotlight’s shortcut: %@", error.localizedDescription), tone: .error)
         }

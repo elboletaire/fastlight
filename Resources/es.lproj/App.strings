@@ -69,6 +69,7 @@
 "Couldn’t change Spotlight’s shortcut: %@" = "No se ha podido cambiar el atajo de Spotlight: %@";
 "Restored. Spotlight gets ⌘Space back after you log out and back in." = "Restaurado. Spotlight recuperará ⌘Espacio cuando cierres sesión y vuelvas a iniciarla.";
 "Spotlight has ⌘Space again; Fastlight is back on %@." = "Spotlight vuelve a tener ⌘Espacio; Fastlight vuelve a usar %@.";
+"Spotlight’s shortcut is restored, but Fastlight couldn’t switch to %@: another app has it. Pick another shortcut above." = "Se ha restaurado el atajo de Spotlight, pero Fastlight no ha podido pasar a %@: lo usa otra app. Elige otro atajo arriba.";
 "Couldn’t restore Spotlight’s shortcut: %@" = "No se ha podido restaurar el atajo de Spotlight: %@";
 "macOS uses %@ for “%@”. Turn it off in Keyboard Shortcuts, or Fastlight won’t get it." = "macOS usa %1$@ para “%2$@”. Desactívalo en Atajos de teclado o Fastlight no lo recibirá.";
 "%@ is taken by another app. Kept %@." = "Otra app ya usa %1$@. Se mantiene %2$@.";
