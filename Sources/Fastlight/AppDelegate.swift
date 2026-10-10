@@ -32,7 +32,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // ⌥Space unless changed in Settings: ⌘Space is Spotlight's on a stock Mac.
         hotKey = GlobalShortcut { [weak self] in self?.toggle() }
-        hintIfSpotlightWins()
+        if hotKey.isRegistered {
+            hintIfSpotlightWins()
+        } else {
+            // Otherwise the only sign would be a shortcut that does nothing.
+            Toast.shared.show("\(KeyboardLayout.display(hotKey.shortcut)) is taken by another app. Choose a shortcut in Fastlight Settings.",
+                              symbol: "exclamationmark.triangle.fill", duration: 6)
+        }
         _ = panel // Starts the daemon and the first app scan now rather than on first show.
 
         // `--show [query]` opens the panel at launch, for trying changes out.
@@ -55,8 +61,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        // Shows the current shortcut, which Settings may have changed.
-        showItem.keyEquivalent = KeyboardLayout.keyEquivalent(for: hotKey.shortcut)
+        // Shows the current shortcut, which Settings may have changed; none
+        // when it couldn't be registered, as it wouldn't work.
+        showItem.keyEquivalent = hotKey.isRegistered ? KeyboardLayout.keyEquivalent(for: hotKey.shortcut) : ""
         showItem.keyEquivalentModifierMask = NSEvent.ModifierFlags(rawValue: hotKey.shortcut.modifiers.rawValue)
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         extensions.refresh()

@@ -206,10 +206,24 @@ final class PanelController: NSObject, NSWindowDelegate {
                                                configuration: NSWorkspace.OpenConfiguration())
         case .file(let f):
             hide()
-            NSWorkspace.shared.open(URL(fileURLWithPath: f.path))
+            Self.open(f)
         case .ext(let r):
             if let a = r.item.actions.first { perform(a, of: r) }
         }
+    }
+
+    /// A content hit opens at its line when the file's editor takes a link
+    /// for that; anything else opens the file as Finder would.
+    private static func open(_ f: FileItem) {
+        let url = URL(fileURLWithPath: f.path)
+        if let line = f.line,
+           let app = NSWorkspace.shared.urlForApplication(toOpen: url),
+           let id = Bundle(url: app)?.bundleIdentifier,
+           let link = EditorLink.url(bundleID: id, path: f.path, line: line),
+           NSWorkspace.shared.open(link) {
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     private func reveal() {
