@@ -63,11 +63,15 @@ import FastlightL10n
             // The syntax itself stays as typed.
             #expect(QuerySyntax.listedFilters.map(\.key).contains("ext"))
             #expect(FileSearchState(.timedOut) == .unavailable("fsearch no responde; solo se buscan aplicaciones."))
+            // fsearch's own message stays as it wrote it, inside a translated frame.
+            #expect(FileSearchState.effect(of: .failed(FSearchError.daemon("bad range >5zb")))
+                == .answered(error: "fsearch no ha entendido la búsqueda: bad range >5zb"))
         }
         inLanguage("ca") {
             let mtime = QuerySyntax.filters.first { $0.key == "mtime" }
             #expect(mtime?.entry.meaning == "Modificat fa menys de (<) o fa més de (>). També modified:")
             #expect(ItemAction(.reveal(path: "/tmp")).displayTitle == "Mostra al Finder")
+            #expect(FSearchError.daemon("bad range >5zb").localizedDescription == "fsearch no ha entès la cerca: bad range >5zb")
         }
     }
 }

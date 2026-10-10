@@ -168,7 +168,7 @@ import Testing
     @Test func aQueryErrorIsShownAsAFileError() {
         // The daemon is up; the filter is at fault.
         let e = FSearchError.daemon("unknown filter: foo:")
-        #expect(FileSearchState.effect(of: .failed(e)) == .answered(error: "unknown filter: foo:"))
+        #expect(FileSearchState.effect(of: .failed(e)) == .answered(error: "fsearch didn't understand the query: unknown filter: foo:"))
     }
 
     @Test func aDownOrCrawlingDaemonChangesTheState() {
