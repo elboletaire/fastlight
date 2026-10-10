@@ -320,7 +320,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
         <details>
           <summary>Why does it need Full Disk Access?</summary>
           <p>macOS protects folders like Desktop, Documents, Downloads and Mail. Without the grant, fsearch quietly skips them instead of popping a prompt for each one, so those files never show up. The grant only lets Fastlight read file names and text on your own disk.</p>
-          <p>If the bundled search daemon was already running before you granted access, quit Fastlight, run <code>pkill -f 'fsearch serve'</code> and open it again so it rescans.</p>
+          <p>You can grant it before or after the first launch: if the search daemon started without access, Fastlight restarts it as soon as it has the grant, and it rescans. If files still don't show up, run <code>tccutil reset SystemPolicyAllFiles com.elboletaire.fastlight</code> and <code>pkill -f 'fsearch serve'</code>, add Fastlight to Full Disk Access again and reopen it.</p>
         </details>
         <details>
           <summary>How is it different from Spotlight?</summary>
