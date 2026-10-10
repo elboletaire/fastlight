@@ -28,11 +28,44 @@ import Testing
         """#
         let (p, _) = try FakeExtension.process(script)
         defer { p.stop(graceful: false) }
-        async let a = p.search("a")
-        try await Task.sleep(for: .milliseconds(50))
-        async let b = p.search("b")
-        #expect(try await a == ["first"])
-        #expect(try await b == ["second"])
+        // Sent one after the other from here, so a gets the lower id and
+        // goes first: no timing involved.
+        let (a, ra) = AsyncStream.makeStream(of: Result<Data, ExtensionError>.self)
+        let (b, rb) = AsyncStream.makeStream(of: Result<Data, ExtensionError>.self)
+        p.request(.search(query: "a", mode: .keyword, limit: 10), timeout: 5) { ra.yield($0) }
+        p.request(.search(query: "b", mode: .keyword, limit: 10), timeout: 5) { rb.yield($0) }
+        func titles(_ s: AsyncStream<Result<Data, ExtensionError>>) async throws -> [String] {
+            var it = s.makeAsyncIterator()
+            let line = try #require(await it.next()).get()
+            return try ExtensionReply.items(from: line).map(\.title)
+        }
+        #expect(try await titles(a) == ["first"])
+        #expect(try await titles(b) == ["second"])
+    }
+
+    /// Three timeouts in a row kill it, and that counts as a crash: three
+    /// such kills within the crash window turn it off.
+    @Test func killsAfterThreeTimeoutsAndGivesUpAfterThreeKills() async throws {
+        let (p, _) = try FakeExtension.process(#"echo '{"type":"ready","protocol":1}'; cat > /dev/null"#) {
+            $0.maxTimeoutsInARow = 3
+            $0.crashLimit = 3
+        }
+        defer { p.stop(graceful: false) }
+        for kill in 1...3 {
+            for n in 1...3 {
+                #expect(await p.ask(.search(query: "x", mode: .keyword, limit: 1), timeout: 0.1) == .failure(.timeout))
+                if n < 3 { #expect(p.pid != nil, "still running after \(n) timeouts") }
+            }
+            if kill < 3 {
+                #expect(p.pid == nil && p.state == .stopped, "killed after the third timeout")
+            }
+        }
+        guard case .failed = p.state else {
+            Issue.record("expected failed after three kills, got \(p.state)")
+            return
+        }
+        p.reset()
+        #expect(p.state == .stopped)
     }
 
     @Test func timesOutAndDropsTheLateReply() async throws {
