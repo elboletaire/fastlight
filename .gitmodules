@@ -1,0 +1,3 @@
+[submodule "third_party/fsearch"]
+	path = third_party/fsearch
+	url = https://github.com/noahdunnagan/fsearch
