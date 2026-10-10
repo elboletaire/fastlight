@@ -189,9 +189,41 @@ import Testing
             .process(["/usr/bin/open", "-b", "com.apple.ScreenSaver.Engine"]),
             .process(["/usr/bin/osascript", "-e",
                       "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode"]),
-            .process(["/usr/sbin/diskutil", "eject", "/Volumes/Backup"]),
-            .process(["/usr/sbin/diskutil", "eject", "/Volumes/Stick"]),
+            .eject(Self.disk),
+            .eject(Volume(name: "Stick", path: "/Volumes/Stick")),
         ])
+    }
+
+    /// `diskutil eject` takes every volume of the disk: the second volume
+    /// of one already ejected is done, not "Couldn't eject".
+    @Test func ejectingADiskTakesItsOtherVolumes() throws {
+        final class Mounts: @unchecked Sendable {
+            let runner: FakeRunner
+            init(_ runner: FakeRunner) { self.runner = runner }
+            var now: Set<String> {
+                var m: Set<String> = ["/", "/Volumes/Data", "/Volumes/Photos", "/Volumes/Stick", "/Volumes/Share"]
+                if runner.outputs.contains(["/usr/sbin/diskutil", "eject", "/Volumes/Data"]) { m.subtract(["/Volumes/Data", "/Volumes/Photos"]) }
+                return m
+            }
+        }
+        let runner = FakeRunner()
+        for argv in [["eject", "/Volumes/Data"], ["eject", "/Volumes/Stick"], ["unmount", "/Volumes/Share"]] {
+            runner.replies[(["/usr/sbin/diskutil"] + argv).joined(separator: " ")] = ""
+        }
+        let mounts = Mounts(runner)
+        let volumes = [Volume(name: "Data", path: "/Volumes/Data"), Volume(name: "Photos", path: "/Volumes/Photos"),
+                       Volume(name: "Stick", path: "/Volumes/Stick"), Volume(name: "Share", path: "/Volumes/Share", network: true)]
+        let e = SystemActionsExtension(executor: LiveExecutor(runner: runner, mounted: { mounts.now }), now: { Date() },
+                                       isDark: { false }, volumes: { volumes })
+        try e.run("perform", item: "ejectAll")
+        #expect(runner.outputs == [["/usr/sbin/diskutil", "eject", "/Volumes/Data"],
+                                   ["/usr/sbin/diskutil", "eject", "/Volumes/Stick"],
+                                   ["/usr/sbin/diskutil", "unmount", "/Volumes/Share"]])
+        #expect(runner.launched.isEmpty)
+
+        // A real failure still says so.
+        runner.replies["/usr/sbin/diskutil eject /Volumes/Stick"] = nil
+        #expect(throws: RunError.self) { try e.run("perform", item: "ejectAll") }
     }
 
     @Test func everyDisruptiveCommand() {
