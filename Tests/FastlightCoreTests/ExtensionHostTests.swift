@@ -308,6 +308,47 @@ import Testing
         #expect(host.pid(of: ext.id) == nil)
     }
 
+    /// The library hashed the folder at this stamp: starting while it still
+    /// matches needs no second hash (which a prewarm would do on the main
+    /// thread). A fingerprint no hash could produce shows none was made.
+    @Test func trustsTheStampTheLibraryHashed() async throws {
+        let (host, real, _) = try setup()
+        #expect(real.stamp != nil)
+        var ext = real
+        ext.fingerprint = "approved-but-never-hashed"
+        host.consent.approve(ext)
+        defer { host.stopAll(graceful: false) }
+        #expect(try await host.search(ext, query: "x", mode: .keyword, limit: 5).map(\.title) == ["x"])
+
+        // Without a stamp to go by, it hashes, and that doesn't match.
+        var unstamped = ext
+        unstamped.stamp = nil
+        unstamped.fingerprint = "another-unhashed-one"
+        host.consent.approve(unstamped)
+        await #expect(throws: ExtensionError.needsConsent) {
+            try await host.search(unstamped, query: "x", mode: .keyword, limit: 5)
+        }
+    }
+
+    /// Start, stop when idle, edit a file, try again: the restart re-checks
+    /// the folder and refuses.
+    @Test func verifiesAgainOnEveryStart() async throws {
+        let (host, ext, root) = try setup()
+        host.timeouts.idle = 0.3
+        host.consent.approve(ext)
+        defer { host.stopAll(graceful: false) }
+        #expect(try await host.search(ext, query: "x", mode: .keyword, limit: 5).map(\.title) == ["x"])
+        #expect(await eventually { host.pid(of: ext.id) == nil && host.state(of: ext.id) == .stopped })
+        // Unchanged: starts again.
+        #expect(try await host.search(ext, query: "y", mode: .keyword, limit: 5).map(\.title) == ["y"])
+        #expect(await eventually { host.pid(of: ext.id) == nil && host.state(of: ext.id) == .stopped })
+        try Data("echo pwned".utf8).write(to: root.appendingPathComponent("ext/run.sh"))
+        await #expect(throws: ExtensionError.needsConsent) {
+            try await host.search(ext, query: "z", mode: .keyword, limit: 5)
+        }
+        #expect(host.pid(of: ext.id) == nil)
+    }
+
     @Test func refusesToStartWithALinkOutAddedSinceApproval() async throws {
         let (host, ext, root) = try setup()
         host.consent.approve(ext)

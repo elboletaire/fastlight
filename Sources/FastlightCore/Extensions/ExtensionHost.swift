@@ -91,12 +91,13 @@ public final class ExtensionHost: @unchecked Sendable {
             if !ext.builtIn {
                 // What's on disk now must still be what was approved: the
                 // folder may have changed since the last rescan.
-                // Hashing can read up to 100 MB, so only redo it when the
-                // stamp (paths, sizes, mtimes, ctimes) moved since the last
-                // start that verified.
+                // Hashing can read up to 100 MB (and a prewarm runs on the
+                // main thread), so only redo it when the stamp (paths,
+                // sizes, mtimes, ctimes) moved since the library hashed the
+                // folder, or since the last start that verified.
                 let dir = ext.directory
                 let approved = ext.fingerprint
-                let verified = VerifiedStamp()
+                let verified = VerifiedStamp(ext.stamp)
                 config.verify = {
                     let stamp = ExtensionLibrary.stamp(of: dir)
                     if verified.matches(stamp) { return nil }
@@ -213,10 +214,12 @@ public final class ExtensionHost: @unchecked Sendable {
     }
 }
 
-/// The folder stamp at the last start whose fingerprint matched.
+/// The folder stamp last known to hash to the approved fingerprint.
 private final class VerifiedStamp: @unchecked Sendable {
     private let lock = NSLock()
     private var stamp: String?
+
+    init(_ stamp: String?) { self.stamp = stamp }
 
     func matches(_ s: String) -> Bool { lock.withLock { stamp == s } }
     func set(_ s: String) { lock.withLock { stamp = s } }

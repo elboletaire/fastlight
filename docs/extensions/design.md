@@ -301,9 +301,12 @@ Access. So:
   files are refused.
 - `ConsentStore` remembers approved `id → fingerprint` pairs. Nothing is
   spawned unless the current fingerprint is approved: `ExtensionHost` checks
-  consent before every request, independent of the UI, and re-hashes the
-  folder right before every process start, so files changed since the last
-  rescan don't run either.
+  consent before every request, independent of the UI, and checks the
+  folder again right before every process start, so files changed since the
+  last rescan don't run either. That check compares the folder's stamp with
+  the one the library hashed (or the last start verified) and only re-hashes
+  when it moved, so starting an unchanged extension costs a directory
+  listing, not a read of every file.
 - The first time a new or changed extension would run (its keyword is typed,
   or the user picks it in the menu), Fastlight hides the panel and asks with
   a standard alert showing the name, id, version, folder and command, and

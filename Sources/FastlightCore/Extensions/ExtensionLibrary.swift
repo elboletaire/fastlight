@@ -12,6 +12,9 @@ public struct LoadedExtension: Sendable, Hashable, Identifiable {
     public var builtIn: Bool
     /// SHA-256 of every file in the folder; what consent is given to.
     public var fingerprint: String
+    /// The folder's stamp (paths, sizes, dates) when it was hashed, so a
+    /// start can skip hashing again while it still matches.
+    public var stamp: String?
 
     public var id: String { manifest.id }
     /// Built-ins' names and descriptions are translated from the
@@ -25,13 +28,14 @@ public struct LoadedExtension: Sendable, Hashable, Identifiable {
     public var icon: ItemIcon? { manifest.icon?.resolved(in: directory) }
 
     public init(manifest: ExtensionManifest, directory: URL, executable: URL, arguments: [String],
-                builtIn: Bool, fingerprint: String) {
+                builtIn: Bool, fingerprint: String, stamp: String? = nil) {
         self.manifest = manifest
         self.directory = directory
         self.executable = executable
         self.arguments = arguments
         self.builtIn = builtIn
         self.fingerprint = fingerprint
+        self.stamp = stamp
     }
 }
 
@@ -114,7 +118,7 @@ public final class ExtensionLibrary {
                 loaded = c.loaded
             } else {
                 do {
-                    loaded = .ok(try load(dir, builtIn: builtIn))
+                    loaded = .ok(try load(dir, builtIn: builtIn, stamp: stamp))
                 } catch {
                     loaded = .issue(error.localizedDescription)
                 }
@@ -157,7 +161,10 @@ public final class ExtensionLibrary {
         }
     }
 
-    func load(_ dir: URL, builtIn: Bool) throws -> LoadedExtension {
+    /// `stamp` is the folder's, taken before reading anything: if a file
+    /// changes meanwhile, the stamp is older than the hash and won't vouch
+    /// for it.
+    func load(_ dir: URL, builtIn: Bool, stamp: String? = nil) throws -> LoadedExtension {
         let file = dir.appendingPathComponent(ExtensionManifest.fileName)
         guard let data = try? Data(contentsOf: file) else {
             throw ValidationError("", "no \(ExtensionManifest.fileName) in this folder")
@@ -171,7 +178,8 @@ public final class ExtensionLibrary {
         let exe = try resolveExecutable(manifest.command[0], in: dir, builtIn: builtIn)
         let fingerprint = builtIn ? "builtin" : try Self.fingerprint(of: dir)
         return LoadedExtension(manifest: manifest, directory: dir, executable: exe,
-                               arguments: Array(manifest.command.dropFirst()), builtIn: builtIn, fingerprint: fingerprint)
+                               arguments: Array(manifest.command.dropFirst()), builtIn: builtIn, fingerprint: fingerprint,
+                               stamp: builtIn ? nil : stamp)
     }
 
     private func resolveExecutable(_ exe: String, in dir: URL, builtIn: Bool) throws -> URL {
