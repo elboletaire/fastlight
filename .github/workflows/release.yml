@@ -64,7 +64,7 @@ jobs:
           CODESIGN_IDENTITY: ${{ env.HAS_SIGNING == 'true' && secrets.CODESIGN_IDENTITY || '-' }}
         run: |
           make dmg
-          lipo -info build/Fastlight.app/Contents/MacOS/Fastlight build/Fastlight.app/Contents/Helpers/fsearch
+          lipo -info build/Fastlight.app/Contents/MacOS/Fastlight build/Fastlight.app/Contents/Helpers/*
           codesign --verify --deep --strict build/Fastlight.app
 
       - name: Notarize
