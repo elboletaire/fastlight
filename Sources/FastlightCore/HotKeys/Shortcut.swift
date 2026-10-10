@@ -111,9 +111,11 @@ public struct Shortcut: Hashable, Sendable, Codable, CustomStringConvertible {
 }
 
 extension Shortcut.Problem {
-    /// One line for under the shortcut field.
-    public func message(for shortcut: Shortcut) -> String {
-        let s = shortcut.display()
+    /// One line for under the shortcut field. `keyName` names character
+    /// keys as `display(keyName:)` does, so the line says the same as the
+    /// field (⌘A on AZERTY, not ⌘Q).
+    public func message(for shortcut: Shortcut, keyName: (UInt16) -> String? = { _ in nil }) -> String {
+        let s = shortcut.display(keyName: keyName)
         switch self {
         case .needsModifier: return L("Add ⌘, ⌥ or ⌃: a shortcut without one would get in the way of typing.")
         case .appShortcut: return L("%@ is a menu shortcut in most apps. Add ⌥ or ⌃.", s)

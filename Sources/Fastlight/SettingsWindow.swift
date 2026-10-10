@@ -202,7 +202,7 @@ final class SettingsModel: ObservableObject {
         do {
             try hotKey.set(s)
             cancelRecording()
-            message = s.problem.map { Message(text: $0.message(for: s), tone: .warning) }
+            message = s.problem.map { Message(text: $0.message(for: s, keyName: KeyboardLayout.keyName), tone: .warning) }
             // ⌘Space has its own section below; other system ones are said here.
             if message == nil, s != .commandSpace, let k = spotlight.conflicts(with: s).first {
                 message = Message(text: L("macOS uses %@ for “%@”. Turn it off in Keyboard Shortcuts, or Fastlight won’t get it.", KeyboardLayout.display(s), k.title), tone: .warning)
@@ -211,7 +211,7 @@ final class SettingsModel: ObservableObject {
             switch error {
             case .notAllowed(let p):
                 held = []
-                message = Message(text: p.message(for: s), tone: .error)
+                message = Message(text: p.message(for: s, keyName: KeyboardLayout.keyName), tone: .error)
             case .taken:
                 cancelRecording()
                 message = Message(text: L("%@ is taken by another app. Kept %@.", KeyboardLayout.display(s), shortcutText), tone: .error)
