@@ -235,6 +235,7 @@ languages buffer stdout when it isn't a terminal: `flush=True` in Python,
 | `FASTLIGHT_VERSION` | Fastlight's version. |
 | `FASTLIGHT_EXTENSION_ID` | Your id. |
 | `FASTLIGHT_DATA_DIR` | A folder for your settings and caches. Don't write into your own folder: that changes it and asks the user for approval again. |
+| `FASTLIGHT_LANGUAGE` | The language Fastlight's UI is in (`en`, `ca`, `es`…), in case you want to match it. Optional: Fastlight shows your titles as you send them. |
 
 `PATH` is `/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`.
 
