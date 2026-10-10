@@ -172,7 +172,18 @@ The bundled fsearch keeps itself current: every Monday, [`fsearch.yml`](.github/
 > [!IMPORTANT]
 > Local builds are signed ad hoc, and macOS ties Full Disk Access to the signature. Grant it again after each rebuild, or sign with a real identity.
 
-`scripts/snapshot.sh` renders the panel with sample data to `build/snapshots/`, in light and dark, which is handy when working on the design.
+`scripts/snapshot.sh` renders the panel with sample data to `build/snapshots/`, in light and dark, which is handy when working on the design. `--language ca` renders in another language (into `build/snapshots/ca/`) and `--only settings,about,convert` keeps the scenes whose names start with those.
+
+## Translations
+
+Fastlight speaks English, Catalan and Spanish: the app's own UI and what the built-in extensions show. It follows the order of languages in System Settings › General › Language & Region, and uses English when none of them is translated. What you type stays English: keywords, units, date phrases and search filters work the same in every language.
+
+The strings live in `Resources/<lang>.lproj/`, one table per module (`App.strings`, `Core.strings`, `Convert.strings`…), with plurals in a matching `.stringsdict`, and permission prompts in `InfoPlist.strings`. The keys are the English text, so a missing translation shows English. Code looks them up with `L("…")` and `Lp("one", "other", count:)`, defined per module in `L10n.swift`, through `Sources/FastlightL10n`. No Xcode needed: there are no String Catalogs to compile, and `scripts/bundle.sh` copies the lproj folders into `Contents/Resources`.
+
+- **The app and its helpers** find `Contents/Resources` from their own executable (`Contents/MacOS` or `Contents/Helpers`). The app tells its extensions which language it picked through `FASTLIGHT_LANGUAGE`.
+- **Outside the bundle** (`swift run`, tests, snapshots) it's English, unless `FASTLIGHT_LANGUAGE` names a language, which is then read from the source tree. Tests can render a language with `Localizer.$override.withValue(Localizer.named("ca")) { … }`.
+- **Built-in extensions' names and descriptions** are translated in `Extensions.strings`, keyed by the English in their `extension.json`. Third-party extensions are shown as their manifests say.
+- **To add a language**, copy `Resources/en.lproj` to `Resources/<code>.lproj`, translate the values, add the code to `CFBundleLocalizations` in `Resources/Info.plist` and to `translations` in `Tests/FastlightL10nTests/CatalogTests.swift`. The tests check that every key the code uses is in each table, and that the format arguments and plural forms match; `plutil -lint Resources/*.lproj/*` catches syntax errors. A language with plural forms other than "one" and "other" needs its rule in `Localizer.category`.
 
 ## How it works
 

@@ -155,6 +155,7 @@ the extension folder and this environment (plus `HOME`, `USER`, `LANG`,
 | `FASTLIGHT_VERSION` | App version, e.g. `0.2.0`. |
 | `FASTLIGHT_EXTENSION_ID` | The manifest id. |
 | `FASTLIGHT_DATA_DIR` | A writable folder for settings and caches: `~/Library/Application Support/Fastlight/ExtensionData/<id>/`. Writing inside the extension folder changes its fingerprint and asks the user again. |
+| `FASTLIGHT_LANGUAGE` | The language the app's strings are in (`en`, `ca`, `es`). The built-ins speak it; anyone else may ignore it. |
 
 The extension's **first line** must be the handshake:
 
@@ -629,6 +630,28 @@ icon the address row shows.
   starting file if there's none and opens it with `open -t`.
 - Normal search never gets a "search the web" row: it would sit above
   Files on every query.
+
+## Translations of the built-ins
+
+The built-ins speak the app's language (English, Catalan or Spanish; see
+"Translations" in the README). Their helpers use the same lookup as the app
+(`Sources/FastlightL10n`): each module has its own table,
+`Resources/<lang>.lproj/<Module>.strings` (and `.stringsdict` for plurals),
+and a helper finds them in `Fastlight.app/Contents/Resources`, two folders up
+from `Contents/Helpers/<helper>`. The app passes `FASTLIGHT_LANGUAGE`, so a
+helper never disagrees with the panel around it, and dates inside a sentence
+are formatted in that language too.
+
+Only what they show is translated. What they understand stays English:
+keywords (`define`, `cal`, `sys`…), units and date phrases ("10 km in mi",
+"days until dec 25") and action names, so a query means the same whatever
+the UI language. System actions also match their translated titles.
+
+Manifests stay English and the format doesn't change. The app shows a
+built-in's `name` and `description` through the `Extensions` table, keyed by
+the English text; that lookup applies only to built-ins (`LoadedExtension.name`
+and `summary`), so a third-party extension is shown exactly as its manifest
+says, and works as before.
 
 ## Testing
 
