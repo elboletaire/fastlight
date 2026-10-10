@@ -108,26 +108,26 @@ final class ExtensionCenter {
         alert.alertStyle = .warning
         switch need {
         case .new:
-            alert.messageText = "Allow “\(ext.name)” to run?"
+            alert.messageText = L("Allow “%@” to run?", ext.name)
         case .changed:
-            alert.messageText = "“\(ext.name)” changed since you allowed it. Allow it to run?"
+            alert.messageText = L("“%@” changed since you allowed it. Allow it to run?", ext.name)
         }
         var lines: [String] = []
         if let d = ext.summary { lines.append(d) }
-        var about = ["Version \(ext.manifest.version)"]
-        if let a = ext.manifest.author { about.insert("By \(a)", at: 0) }
+        var about = [L("Version %@", ext.manifest.version)]
+        if let a = ext.manifest.author { about.insert(L("By %@", a), at: 0) }
         about.append(ext.id)
         lines.append(about.joined(separator: " · "))
-        if case .changed(let v) = need { lines.append("You allowed version \(v); its files have changed since.") }
-        lines.append("Folder: \(Format.path(ext.directory.path))")
-        lines.append("Runs: \(([Format.path(ext.executable.path)] + ext.arguments).joined(separator: " "))")
-        if let src = ext.manifest.source ?? ext.manifest.homepage { lines.append("Source: \(src.absoluteString)") }
+        if case .changed(let v) = need { lines.append(L("You allowed version %@; its files have changed since.", v)) }
+        lines.append(L("Folder: %@", Format.path(ext.directory.path)))
+        lines.append(L("Runs: %@", ([Format.path(ext.executable.path)] + ext.arguments).joined(separator: " ")))
+        if let src = ext.manifest.source ?? ext.manifest.homepage { lines.append(L("Source: %@", src.absoluteString)) }
         lines.append("")
-        lines.append("Extensions run with Fastlight’s permissions, including Full Disk Access if you granted it. Only allow extensions you trust.")
+        lines.append(L("Extensions run with Fastlight’s permissions, including Full Disk Access if you granted it. Only allow extensions you trust."))
         alert.informativeText = lines.joined(separator: "\n")
-        alert.addButton(withTitle: "Allow")
-        alert.addButton(withTitle: "Not Now")
-        alert.addButton(withTitle: "Disable Extension")
+        alert.addButton(withTitle: L("Allow"))
+        alert.addButton(withTitle: L("Not Now"))
+        alert.addButton(withTitle: L("Disable Extension"))
         NSApp.activate()
         switch alert.runModal() {
         case .alertFirstButtonReturn:

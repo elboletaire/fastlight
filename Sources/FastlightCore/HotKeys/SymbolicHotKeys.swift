@@ -9,8 +9,8 @@ public enum SymbolicHotKey: Int, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .spotlight: "Show Spotlight search"
-        case .finderSearch: "Show Finder search window"
+        case .spotlight: L("Show Spotlight search")
+        case .finderSearch: L("Show Finder search window")
         }
     }
 

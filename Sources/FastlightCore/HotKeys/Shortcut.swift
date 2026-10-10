@@ -49,7 +49,7 @@ public struct Shortcut: Hashable, Sendable, Codable, CustomStringConvertible {
     /// "⌥Space", "⌃⌥K". `keyName` names character keys for the current
     /// keyboard layout; without it they're named as on a US keyboard.
     public func display(keyName: (UInt16) -> String? = { _ in nil }) -> String {
-        modifiers.symbols + (Key.special[keyCode] ?? keyName(keyCode) ?? Key.ansi[keyCode].map { $0.count == 1 ? $0.uppercased() : $0 } ?? "Key \(keyCode)")
+        modifiers.symbols + (Key.special[keyCode].map { L($0) } ?? keyName(keyCode) ?? Key.ansi[keyCode].map { $0.count == 1 ? $0.uppercased() : $0 } ?? "Key \(keyCode)")
     }
 
     public var description: String { display() }
@@ -90,22 +90,22 @@ public struct Shortcut: Hashable, Sendable, Codable, CustomStringConvertible {
     static let reserved: [Shortcut: (String, Bool)] = {
         func s(_ k: UInt16, _ m: Modifiers) -> Shortcut { Shortcut(keyCode: k, modifiers: m) }
         return [
-            s(Key.tab, .command): ("switching apps", true),
-            s(Key.tab, [.command, .shift]): ("switching apps", true),
-            s(Key.escape, [.command, .option]): ("Force Quit", true),
-            s(Key.space, .control): ("switching input sources", false),
-            s(Key.space, [.control, .option]): ("switching input sources", false),
-            s(Key.space, [.control, .command]): ("the emoji picker", false),
-            s(20, [.command, .shift]): ("screenshots", false), // 3
-            s(21, [.command, .shift]): ("screenshots", false), // 4
-            s(23, [.command, .shift]): ("screenshots", false), // 5
-            s(12, [.control, .command]): ("Lock Screen", false), // Q
-            s(3, [.control, .command]): ("full screen", false), // F
-            s(Key.upArrow, .control): ("Mission Control", false),
-            s(Key.downArrow, .control): ("App Exposé", false),
-            s(Key.leftArrow, .control): ("switching Spaces", false),
-            s(Key.rightArrow, .control): ("switching Spaces", false),
-            s(103, []): ("Show Desktop", false), // F11
+            s(Key.tab, .command): (L10nKey("switching apps"), true),
+            s(Key.tab, [.command, .shift]): (L10nKey("switching apps"), true),
+            s(Key.escape, [.command, .option]): (L10nKey("Force Quit"), true),
+            s(Key.space, .control): (L10nKey("switching input sources"), false),
+            s(Key.space, [.control, .option]): (L10nKey("switching input sources"), false),
+            s(Key.space, [.control, .command]): (L10nKey("the emoji picker"), false),
+            s(20, [.command, .shift]): (L10nKey("screenshots"), false), // 3
+            s(21, [.command, .shift]): (L10nKey("screenshots"), false), // 4
+            s(23, [.command, .shift]): (L10nKey("screenshots"), false), // 5
+            s(12, [.control, .command]): (L10nKey("Lock Screen"), false), // Q
+            s(3, [.control, .command]): (L10nKey("full screen"), false), // F
+            s(Key.upArrow, .control): (L10nKey("Mission Control"), false),
+            s(Key.downArrow, .control): (L10nKey("App Exposé"), false),
+            s(Key.leftArrow, .control): (L10nKey("switching Spaces"), false),
+            s(Key.rightArrow, .control): (L10nKey("switching Spaces"), false),
+            s(103, []): (L10nKey("Show Desktop"), false), // F11
         ]
     }()
 }
@@ -115,10 +115,10 @@ extension Shortcut.Problem {
     public func message(for shortcut: Shortcut) -> String {
         let s = shortcut.display()
         switch self {
-        case .needsModifier: return "Add ⌘, ⌥ or ⌃: a shortcut without one would get in the way of typing."
-        case .appShortcut: return "\(s) is a menu shortcut in most apps. Add ⌥ or ⌃."
-        case .systemOnly(let what): return "macOS keeps \(s) for \(what)."
-        case .reserved(let what): return "macOS uses \(s) for \(what). Turn that off in Keyboard Shortcuts, or Fastlight may not get it."
+        case .needsModifier: return L("Add ⌘, ⌥ or ⌃: a shortcut without one would get in the way of typing.")
+        case .appShortcut: return L("%@ is a menu shortcut in most apps. Add ⌥ or ⌃.", s)
+        case .systemOnly(let what): return L("macOS keeps %@ for %@.", s, L(what))
+        case .reserved(let what): return L("macOS uses %@ for %@. Turn that off in Keyboard Shortcuts, or Fastlight may not get it.", s, L(what))
         }
     }
 }
@@ -145,9 +145,9 @@ public enum Key {
     /// Keys whose name doesn't depend on the layout.
     public static let special: [UInt16: String] = {
         var names: [UInt16: String] = [
-            space: "Space", `return`: "↩", tab: "⇥", delete: "⌫", escape: "⎋", forwardDelete: "⌦",
+            space: L10nKey("Space"), `return`: "↩", tab: "⇥", delete: "⌫", escape: "⎋", forwardDelete: "⌦",
             leftArrow: "←", rightArrow: "→", downArrow: "↓", upArrow: "↑",
-            115: "↖", 119: "↘", 116: "⇞", 121: "⇟", 114: "Help", 76: "⌤", 71: "⌧",
+            115: "↖", 119: "↘", 116: "⇞", 121: "⇟", 114: L10nKey("Help"), 76: "⌤", 71: "⌧",
         ]
         for (i, code) in functionKeys.enumerated() { names[code] = "F\(i + 1)" }
         return names

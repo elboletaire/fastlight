@@ -9,10 +9,10 @@ public enum FSearchError: Error, LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .notInstalled: "The bundled fsearch helper is missing. Reinstall Fastlight, or install fsearch to ~/.local/bin."
-        case .unreachable(let why): "Cannot reach the fsearch daemon: \(why)"
+        case .notInstalled: L("The bundled fsearch helper is missing. Reinstall Fastlight, or install fsearch to ~/.local/bin.")
+        case .unreachable(let why): L("Cannot reach the fsearch daemon: %@", why)
         case .daemon(let msg): msg
-        case .timedOut: "The fsearch daemon didn't answer in time."
+        case .timedOut: L("The fsearch daemon didn't answer in time.")
         }
     }
 

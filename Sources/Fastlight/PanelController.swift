@@ -251,7 +251,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         case .copy(let text):
             hide()
             Paster.copy(text)
-            Toast.shared.show("Copied \(Self.preview(text))")
+            Toast.shared.show(L("Copied %@", Self.preview(text)))
         case .paste(let text):
             hide()
             Paster.paste(text, into: previousApp)
@@ -267,8 +267,9 @@ final class PanelController: NSObject, NSWindowDelegate {
                     try await host.run(ext, name: name, item: item.id, data: data, query: query)
                     if then == .refresh { self?.model.rerun() }
                 } catch {
-                    let why = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                    Toast.shared.show("\(ext.name): \(why)", symbol: "exclamationmark.triangle.fill", duration: 3)
+                    let why = (error as? ExtensionError)?.message(for: ext.name)
+                        ?? L("%@: %@", ext.name, (error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+                    Toast.shared.show(why, symbol: "exclamationmark.triangle.fill", duration: 3)
                 }
             }
             return

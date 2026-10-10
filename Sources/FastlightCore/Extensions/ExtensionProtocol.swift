@@ -89,10 +89,10 @@ public struct ItemAction: Sendable, Hashable {
     public var displayTitle: String {
         if let title { return title }
         switch kind {
-        case .open: return "Open"
-        case .copy: return "Copy"
-        case .paste: return "Paste"
-        case .reveal: return "Show in Finder"
+        case .open: return L("Open")
+        case .copy: return L("Copy")
+        case .paste: return L("Paste")
+        case .reveal: return L("Show in Finder")
         case .run(let name, _, _): return name
         }
     }
