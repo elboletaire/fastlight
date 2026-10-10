@@ -153,6 +153,21 @@ import Testing
         #expect(!DaemonLock.isHeld(in: dir))
     }
 
+    /// The lock reached the child only when its descriptor wasn't 63: a
+    /// loaded run (more descriptors open) sometimes found it there, and the
+    /// "daemon" held nothing.
+    @Test func handsTheLockOverWhateverItsDescriptor() throws {
+        for n: Int32 in 60...66 {
+            // A lock file each: a process another test is starting can hold
+            // a copy of the last one's descriptor for a moment.
+            let dir = try FakeDaemon.tempDir()
+            defer { try? FileManager.default.removeItem(at: dir) }
+            let holder = try LockHolder(dir: dir, lockFDAtLeast: n)
+            defer { holder.kill() }
+            #expect(DaemonLock.isHeld(in: dir), "lock at descriptor \(n) or above")
+        }
+    }
+
     @Test func givesUpOnADaemonThatWontStop() throws {
         let dir = try FakeDaemon.tempDir()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -297,16 +312,30 @@ import Testing
 final class LockHolder {
     let pid: pid_t
 
-    init(dir: URL, ignoreTERM: Bool = false) throws {
+    /// `lockFDAtLeast` moves the lock to a descriptor of at least that
+    /// number, for tests about the number itself.
+    init(dir: URL, ignoreTERM: Bool = false, lockFDAtLeast: Int32? = nil) throws {
         let lockPath = DaemonLock.url(in: dir).path
-        let fd = open(lockPath, O_WRONLY | O_CREAT | O_CLOEXEC, 0o644)
-        guard fd >= 0, flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw FSearchError.unreachable("lock") }
+        func failure(_ step: String) -> FSearchError { .unreachable("\(step): \(String(cString: strerror(errno)))") }
+        var fd = open(lockPath, O_WRONLY | O_CREAT | O_CLOEXEC, 0o644)
+        guard fd >= 0 else { throw failure("open") }
+        if let min = lockFDAtLeast {
+            let moved = fcntl(fd, F_DUPFD_CLOEXEC, min)
+            close(fd)
+            fd = moved
+            guard fd >= 0 else { throw failure("dup") }
+        }
         defer { close(fd) }
+        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw failure("flock") }
 
         var actions: posix_spawn_file_actions_t?
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }
-        posix_spawn_file_actions_adddup2(&actions, fd, 63)
+        // Inherited at its own number. A dup2 to a fixed one (63, it was) is
+        // a no-op when the lock already has that number, which then stays
+        // close-on-exec: the child got no lock, and ours went with close().
+        // With more descriptors open (a loaded parallel run) that happened.
+        posix_spawn_file_actions_addinherit_np(&actions, fd)
         let argv = ["/bin/sleep", "30"]
         var cargs = argv.map { strdup($0) } + [nil]
         defer { cargs.forEach { free($0) } }
@@ -323,11 +352,12 @@ final class LockHolder {
         if ignoreTERM { sigaddset(&mask, SIGTERM) }
         posix_spawnattr_setsigdefault(&attr, &all)
         posix_spawnattr_setsigmask(&attr, &mask)
-        // Only the lock (fd 63) goes along: not other tests' pipes and sockets,
+        // Only the lock goes along: not other tests' pipes and sockets,
         // which a 30 s sleeper would otherwise keep open.
         posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_CLOEXEC_DEFAULT))
         var child: pid_t = 0
-        guard posix_spawn(&child, argv[0], &actions, &attr, &cargs, nil) == 0 else { throw FSearchError.unreachable("spawn") }
+        let spawned = posix_spawn(&child, argv[0], &actions, &attr, &cargs, nil)
+        guard spawned == 0 else { throw FSearchError.unreachable("spawn: \(String(cString: strerror(spawned)))") }
         pid = child
         // Like fsearch: the pid goes into the locked file.
         ftruncate(fd, 0)
@@ -337,7 +367,7 @@ final class LockHolder {
     func kill() {
         Darwin.kill(pid, SIGKILL)
         var status: Int32 = 0
-        waitpid(pid, &status, 0)
+        while waitpid(pid, &status, 0) < 0, errno == EINTR {}
     }
 }
 
