@@ -137,6 +137,16 @@ public final class ExtensionProcess: @unchecked Sendable {
         if let fail { completion(.failure(fail)) }
     }
 
+    /// Starts the child ahead of the first request, so a cold start doesn't
+    /// eat into global search's time budget.
+    public func start() {
+        lock.withLock {
+            guard _state == .stopped else { return }
+            spawn()
+            bumpIdle()
+        }
+    }
+
     /// A notification: sent only to a running child, never starts one.
     public func notify(_ message: OutgoingMessage) {
         lock.withLock {
