@@ -1,0 +1,16 @@
+{
+  "name": "Fastlight",
+  "short_name": "Fastlight",
+  "description": "A fast, free, open-source launcher for macOS, powered by fsearch.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "browser",
+  "background_color": "#15161B",
+  "theme_color": "#15161B",
+  "icons": [
+    { "src": "brand/mark-dark-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "brand/mark-dark-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

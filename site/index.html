@@ -1,0 +1,378 @@
+<!doctype html>
+<!--
+THESIS: The panel is the pitch. The page opens on the real Fastlight panel answering real
+queries, large, on the graphite-glow stage the icon lives on; it refuses the stock
+"centered hero + three feature cards" launcher page.
+OWN-WORLD: Graphite 950/900 fields, one warm comet burst (orange > pink > lavender) per
+screen, gold spark for the moment of finding. Sora headings, Inter body, JetBrains Mono
+only for queries, keys and measurements. Key caps and search-field pills are the
+component language.
+STORY: It is instant (fsearch numbers), it keeps apps and files apart, it speaks a query
+language, it installs in four steps, it stays on your Mac. Download.
+FIRST VIEWPORT: Lockup + nav, headline and pitch left, Download (comet) + GitHub,
+then the panel snapshot at full container width cycling term / invoice / grep.
+FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fastlight: a fast, free launcher for macOS</title>
+<meta name="description" content="Fastlight is a free, open-source Spotlight-style launcher for macOS. Press ⌥Space and find apps and any file on your disk in about a millisecond, powered by fsearch.">
+<link rel="canonical" href="https://elboletaire.github.io/fastlight/">
+<meta name="theme-color" content="#15161B" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15161B" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Fastlight">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://elboletaire.github.io/fastlight/">
+<meta property="og:title" content="Fastlight: a fast, free launcher for macOS">
+<meta property="og:description" content="Press ⌥Space, type, and find apps and any file on your disk in about a millisecond. Free and open source, powered by fsearch.">
+<meta property="og:image" content="https://elboletaire.github.io/fastlight/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Fastlight panel showing Terminal as the top hit for the query “term”, next to the Fastlight logo and the line “Find anything on your Mac in a millisecond.”">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Fastlight: a fast, free launcher for macOS">
+<meta name="twitter:description" content="Press ⌥Space, type, and find apps and any file on your disk in about a millisecond. Free and open source, powered by fsearch.">
+<meta name="twitter:image" content="https://elboletaire.github.io/fastlight/og.png">
+<meta name="twitter:image:alt" content="The Fastlight panel showing Terminal as the top hit for the query “term”, next to the Fastlight logo.">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Sora:wght@600;700&display=swap">
+<link rel="preload" as="image" type="image/webp" media="(min-width: 600px)" href="assets/hero-apps-1536.webp" imagesrcset="assets/hero-apps-960.webp 960w, assets/hero-apps-1536.webp 1536w" imagesizes="(min-width: 1264px) 1200px, calc(100vw - 32px)">
+<link rel="stylesheet" href="styles.css">
+<script src="main.js" defer></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Fastlight",
+  "description": "A free, open-source Spotlight-style launcher for macOS. Finds applications and files across the whole disk in about a millisecond, powered by fsearch.",
+  "url": "https://elboletaire.github.io/fastlight/",
+  "image": "https://elboletaire.github.io/fastlight/og.png",
+  "screenshot": "https://elboletaire.github.io/fastlight/assets/hero-apps-1536.webp",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "macOS 14 or later",
+  "downloadUrl": "https://github.com/elboletaire/fastlight/releases/latest",
+  "installUrl": "https://github.com/elboletaire/fastlight/releases/latest",
+  "codeRepository": "https://github.com/elboletaire/fastlight",
+  "license": "https://github.com/elboletaire/fastlight/blob/main/LICENSE",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "elboletaire", "url": "https://github.com/elboletaire" }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap site-header-inner">
+    <a class="brand" href="./" aria-label="Fastlight home">
+      <img src="brand/logo-lockup-dark.svg" width="116" height="32" alt="Fastlight">
+    </a>
+    <nav class="nav" aria-label="Main">
+      <ul>
+        <li><a href="#fast">Speed</a></li>
+        <li><a href="#syntax">Queries</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a class="nav-gh" href="https://github.com/elboletaire/fastlight" aria-label="Fastlight on GitHub">
+        <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span>GitHub</span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="hero-band">
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">Find anything on your&nbsp;Mac before you finish&nbsp;typing.</h1>
+      <div class="hero-side">
+        <p class="lede">Fastlight is a free, open-source launcher for macOS. Press <kbd>⌥Space</kbd>, type a few letters, and it finds your apps and every file on the disk in about a millisecond.</p>
+        <div class="cta-row">
+          <a class="btn btn-comet" href="https://github.com/elboletaire/fastlight/releases/latest">
+            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download for macOS
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/elboletaire/fastlight">Source on GitHub</a>
+        </div>
+        <p class="fineprint">Free and open source · macOS 14 or later · No account, no network</p>
+      </div>
+    </div>
+
+    <figure class="stage" data-stage>
+      <div class="stage-frame">
+        <picture class="shot is-active" data-shot="term">
+          <source media="(max-width: 599px)" srcset="assets/hero-apps-m.webp 720w" sizes="calc(100vw - 32px)" width="720" height="720">
+          <img src="assets/hero-apps-1536.webp" srcset="assets/hero-apps-960.webp 960w, assets/hero-apps-1536.webp 1536w" sizes="(min-width: 1264px) 1200px, calc(100vw - 32px)" width="1536" height="900" fetchpriority="high" alt="The Fastlight panel with the query “term”: Terminal as the Top Hit, iTerm under Applications, and matching files such as terminal-cheatsheet.md under Files.">
+        </picture>
+        <picture class="shot" data-shot="invoice">
+          <source media="(max-width: 599px)" srcset="assets/hero-files-m.webp 720w" sizes="calc(100vw - 32px)" width="720" height="720">
+          <img src="assets/hero-files-1536.webp" srcset="assets/hero-files-960.webp 960w, assets/hero-files-1536.webp 1536w" sizes="(min-width: 1264px) 1200px, calc(100vw - 32px)" width="1536" height="900" loading="lazy" decoding="async" alt="The Fastlight panel with the query “invoice”: Invoice-2026-041.pdf as the Top Hit, followed by an Invoices folder and more invoice PDFs, spreadsheets and pages documents.">
+        </picture>
+        <picture class="shot" data-shot="grep">
+          <source media="(max-width: 599px)" srcset="assets/hero-grep-m.webp 720w" sizes="calc(100vw - 32px)" width="720" height="720">
+          <img src="assets/hero-grep-1536.webp" srcset="assets/hero-grep-960.webp 960w, assets/hero-grep-1536.webp 1536w" sizes="(min-width: 1264px) 1200px, calc(100vw - 32px)" width="1536" height="900" loading="lazy" decoding="async" alt="The Fastlight panel with the query “grep:TODO ext:swift”: Swift files listed with the line number and text of each TODO comment.">
+        </picture>
+      </div>
+      <figcaption class="stage-caption">
+        <span class="stage-label" id="stage-label" hidden>Try a query</span>
+        <div class="chips" role="group" aria-labelledby="stage-label" data-chips hidden>
+          <button type="button" class="chip" data-for="term" aria-pressed="true"><code>term</code><span>an app</span></button>
+          <button type="button" class="chip" data-for="invoice" aria-pressed="false"><code>invoice</code><span>a file</span></button>
+          <button type="button" class="chip" data-for="grep" aria-pressed="false"><code>grep:TODO ext:swift</code><span>inside files</span></button>
+        </div>
+        <span class="stage-note">Real panel renders with sample files.</span>
+      </figcaption>
+    </figure>
+  </section>
+</div>
+
+<div class="page">
+  <section id="fast" class="section wrap" aria-labelledby="fast-title">
+    <div class="split split-head">
+      <h2 id="fast-title">Millions of files. About a&nbsp;millisecond.</h2>
+      <p class="intro">Fastlight ships <a href="https://github.com/noahdunnagan/fsearch">fsearch</a>, a whole-disk index that crawls once, then follows every change through FSEvents. Typing never waits on the disk.</p>
+    </div>
+
+    <div class="bench">
+      <table>
+        <caption>fsearch’s own benchmark: M4 Max, 7.7 million files and folders on disk.</caption>
+        <tbody>
+          <tr><th scope="row">Find a file by name, whole disk</th><td><span class="num">1.3</span> ms</td></tr>
+          <tr><th scope="row">Search inside files</th><td><span class="num">9</span> ms</td></tr>
+          <tr><th scope="row">A new, renamed or deleted file shows up</th><td><span class="num">~0.1</span> s</td></tr>
+          <tr><th scope="row">First crawl of the disk, once</th><td><span class="num">~20</span> s</td></tr>
+        </tbody>
+      </table>
+      <p class="bench-note">Median (p50) times. Your Mac and your disk will differ.</p>
+    </div>
+
+    <dl class="traits">
+      <div>
+        <dt>Forgives typos</dt>
+        <dd>Words are fuzzy, and words of five letters or more survive one typo: <code>mian.rs</code> still finds <code>main.rs</code>.</dd>
+      </div>
+      <div>
+        <dt>Reads inside files</dt>
+        <dd>A trigram index of your text files makes <code>grep:</code> instant. Matches are read fresh from disk, so they are never stale.</dd>
+      </div>
+      <div>
+        <dt>Whole disk, not a guess</dt>
+        <dd>Every folder you give it access to, not a curated subset. With Full Disk Access that includes Desktop, Documents and Mail.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section id="sections" class="section wrap" aria-labelledby="sections-title">
+    <div class="split split-media">
+      <div class="copy">
+        <h2 id="sections-title">Apps first. Files right&nbsp;after.</h2>
+        <p>Results arrive in sections, so launching an app never means wading through files, and finding a file never means scrolling past apps.</p>
+        <ul class="sections-list">
+          <li><strong>Top Hit</strong> is what <kbd>↵</kbd> opens.</li>
+          <li><strong>Applications</strong>, with their real icons, from <code>/Applications</code>, <code>/System/Applications</code> and <code>~/Applications</code>. Ranked by how well the name matches and how often you open them, so <code>vsc</code> finds Visual Studio Code.</li>
+          <li><strong>Files</strong> from everywhere else. Plain queries leave out app bundles, dot-folders and <code>~/Library</code>; any filter brings them back.</li>
+        </ul>
+      </div>
+      <figure class="shot-card">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/apps-saf-dark-720.webp 720w, assets/apps-saf-dark-1200.webp 1200w" sizes="(min-width: 960px) 600px, calc(100vw - 32px)">
+          <img src="assets/apps-saf-light-1200.webp" srcset="assets/apps-saf-light-720.webp 720w, assets/apps-saf-light-1200.webp 1200w" sizes="(min-width: 960px) 600px, calc(100vw - 32px)" width="1200" height="553" loading="lazy" decoding="async" alt="The query “saf”: Safari as the Top Hit with its icon, and the files Safety deposit.pdf and safari-bookmarks.html in a separate Files section.">
+        </picture>
+      </figure>
+    </div>
+  </section>
+
+  <section id="syntax" class="section wrap" aria-labelledby="syntax-title">
+    <div class="split split-head">
+      <h2 id="syntax-title">Say exactly what you&nbsp;mean.</h2>
+      <p class="intro">The search field speaks fsearch’s query language. Plain words for everyday use; filters when you know what you are after.</p>
+    </div>
+
+    <ol class="queries">
+      <li>
+        <p class="field"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><code>invoice <b>ext:</b>pdf <b>mtime:</b>&lt;30d</code></p>
+        <p class="means">PDFs named like “invoice”, changed in the last 30 days.</p>
+      </li>
+      <li>
+        <p class="field"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><code>readme <b>in:</b>~/src</code></p>
+        <p class="means">Every readme under <code>~/src</code>, and nowhere else.</p>
+      </li>
+      <li>
+        <p class="field"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><code><b>grep:</b>TODO <b>ext:</b>swift</code></p>
+        <p class="means">Swift files that contain “TODO”, with the matching line.</p>
+      </li>
+    </ol>
+
+    <div class="split split-ref">
+      <figure class="shot-card">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/grep-dark-720.webp 720w, assets/grep-dark-1200.webp 1200w" sizes="(min-width: 960px) 600px, calc(100vw - 32px)">
+          <img src="assets/grep-light-1200.webp" srcset="assets/grep-light-720.webp 720w, assets/grep-light-1200.webp 1200w" sizes="(min-width: 960px) 600px, calc(100vw - 32px)" width="1200" height="547" loading="lazy" decoding="async" alt="Results for “grep:TODO ext:swift”: four Swift files, each with the line number and the text of its TODO comment.">
+        </picture>
+        <figcaption>Content matches show the file, the line number and the line itself.</figcaption>
+      </figure>
+      <div class="ref">
+        <h3>Operators</h3>
+        <dl class="ref-list">
+          <div><dt><code>'exact</code></dt><dd>Match the word as typed, no fuzziness</dd></div>
+          <div><dt><code>^prefix</code></dt><dd>Name starts with</dd></div>
+          <div><dt><code>suffix$</code></dt><dd>Name ends with</dd></div>
+          <div><dt><code>!exclude</code></dt><dd>Leave out matches</dd></div>
+        </dl>
+        <h3>Filters</h3>
+        <dl class="ref-list">
+          <div><dt><code>ext:</code></dt><dd>Extension: <code>ext:pdf</code></dd></div>
+          <div><dt><code>type:</code></dt><dd><code>image</code>, <code>video</code>, <code>audio</code>, <code>doc</code> or <code>code</code></dd></div>
+          <div><dt><code>kind:</code></dt><dd><code>file</code> or <code>dir</code></dd></div>
+          <div><dt><code>in:</code></dt><dd>Under a folder: <code>in:~/src</code></dd></div>
+          <div><dt><code>size:</code></dt><dd><code>size:&gt;5mb</code></dd></div>
+          <div><dt><code>mtime:</code></dt><dd>Modified: <code>mtime:&lt;7d</code></dd></div>
+          <div><dt><code>path:</code></dt><dd>Regex over the full path</dd></div>
+          <div><dt><code>grep:</code></dt><dd>Text inside files, smart-case</dd></div>
+          <div><dt><code>regex:</code></dt><dd>Regex inside files</dd></div>
+          <div><dt><code>sym:</code></dt><dd>Where a symbol is defined</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="keys" class="section wrap" aria-labelledby="keys-title">
+    <div class="split split-keys">
+      <div class="copy">
+        <h2 id="keys-title">Hands stay on the&nbsp;keyboard.</h2>
+        <p>Fastlight lives in the menu bar and waits for <kbd>⌥Space</kbd>. Everything after that is a key away.</p>
+      </div>
+      <table class="keys">
+        <caption class="visually-hidden">Keyboard shortcuts</caption>
+        <thead><tr><th scope="col">Keys</th><th scope="col">Does</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>⌥</kbd><kbd>Space</kbd></td><td>Show or hide Fastlight</td></tr>
+          <tr><td><kbd>↑</kbd><kbd>↓</kbd></td><td>Move through results</td></tr>
+          <tr><td><kbd>Tab</kbd> <span class="or">/</span> <kbd>⇧</kbd><kbd>Tab</kbd></td><td>Next or previous section (also <kbd>⌘</kbd><kbd>↓</kbd> <kbd>⌘</kbd><kbd>↑</kbd>)</td></tr>
+          <tr><td><kbd>↵</kbd></td><td>Open</td></tr>
+          <tr><td><kbd>⌘</kbd><kbd>↵</kbd></td><td>Show in Finder</td></tr>
+          <tr><td><kbd>⌘</kbd><kbd>Y</kbd></td><td>Quick Look</td></tr>
+          <tr><td><kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd></td><td>Copy the path</td></tr>
+          <tr><td><kbd>⎋</kbd></td><td>Clear the query, then close</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="install" class="section wrap" aria-labelledby="install-title">
+    <div class="split split-head">
+      <h2 id="install-title">Installed in a&nbsp;minute.</h2>
+      <p class="intro">One app, fsearch included. Nothing to brew, no daemon to set up, no account.</p>
+    </div>
+    <ol class="steps">
+      <li>
+        <h3>Download the DMG</h3>
+        <p>Get <code>Fastlight-&lt;version&gt;.dmg</code> from the <a href="https://github.com/elboletaire/fastlight/releases/latest">latest release</a> and open it.</p>
+      </li>
+      <li>
+        <h3>Drag it to Applications</h3>
+        <p>Drop <strong>Fastlight</strong> onto the <strong>Applications</strong> folder in the DMG window, then open it from there.</p>
+      </li>
+      <li>
+        <h3>Click “Open Anyway” if asked</h3>
+        <p>Builds that aren’t notarized are blocked the first time. Go to System Settings → Privacy &amp; Security and click <strong>Open Anyway</strong>.</p>
+      </li>
+      <li>
+        <h3>Grant Full Disk Access</h3>
+        <p>Add Fastlight under System Settings → Privacy &amp; Security → Full Disk Access, so Desktop, Documents and Downloads get indexed too.</p>
+      </li>
+    </ol>
+    <figure class="shot-card shot-wide">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="assets/full-disk-access-dark-720.webp 720w, assets/full-disk-access-dark-1200.webp 1200w" sizes="(min-width: 1064px) 1000px, calc(100vw - 32px)">
+        <img src="assets/full-disk-access-light-1200.webp" srcset="assets/full-disk-access-light-720.webp 720w, assets/full-disk-access-light-1200.webp 1200w" sizes="(min-width: 1064px) 1000px, calc(100vw - 32px)" width="1200" height="341" loading="lazy" decoding="async" alt="The Fastlight panel showing the notice “Allow Full Disk Access to also find files in Desktop, Documents and Downloads.” with an Open Settings button.">
+      </picture>
+      <figcaption>Until access is granted, the panel says so and links straight to the right settings pane.</figcaption>
+    </figure>
+  </section>
+
+  <section id="faq" class="section wrap" aria-labelledby="faq-title">
+    <div class="split split-faq">
+      <h2 id="faq-title">Questions</h2>
+      <div class="faq">
+        <details>
+          <summary>Does anything leave my Mac?</summary>
+          <p>No. The index, the queries and the results stay on your Mac. Fastlight and fsearch talk over a local socket in <code>~/Library/Application Support/FSearch</code>; there is no account, no analytics and no network access.</p>
+        </details>
+        <details>
+          <summary>Why does it need Full Disk Access?</summary>
+          <p>macOS protects folders like Desktop, Documents, Downloads and Mail. Without the grant, fsearch quietly skips them instead of popping a prompt for each one, so those files never show up. The grant only lets Fastlight read file names and text on your own disk.</p>
+          <p>If the bundled search daemon was already running before you granted access, quit Fastlight, run <code>pkill -f 'fsearch serve'</code> and open it again so it rescans.</p>
+        </details>
+        <details>
+          <summary>How is it different from Spotlight?</summary>
+          <p>Spotlight relies on metadata importers and decides what is worth indexing; Fastlight indexes every file name it can reach and answers fuzzy, typo-tolerant queries in about a millisecond. It keeps apps and files in separate sections and adds a query language with filters such as <code>in:</code>, <code>mtime:</code> and <code>grep:</code>. It doesn’t replace Spotlight, so you can keep both.</p>
+        </details>
+        <details>
+          <summary>What do I need to run it?</summary>
+          <p>macOS 14 Sonoma or later. On macOS 26 the panel picks up the Liquid Glass look. Everything else, fsearch included, is inside the app.</p>
+        </details>
+        <details>
+          <summary>Is it really free?</summary>
+          <p>Yes. Fastlight is free and open source under the <a href="https://github.com/elboletaire/fastlight/blob/main/LICENSE">MIT license</a>, and so is fsearch. The code is on <a href="https://github.com/elboletaire/fastlight">GitHub</a>; issues and pull requests are welcome.</p>
+        </details>
+        <details>
+          <summary>I updated and files went missing. What happened?</summary>
+          <p>Ad-hoc signed builds get a new signature on every release, and macOS ties Full Disk Access to that signature. Remove Fastlight from the Full Disk Access list, add it again, and it is back to the whole disk.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="closer" aria-labelledby="closer-title">
+  <div class="wrap closer-inner">
+    <img class="closer-icon" src="brand/app-icon-256.png" width="128" height="128" alt="" loading="lazy" decoding="async">
+    <h2 id="closer-title"><span class="nowrap">Press <kbd>⌥Space</kbd>.</span> Type. It’s&nbsp;there.</h2>
+    <div class="cta-row">
+      <a class="btn btn-comet" href="https://github.com/elboletaire/fastlight/releases/latest">
+        <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download for macOS
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/elboletaire/fastlight">Source on GitHub</a>
+    </div>
+    <p class="credits">Search by <a href="https://github.com/noahdunnagan/fsearch">fsearch</a>, made by Noah Dunnagan and released under the MIT license. Fastlight bundles it unchanged and wouldn’t exist without it.</p>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <img src="brand/logo-mark-dark.svg" width="34" height="30" alt="" class="footer-mark">
+    <nav aria-label="Footer">
+      <ul>
+        <li><a href="https://github.com/elboletaire/fastlight">Source</a></li>
+        <li><a href="https://github.com/elboletaire/fastlight/releases">Releases</a></li>
+        <li><a href="https://github.com/elboletaire/fastlight/issues">Issues</a></li>
+        <li><a href="https://github.com/elboletaire/fastlight/blob/main/LICENSE">License</a></li>
+        <li><a href="https://github.com/noahdunnagan/fsearch">fsearch</a></li>
+      </ul>
+    </nav>
+    <p class="disclaimer">Fastlight is an independent open-source project, MIT licensed. Not affiliated with Apple. Spotlight and macOS are trademarks of Apple Inc.</p>
+  </div>
+</footer>
+</body>
+</html>
