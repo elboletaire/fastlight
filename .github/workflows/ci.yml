@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The fsearch workflow starts it on its own PRs, which don't trigger it.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}

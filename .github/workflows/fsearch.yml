@@ -1,0 +1,86 @@
+# Keeps the bundled fsearch current: weekly, when upstream's main has moved
+# past the pinned commit, scripts/bump-fsearch.sh updates the submodule and
+# bumps the patch version, and this opens (or refreshes) one PR for it.
+# Merging that PR releases the new version (see tag-release.yml).
+#
+# PRs opened with the workflow token don't trigger other workflows, so CI is
+# started on the branch explicitly; its result shows on the PR. Needs
+# "Allow GitHub Actions to create and approve pull requests" in the
+# repository's Actions settings.
+name: fsearch
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: fsearch-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    # macOS for PlistBuddy, as the release does.
+    runs-on: macos-26
+    env:
+      BRANCH: deps/fsearch
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Update fsearch
+        id: bump
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          scripts/bump-fsearch.sh
+
+      - name: Open or update the PR
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+          OLD: ${{ steps.bump.outputs.old }}
+          NEW: ${{ steps.bump.outputs.new }}
+          NOTES: ${{ steps.bump.outputs.notes }}
+        run: |
+          # Same tree as the open PR (nothing new upstream, main unchanged):
+          # leave it, and its CI run, alone.
+          if git fetch --quiet origin "$BRANCH" 2>/dev/null &&
+             [ "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse 'FETCH_HEAD^{tree}')" ]; then
+            echo "$BRANCH is already current"
+            exit 0
+          fi
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+
+          title="build(deps): update fsearch to ${NEW:0:7} (Fastlight $VERSION)"
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "Updates the bundled [fsearch](https://github.com/noahdunnagan/fsearch) from \`${OLD:0:7}\` to \`${NEW:0:7}\` and bumps Fastlight to **$VERSION**."
+            echo
+            echo "## Upstream changes"
+            echo
+            cat "$NOTES"
+            echo
+            echo "[Full diff](https://github.com/noahdunnagan/fsearch/compare/$OLD...$NEW)"
+            echo
+            echo "Merging this releases Fastlight $VERSION: tag-release.yml tags it and runs the release build."
+            echo
+            echo "<sub>Opened by the weekly fsearch workflow. It force-pushes \`$BRANCH\` whenever upstream moves on.</sub>"
+          } > "$body"
+
+          pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$title" --body-file "$body"
+          else
+            gh pr create --base main --head "$BRANCH" --title "$title" --body-file "$body"
+          fi
+          gh workflow run ci.yml --ref "$BRANCH"

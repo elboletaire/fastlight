@@ -1,0 +1,44 @@
+# A version bump landing on main is a release: when Resources/Info.plist names
+# a version with no tag yet, this tags it (v<version>) and runs the release
+# workflow on that tag. No need to push tags by hand.
+#
+# Tags pushed with the workflow token don't trigger release.yml's tag push,
+# so it's started explicitly, which it does take.
+name: Tag release
+
+on:
+  push:
+    branches: [main]
+    paths: [Resources/Info.plist]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Tag and release
+        run: |
+          version="$(python3 -c 'import plistlib; print(plistlib.load(open("Resources/Info.plist", "rb"))["CFBundleShortVersionString"])')"
+          tag="v$version"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$tag" -m "Fastlight $version"
+          git push origin "$tag"
+          gh workflow run release.yml --ref "$tag"
+          echo "Tagged $tag and started the release"
