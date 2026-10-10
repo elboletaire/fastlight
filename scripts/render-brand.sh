@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Render Fastlight brand assets from the SVG sources in assets/brand/.
 #
-#   scripts/render-brand.sh          # SVG -> PNGs, AppIcon.icns, menu bar icons
+#   scripts/render-brand.sh          # SVG -> PNGs, AppIcon.icns, menu bar icons, DMG background
 #   scripts/render-brand.sh --svg    # first regenerate the SVGs (needs uv + network)
 #
-# Requires resvg (brew install resvg) and iconutil (ships with macOS).
+# Requires resvg (brew install resvg); iconutil and tiffutil ship with macOS.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,7 +21,10 @@ if [[ "${1:-}" == "--svg" ]]; then
   trap 'rm -rf "$fontdir"' EXIT
   curl -fsSL -o "$fontdir/Sora.ttf" \
     "https://github.com/google/fonts/raw/main/ofl/sora/Sora%5Bwght%5D.ttf"
-  uv run --quiet --with fonttools python "$src/generate.py" "$fontdir/Sora.ttf" "$brand"
+  curl -fsSL -o "$fontdir/Inter.ttf" \
+    "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf"
+  uv run --quiet --with fonttools --with uharfbuzz \
+    python "$src/generate.py" "$fontdir/Sora.ttf" "$brand" "$fontdir/Inter.ttf"
 fi
 
 r() { resvg -w "$2" -h "$2" "$1" "$3"; }
@@ -61,5 +64,14 @@ rm -rf "$(dirname "$iconset")"
 # Menu bar template glyph (alpha only)
 resvg "$src/menubar-18.svg" "$res/MenuBarIcon.png"
 resvg "$src/menubar-36.svg" "$res/MenuBarIcon@2x.png"
+
+# DMG window background (scripts/dmg.sh): 1x + 2x in one HiDPI TIFF, so
+# building a DMG needs no resvg.
+dmgbg="$(mktemp -d)"
+resvg -w 660 "$src/dmg-background.svg" "$dmgbg/bg.png"
+resvg -w 1320 "$src/dmg-background.svg" "$dmgbg/bg@2x.png"
+mkdir -p "$root/assets/dmg"
+tiffutil -cathidpicheck "$dmgbg/bg.png" "$dmgbg/bg@2x.png" -out "$root/assets/dmg/background.tiff"
+rm -rf "$dmgbg"
 
 echo "Brand assets rendered."
