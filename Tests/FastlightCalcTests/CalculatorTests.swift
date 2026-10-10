@@ -187,6 +187,22 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(CalcFormat.display(-2.5e-300, locale: en).copy == "-2.5e-300")
     }
 
+    /// Integers up to 15 digits are exact; rounding to 12 digits used to
+    /// change the last ones, in the answer and in the subtitle.
+    @Test func exactIntegersKeepTheirDigits() throws {
+        #expect(CalcFormat.display(1_234_567_890_124, locale: en) == ("1,234,567,890,124", "1234567890124"))
+        #expect(CalcFormat.display(-999_999_999_999_999, locale: en).copy == "-999999999999999")
+        let ext = CalculatorExtension(locale: en)
+        let sum = ext.items(for: "1234567890123+1", global: true)[0]
+        #expect(sum["title"] as? String == "1,234,567,890,124")
+        #expect(sum["subtitle"] as? String == "1234567890123 + 1 =")
+        #expect(ext.items(for: "123456789*987654", global: true)[0]["title"] as? String == "121,932,591,483,006")
+        // Not integers, or too big to be exact: still 12 digits.
+        #expect(CalcFormat.display(0.1 + 0.2, locale: en).title == "0.3")
+        #expect(CalcFormat.display(1e15 + 1, locale: en).title == "1 × 10¹⁵")
+        #expect(CalcFormat.display(123_456_789_012.345678, locale: en).title == "123,456,789,012")
+    }
+
     @Test func scientificOnlyWhenNeeded() {
         #expect(CalcFormat.display(1e14, locale: en).title == "100,000,000,000,000")
         #expect(CalcFormat.display(3e20, locale: en) == ("3 × 10²⁰", "3e20"))
