@@ -18,6 +18,9 @@ enum Snapshot {
         var selection = 0
         /// Leave the example extensions unapproved, to show the notice.
         var pending = false
+        /// What the sample Contacts, Calendar and Reminders pretend macOS
+        /// allows (an `Access` raw value).
+        var access = "authorized"
     }
 
     /// Sample files, in place of fsearch.
@@ -57,7 +60,9 @@ enum Snapshot {
             }
         }
         let exe = Bundle.main.executableURL?.deletingLastPathComponent()
-        let library = ExtensionLibrary(builtInRoot: ExtensionCenter.builtInRoot(), userRoot: userRoot,
+        let accessFile = scratch.appendingPathComponent("sample-access")
+        let builtIns = sampleBuiltIns(ExtensionCenter.builtInRoot(), in: scratch, accessFile: accessFile)
+        let library = ExtensionLibrary(builtInRoot: builtIns, userRoot: userRoot,
                                        helperDirs: [exe].compactMap { $0 }, appVersion: AppInfo.version)
         defaults.removePersistentDomain(forName: suite + ".consent")
         let consent = ConsentStore(defaults: UserDefaults(suiteName: suite + ".consent")!)
@@ -85,6 +90,7 @@ enum Snapshot {
             all.append(Scene(name: "live-\(String(slug))", query: q, files: files))
         }
         for scene in all {
+            try? scene.access.write(to: accessFile, atomically: true, encoding: .utf8)
             for ext in library.extensions where !ext.builtIn {
                 if scene.pending { consent.revoke(ext.id) } else { consent.approve(ext) }
             }
@@ -105,6 +111,26 @@ enum Snapshot {
         }
         renderSettings(into: dir, suite: suite)
         renderAbout(into: dir)
+    }
+
+    /// A copy of the built-ins whose Contacts, Calendar and Reminders run
+    /// with `--sample`: made-up people and events, so screenshots never show
+    /// (or ask for) the real ones.
+    private static func sampleBuiltIns(_ root: URL?, in scratch: URL, accessFile: URL) -> URL? {
+        guard let root else { return nil }
+        let fm = FileManager.default
+        let copy = scratch.appendingPathComponent("BuiltIn")
+        guard (try? fm.copyItem(at: root, to: copy)) != nil else { return root }
+        for name in (try? fm.contentsOfDirectory(atPath: copy.path)) ?? [] {
+            let file = copy.appendingPathComponent(name).appendingPathComponent("extension.json")
+            guard let data = try? Data(contentsOf: file),
+                  var o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let command = o["command"] as? [String],
+                  ["fastlight-contacts", "fastlight-calendar"].contains(command.first ?? "") else { continue }
+            o["command"] = command + ["--sample", accessFile.path]
+            try? JSONSerialization.data(withJSONObject: o).write(to: file)
+        }
+        return copy
     }
 
     // MARK: About
@@ -293,6 +319,14 @@ enum Snapshot {
                 f("Documents/Budget/15 percent rule.pdf", size: 98_000, ago: 60 * day),
             ]),
             Scene(name: "indexing", query: "", state: .indexing),
+            Scene(name: "contacts-keyword", query: "contact elena"),
+            Scene(name: "contacts-global", query: "elena", files: [
+                f("Documents/Northwind/Elena - brand deck.key", size: 18_400_000, ago: 4 * day),
+            ]),
+            Scene(name: "contacts-access", query: "contact ", access: "notDetermined"),
+            Scene(name: "calendar-agenda", query: "cal "),
+            Scene(name: "reminders-keyword", query: "remind "),
+            Scene(name: "reminders-denied", query: "remind ", access: "denied"),
         ]
     }
 }
