@@ -66,7 +66,7 @@ public final class SettingsExtension: LineHandler, @unchecked Sendable {
             "title": p.title,
             "subtitle": p.subtitle,
             "icon": icon,
-            "actions": [["type": "open", "target": p.target, "title": "Open Settings"]],
+            "actions": [["type": "open", "target": p.target, "title": L("Open Settings")]],
         ]
     }
 }

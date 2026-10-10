@@ -1,0 +1,13 @@
+/* Emoji: keys are the English text. Generated rows; edit freely. */
+"Paste Emoji" = "Paste Emoji";
+"Copy Emoji" = "Copy Emoji";
+"Skin Tone: %@" = "Skin Tone: %@";
+"Default" = "Default";
+"Light" = "Light";
+"Medium-Light" = "Medium-Light";
+"Medium" = "Medium";
+"Medium-Dark" = "Medium-Dark";
+"Dark" = "Dark";
+"Used for emoji that come in skin tones" = "Used for emoji that come in skin tones";
+"Use This Tone" = "Use This Tone";
+"Current" = "Current";

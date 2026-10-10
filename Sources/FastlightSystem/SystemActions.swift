@@ -49,7 +49,7 @@ public enum ScreenLock {
     public static var isAvailable: Bool { symbol() != nil }
 
     public static func lock() throws {
-        guard let sym = symbol() else { throw RunError("Can't lock the screen on this version of macOS") }
+        guard let sym = symbol() else { throw RunError(L("Can't lock the screen on this version of macOS")) }
         _ = unsafeBitCast(sym, to: Lock.self)()
     }
 }
@@ -96,27 +96,43 @@ public struct SystemAction: Sendable, Equatable {
     /// "shut down", for "Press ↵ again to shut down".
     public var verb: String
 
+    /// Title, subtitle and verb are English, and keys for the user's
+    /// language; what's typed is matched against the English (and the
+    /// translated title).
+    public var localizedTitle: String { L(title) }
+
+    /// "Confirm Restart?": a question of its own in each language.
+    public var confirmTitle: String {
+        switch id {
+        case .emptyTrash: L("Confirm Empty Trash?")
+        case .logOut: L("Confirm Log Out?")
+        case .restart: L("Confirm Restart?")
+        case .shutDown: L("Confirm Shut Down?")
+        default: L("Confirm %@?", localizedTitle)
+        }
+    }
+
     public static let all: [SystemAction] = [
-        SystemAction(id: .lockScreen, title: "Lock Screen", aliases: ["lock", "lock mac", "lock computer"],
-                     symbol: "lock", subtitle: "Locks the screen right away", confirm: false, verb: "lock the screen"),
-        SystemAction(id: .sleep, title: "Sleep", aliases: ["sleep mac", "suspend"],
-                     symbol: "moon.zzz", subtitle: "Puts the Mac to sleep", confirm: false, verb: "sleep"),
-        SystemAction(id: .sleepDisplays, title: "Sleep Displays", aliases: ["display sleep", "screen off", "turn off displays", "turn off screen"],
-                     symbol: "display", subtitle: "Turns the displays off; the Mac keeps running", confirm: false, verb: "sleep the displays"),
-        SystemAction(id: .screenSaver, title: "Start Screen Saver", aliases: ["screen saver", "screensaver"],
-                     symbol: "sparkles.tv", subtitle: "Starts the screen saver", confirm: false, verb: "start the screen saver"),
-        SystemAction(id: .toggleDarkMode, title: "Toggle Dark Mode", aliases: ["dark mode", "light mode", "toggle appearance", "dark", "night mode"],
-                     symbol: "circle.lefthalf.filled", subtitle: "", confirm: false, verb: "switch appearance"),
-        SystemAction(id: .ejectAll, title: "Eject All Disks", aliases: ["eject", "eject disks", "eject all", "unmount"],
-                     symbol: "eject", subtitle: "", confirm: false, verb: "eject"),
-        SystemAction(id: .emptyTrash, title: "Empty Trash", aliases: ["empty bin", "empty the trash"],
-                     symbol: "trash", subtitle: "Deletes everything in the Trash for good", confirm: true, verb: "empty the Trash"),
-        SystemAction(id: .logOut, title: "Log Out", aliases: ["logout", "log off", "sign out"],
-                     symbol: "rectangle.portrait.and.arrow.right", subtitle: "Quits all apps and logs you out", confirm: true, verb: "log out"),
-        SystemAction(id: .restart, title: "Restart", aliases: ["reboot", "restart mac"],
-                     symbol: "arrow.clockwise.circle", subtitle: "Quits all apps and restarts the Mac", confirm: true, verb: "restart"),
-        SystemAction(id: .shutDown, title: "Shut Down", aliases: ["shutdown", "power off", "turn off", "turn off mac"],
-                     symbol: "power", subtitle: "Quits all apps and turns the Mac off", confirm: true, verb: "shut down"),
+        SystemAction(id: .lockScreen, title: L10nKey("Lock Screen"), aliases: ["lock", "lock mac", "lock computer"],
+                     symbol: "lock", subtitle: L10nKey("Locks the screen right away"), confirm: false, verb: L10nKey("lock the screen")),
+        SystemAction(id: .sleep, title: L10nKey("Sleep"), aliases: ["sleep mac", "suspend"],
+                     symbol: "moon.zzz", subtitle: L10nKey("Puts the Mac to sleep"), confirm: false, verb: L10nKey("sleep")),
+        SystemAction(id: .sleepDisplays, title: L10nKey("Sleep Displays"), aliases: ["display sleep", "screen off", "turn off displays", "turn off screen"],
+                     symbol: "display", subtitle: L10nKey("Turns the displays off; the Mac keeps running"), confirm: false, verb: L10nKey("sleep the displays")),
+        SystemAction(id: .screenSaver, title: L10nKey("Start Screen Saver"), aliases: ["screen saver", "screensaver"],
+                     symbol: "sparkles.tv", subtitle: L10nKey("Starts the screen saver"), confirm: false, verb: L10nKey("start the screen saver")),
+        SystemAction(id: .toggleDarkMode, title: L10nKey("Toggle Dark Mode"), aliases: ["dark mode", "light mode", "toggle appearance", "dark", "night mode"],
+                     symbol: "circle.lefthalf.filled", subtitle: "", confirm: false, verb: L10nKey("switch appearance")),
+        SystemAction(id: .ejectAll, title: L10nKey("Eject All Disks"), aliases: ["eject", "eject disks", "eject all", "unmount"],
+                     symbol: "eject", subtitle: "", confirm: false, verb: L10nKey("eject")),
+        SystemAction(id: .emptyTrash, title: L10nKey("Empty Trash"), aliases: ["empty bin", "empty the trash"],
+                     symbol: "trash", subtitle: L10nKey("Deletes everything in the Trash for good"), confirm: true, verb: L10nKey("empty the Trash")),
+        SystemAction(id: .logOut, title: L10nKey("Log Out"), aliases: ["logout", "log off", "sign out"],
+                     symbol: "rectangle.portrait.and.arrow.right", subtitle: L10nKey("Quits all apps and logs you out"), confirm: true, verb: L10nKey("log out")),
+        SystemAction(id: .restart, title: L10nKey("Restart"), aliases: ["reboot", "restart mac"],
+                     symbol: "arrow.clockwise.circle", subtitle: L10nKey("Quits all apps and restarts the Mac"), confirm: true, verb: L10nKey("restart")),
+        SystemAction(id: .shutDown, title: L10nKey("Shut Down"), aliases: ["shutdown", "power off", "turn off", "turn off mac"],
+                     symbol: "power", subtitle: L10nKey("Quits all apps and turns the Mac off"), confirm: true, verb: L10nKey("shut down")),
     ]
 
     public static func action(_ id: ID) -> SystemAction { all.first { $0.id == id }! }
@@ -228,7 +244,7 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
     static func matches(_ a: SystemAction, _ query: String, global: Bool) -> MatchKind? {
         let q = TextMatch.words(query)
         guard !q.isEmpty else { return nil }
-        let names = [a.title] + a.aliases
+        let names = [a.title] + a.aliases + (a.localizedTitle == a.title ? [] : [a.localizedTitle])
         if global {
             let plain = query.allSatisfy { $0.isLetter || $0.isNumber || $0 == " " || $0 == "-" || $0 == "'" || $0 == "’" }
             guard plain else { return nil }
@@ -269,41 +285,43 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
         let id = a.id.rawValue
         if a.confirm {
             if armed {
-                item["title"] = "Confirm \(a.title)?"
-                item["subtitle"] = "Press ↵ again within \(Int(Confirmation.window)) seconds to \(a.verb)"
+                let seconds = Int(Confirmation.window)
+                item["title"] = a.confirmTitle
+                item["subtitle"] = Lp("Press ↵ again within %d second to %@", "Press ↵ again within %d seconds to %@",
+                                      count: seconds, seconds, L(a.verb))
                 item["icon"] = "exclamationmark.triangle"
                 item["actions"] = [
-                    ["type": "run", "name": "confirm", "data": id, "title": a.title],
-                    ["type": "run", "name": "disarm", "data": id, "then": "refresh", "title": "Cancel"],
+                    ["type": "run", "name": "confirm", "data": id, "title": a.localizedTitle],
+                    ["type": "run", "name": "disarm", "data": id, "then": "refresh", "title": L("Cancel")],
                 ]
                 // Built-ins may take the Top Hit: there, ↵ confirms in
                 // normal search too.
                 if global { item["topHit"] = true }
             } else {
-                item["title"] = a.title + "…"
-                item["subtitle"] = a.subtitle + " (asks first)"
-                item["actions"] = [["type": "run", "name": "arm", "data": id, "then": "refresh", "title": a.title + "…"]]
+                item["title"] = a.localizedTitle + "…"
+                item["subtitle"] = L("%@ (asks first)", L(a.subtitle))
+                item["actions"] = [["type": "run", "name": "arm", "data": id, "then": "refresh", "title": a.localizedTitle + "…"]]
             }
             return item
         }
-        item["title"] = a.title
-        item["subtitle"] = a.subtitle
+        item["title"] = a.localizedTitle
+        item["subtitle"] = a.subtitle.isEmpty ? "" : L(a.subtitle)
         switch a.id {
         case .toggleDarkMode:
-            item["subtitle"] = isDark() ? "Dark Mode is on: switch to Light" : "Dark Mode is off: switch to Dark"
+            item["subtitle"] = isDark() ? L("Dark Mode is on: switch to Light") : L("Dark Mode is off: switch to Dark")
         case .ejectAll:
             let v = volumes()
             if v.isEmpty {
                 // Nothing to eject: say so in keyword mode, stay quiet otherwise.
                 guard !global else { return nil }
-                item["subtitle"] = "No disks to eject"
+                item["subtitle"] = L("No disks to eject")
                 return item
             }
-            item["subtitle"] = "Ejects " + v.map(\.name).joined(separator: ", ")
+            item["subtitle"] = L("Ejects %@", v.map(\.name).joined(separator: ", "))
         default:
             break
         }
-        item["actions"] = [["type": "run", "name": "perform", "data": id, "title": a.title]]
+        item["actions"] = [["type": "run", "name": "perform", "data": id, "title": a.localizedTitle]]
         return item
     }
 
@@ -314,7 +332,7 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
         switch name {
         case "perform":
             // Never a way around the confirmation.
-            guard !action.confirm else { throw RunError("\(action.title) needs confirming") }
+            guard !action.confirm else { throw RunError(L("%@ needs confirming", action.localizedTitle)) }
         case "arm":
             guard action.confirm else { throw RunError("unknown action") }
             lock.withLock { confirmation.arm(id, now: t) }
@@ -326,13 +344,13 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
             guard action.confirm else { throw RunError("unknown action") }
             let ok = lock.withLock { confirmation.confirm(id, now: t) }
             guard ok else {
-                throw RunError("Not confirmed in time, so the Mac didn't \(action.verb). Try again.")
+                throw RunError(L("Not confirmed in time, so the Mac didn't %@. Try again.", L(action.verb)))
             }
         default:
             throw RunError("unknown action")
         }
         let commands = SystemAction.commands(for: id, volumes: id == .ejectAll ? volumes() : [])
-        guard !commands.isEmpty else { throw RunError("No disks to eject") }
+        guard !commands.isEmpty else { throw RunError(L("No disks to eject")) }
         var failures: [String] = []
         for c in commands {
             do {
@@ -341,6 +359,6 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
                 failures.append((error as? RunError)?.message ?? error.localizedDescription)
             }
         }
-        if let first = failures.first { throw RunError("Couldn't \(action.verb): \(first)") }
+        if let first = failures.first { throw RunError(L("Couldn't %@: %@", L(action.verb), first)) }
     }
 }

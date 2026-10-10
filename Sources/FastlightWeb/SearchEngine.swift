@@ -85,11 +85,11 @@ public struct WebSettings: Equatable, Sendable {
     public static func parse(_ data: Data, builtIns: [SearchEngine] = SearchEngine.builtIns()) -> WebSettings {
         var engines = builtIns
         guard let o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-            return WebSettings(engines: engines, problems: ["settings.json isn't a JSON object"])
+            return WebSettings(engines: engines, problems: [L("settings.json isn't a JSON object")])
         }
         var problems: [String] = []
         for key in o.keys.sorted() where !["engine", "engines"].contains(key) {
-            problems.append("unknown key \"\(key)\"")
+            problems.append(L("unknown key \"%@\"", key))
         }
         if let list = o["engines"] {
             if let list = list as? [Any] {
@@ -106,7 +106,7 @@ public struct WebSettings: Equatable, Sendable {
                     }
                 }
             } else {
-                problems.append("engines: must be a list")
+                problems.append(L("engines: must be a list"))
             }
         }
         if let id = o["engine"] {
@@ -114,7 +114,7 @@ public struct WebSettings: Equatable, Sendable {
                 engines.insert(engines.remove(at: i), at: 0)
             } else {
                 let known = engines.map(\.id).joined(separator: ", ")
-                problems.append("engine: \(id) isn't one of \(known)")
+                problems.append(L("engine: %@ isn't one of %@", "\(id)", known))
             }
         }
         return WebSettings(engines: engines, problems: problems)
@@ -123,16 +123,16 @@ public struct WebSettings: Equatable, Sendable {
     struct Problem: Error { var message: String }
 
     static func engine(from value: Any) -> Result<SearchEngine, Problem> {
-        guard let o = value as? [String: Any] else { return .failure(Problem(message: "must be an object")) }
+        guard let o = value as? [String: Any] else { return .failure(Problem(message: L("must be an object"))) }
         guard let id = (o["id"] as? String)?.lowercased(), !id.isEmpty,
               id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
-        else { return .failure(Problem(message: "id: must be letters, digits and -")) }
+        else { return .failure(Problem(message: L("id: must be letters, digits and -"))) }
         guard let name = o["name"] as? String, !name.isEmpty, name.count <= 40
-        else { return .failure(Problem(message: "name: must be 1–40 characters")) }
+        else { return .failure(Problem(message: L("name: must be 1–40 characters"))) }
         guard let url = o["url"] as? String, url.contains("%s"),
               let u = URL(string: url.replacingOccurrences(of: "%s", with: "x")),
               ["http", "https"].contains(u.scheme?.lowercased() ?? ""), u.host != nil
-        else { return .failure(Problem(message: "url: must be an http(s) URL with %s for the query")) }
+        else { return .failure(Problem(message: L("url: must be an http(s) URL with %s for the query"))) }
         return .success(SearchEngine(id: id, name: name, template: url))
     }
 }

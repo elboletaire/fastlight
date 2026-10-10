@@ -1,0 +1,23 @@
+/* Web: keys are the English text. Generated rows; edit freely. */
+"Type what to search the web for" = "Escriu què vols cercar a internet";
+"↵ searches with %@; the other engines are listed below it" = "↵ cerca amb %@; els altres cercadors surten a sota";
+"Default Search Engine: %@" = "Cercador per omissió: %@";
+"Change it, or add engines, in settings.json" = "Canvia’l, o afegeix-ne d’altres, a settings.json";
+"Edit Settings" = "Edita la configuració";
+"Search %@ for “%@”" = "Cerca “%2$@” a %1$@";
+"Search %@" = "Cerca a %@";
+"Copy Link" = "Copia l’enllaç";
+"settings.json: %@" = "settings.json: %@";
+"The rest of the settings still apply" = "La resta de la configuració continua vigent";
+"Open %@" = "Obre %@";
+"Open in Browser" = "Obre al navegador";
+"No data folder to keep settings in" = "No hi ha cap carpeta de dades on desar la configuració";
+"Couldn't create %@: %@" = "No s’ha pogut crear %@: %@";
+"settings.json isn't a JSON object" = "settings.json no és un objecte JSON";
+"unknown key \"%@\"" = "clau desconeguda “%@”";
+"engines: must be a list" = "engines: ha de ser una llista";
+"engine: %@ isn't one of %@" = "engine: %@ no és cap d’aquests: %@";
+"must be an object" = "ha de ser un objecte";
+"id: must be letters, digits and -" = "id: només lletres, xifres i -";
+"name: must be 1–40 characters" = "name: ha de tenir d’1 a 40 caràcters";
+"url: must be an http(s) URL with %s for the query" = "url: ha de ser una URL http(s) amb %s on va la cerca";

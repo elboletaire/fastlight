@@ -1,0 +1,23 @@
+/* Web: keys are the English text. Generated rows; edit freely. */
+"Type what to search the web for" = "Escribe qué quieres buscar en internet";
+"↵ searches with %@; the other engines are listed below it" = "↵ busca con %@; los demás buscadores aparecen debajo";
+"Default Search Engine: %@" = "Buscador por omisión: %@";
+"Change it, or add engines, in settings.json" = "Cámbialo, o añade otros, en settings.json";
+"Edit Settings" = "Editar ajustes";
+"Search %@ for “%@”" = "Buscar “%2$@” en %1$@";
+"Search %@" = "Buscar en %@";
+"Copy Link" = "Copiar enlace";
+"settings.json: %@" = "settings.json: %@";
+"The rest of the settings still apply" = "El resto de los ajustes sigue aplicándose";
+"Open %@" = "Abrir %@";
+"Open in Browser" = "Abrir en el navegador";
+"No data folder to keep settings in" = "No hay ninguna carpeta de datos donde guardar los ajustes";
+"Couldn't create %@: %@" = "No se ha podido crear %@: %@";
+"settings.json isn't a JSON object" = "settings.json no es un objeto JSON";
+"unknown key \"%@\"" = "clave desconocida “%@”";
+"engines: must be a list" = "engines: debe ser una lista";
+"engine: %@ isn't one of %@" = "engine: %@ no es ninguno de estos: %@";
+"must be an object" = "debe ser un objeto";
+"id: must be letters, digits and -" = "id: solo letras, cifras y -";
+"name: must be 1–40 characters" = "name: debe tener de 1 a 40 caracteres";
+"url: must be an http(s) URL with %s for the query" = "url: debe ser una URL http(s) con %s donde va la búsqueda";

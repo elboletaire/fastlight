@@ -1,0 +1,13 @@
+/* Emoji: keys are the English text. Generated rows; edit freely. */
+"Paste Emoji" = "Enganxa l’emoji";
+"Copy Emoji" = "Copia l’emoji";
+"Skin Tone: %@" = "To de pell: %@";
+"Default" = "Per omissió";
+"Light" = "Clar";
+"Medium-Light" = "Mitjà-clar";
+"Medium" = "Mitjà";
+"Medium-Dark" = "Mitjà-fosc";
+"Dark" = "Fosc";
+"Used for emoji that come in skin tones" = "Per als emojis que tenen tons de pell";
+"Use This Tone" = "Fes servir aquest to";
+"Current" = "Actual";

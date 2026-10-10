@@ -59,7 +59,8 @@ public final class EmojiExtension {
     public let index: EmojiIndex
     public let store: EmojiStore
 
-    static let toneNames = ["Default", "Light", "Medium-Light", "Medium", "Medium-Dark", "Dark"]
+    static let toneNames = [L10nKey("Default"), L10nKey("Light"), L10nKey("Medium-Light"), L10nKey("Medium"),
+                             L10nKey("Medium-Dark"), L10nKey("Dark")]
 
     public init(index: EmojiIndex, store: EmojiStore) {
         self.index = index
@@ -129,8 +130,8 @@ public final class EmojiExtension {
             "subtitle": about,
             "icon": ["emoji": glyph],
             "actions": [
-                ["type": "paste", "text": glyph, "title": "Paste Emoji"],
-                ["type": "copy", "text": glyph, "title": "Copy Emoji"],
+                ["type": "paste", "text": glyph, "title": L("Paste Emoji")],
+                ["type": "copy", "text": glyph, "title": L("Copy Emoji")],
             ],
         ]
         if let code = e.shortcodes.first { item["accessory"] = ":\(code):" }
@@ -141,12 +142,12 @@ public final class EmojiExtension {
         (0...5).map { t in
             var item: [String: Any] = [
                 "id": "tone-\(t)",
-                "title": "Skin Tone: \(Self.toneNames[t])",
-                "subtitle": "Used for emoji that come in skin tones",
+                "title": L("Skin Tone: %@", L(Self.toneNames[t])),
+                "subtitle": L("Used for emoji that come in skin tones"),
                 "icon": ["emoji": t == 0 ? "✋" : ["✋🏻", "✋🏼", "✋🏽", "✋🏾", "✋🏿"][t - 1]],
-                "actions": [["type": "run", "name": "setTone", "data": t, "then": "refresh", "title": "Use This Tone"]],
+                "actions": [["type": "run", "name": "setTone", "data": t, "then": "refresh", "title": L("Use This Tone")]],
             ]
-            if t == store.tone { item["accessory"] = "Current" }
+            if t == store.tone { item["accessory"] = L("Current") }
             return item
         }
     }

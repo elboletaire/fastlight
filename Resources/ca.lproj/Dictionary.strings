@@ -1,0 +1,8 @@
+/* Dictionary: keys are the English text. Generated rows; edit freely. */
+"Type a word to look it up" = "Escriu una paraula per consultar-la";
+"From the dictionaries turned on in Dictionary › Settings" = "Dels diccionaris activats a Diccionari › Configuració";
+"No definition for “%@”" = "No hi ha cap definició per a “%@”";
+"Search Dictionary.app, or turn on more dictionaries in its settings" = "Cerca a l’app Diccionari o activa més diccionaris a la seva configuració";
+"Search in Dictionary" = "Cerca al Diccionari";
+"Open in Dictionary" = "Obre al Diccionari";
+"Copy Definition" = "Copia la definició";
