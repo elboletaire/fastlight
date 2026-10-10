@@ -49,9 +49,10 @@ $pb -c "Set :CFBundleShortVersionString $next" -c "Set :CFBundleVersion $((build
 notes="$(mktemp)"
 git -C "$sub" log --reverse --format='- [`%h`](https://github.com/noahdunnagan/fsearch/commit/%H) %s' "$old..$new" > "$notes"
 
-git add "$sub" "$plist"
+# Just these two paths, whatever else happens to be staged.
 git commit --quiet -m "build(deps): update fsearch to ${new:0:7} and bump to $next" \
-  -m "Upstream changes: https://github.com/noahdunnagan/fsearch/compare/$old...$new"
+  -m "Upstream changes: https://github.com/noahdunnagan/fsearch/compare/$old...$new" \
+  -- "$sub" "$plist"
 
 echo "fsearch ${old:0:7} -> ${new:0:7}, Fastlight $version -> $next"
 output changed true
