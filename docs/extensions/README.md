@@ -119,11 +119,13 @@ System Settings › Privacy & Security, where Fastlight's switch is.
   browser opens the page.
 
 Address detection is strict so file names stay file names: a domain needs a
-TLD from a short list of common ones (`.com`, `.org`, `.io`, `.dev`, country
+TLD from a short list of common ones (`.com`, `.net`, `.io`, `.dev`, country
 codes…). TLDs that are also file extensions (`.app`, `.sh`, `.zip`, `.ai`,
-`.so`, `.pl`, `.cc`, `.in`, `.mov`) also need `www.`, a port or a path
-(`brew.sh/`), and any other one needs the scheme (`https://my-nas.local`).
-So `notes.md`, `main.swift` and `Safari.app` are never addresses.
+`.so`, `.pl`, `.cc`, `.in`, `.mov`, `.org`, `.info`, `.pt`, `.ly`, `.cl`,
+`.br`, `.ar`, `.au`, `.it`, `.tr`, `.me`) also need `www.`, a port or a path
+(`brew.sh/`, `wikipedia.org/wiki/x`), and any other one needs the scheme
+(`https://my-nas.local`). So `notes.md`, `main.swift`, `Safari.app` and
+`todo.org` are never addresses.
 
 The default engine is Google, as in Safari. To change it, or add engines,
 pick **Default Search Engine** after typing `web ` (it creates the file and

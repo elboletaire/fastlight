@@ -44,6 +44,22 @@ import Testing
         #expect(url("myapp.app:443") == "https://myapp.app:443")
     }
 
+    /// TLDs that double as everyday file extensions need www., a port, a
+    /// path or the scheme.
+    @Test func extensionLikeTLDsNeedMoreEvidence() {
+        for s in ["model.pt", "todo.org", "emacs.info", "score.ly", "kernel.cl", "app.js.br", "libfoo.ar", "sound.au",
+                  "song.it", "page.tr", "read.me", "wikipedia.org"] {
+            #expect(url(s) == nil, "\(s)")
+        }
+        #expect(url("github.com") == "https://github.com")
+        #expect(url("wikipedia.org/wiki/x") == "https://wikipedia.org/wiki/x")
+        #expect(url("www.example.org") == "https://www.example.org")
+        #expect(url("publico.pt/") == "https://publico.pt/")
+        #expect(url("bit.ly/abc") == "https://bit.ly/abc")
+        #expect(url("https://todo.org") == "https://todo.org")
+        #expect(url("gencat.cat") == "https://gencat.cat")
+    }
+
     @Test func fileNamesAreNotAddresses() {
         for s in ["notes.md", "main.swift", "Safari.app", "install.sh", "archive.zip", "logo.ai", "lib.so", "app.py",
                   "lib.rs", "index.html", "style.css", "package.json", "Info.plist", "README", "Makefile.in",
