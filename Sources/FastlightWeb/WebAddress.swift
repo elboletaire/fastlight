@@ -83,14 +83,21 @@ public enum WebAddress {
     /// TLDs that hardly ever end a file name. Not every TLD: those that
     /// are left out still work with `https://`.
     static let commonTLDs: Set<String> = [
-        "com", "org", "net", "edu", "gov", "mil", "int", "info", "biz", "xyz", "dev", "io", "co", "me", "tv",
-        "ly", "fm", "gg", "cloud", "online", "site", "tech", "blog", "wiki", "news", "shop", "store", "live",
-        "uk", "de", "fr", "es", "cat", "eu", "it", "nl", "be", "ch", "at", "se", "no", "dk", "fi", "pt", "ie",
-        "ru", "ua", "jp", "cn", "kr", "au", "nz", "ca", "br", "mx", "ar", "cl", "za", "us", "il", "tw", "hk",
-        "sg", "gr", "cz", "hu", "ro", "tr",
+        "com", "net", "edu", "gov", "mil", "int", "biz", "xyz", "dev", "io", "co", "tv",
+        "fm", "gg", "cloud", "online", "site", "tech", "blog", "wiki", "news", "shop", "store", "live",
+        "uk", "de", "fr", "es", "cat", "eu", "nl", "be", "ch", "se", "no", "dk", "fi", "ie",
+        "ru", "ua", "jp", "cn", "kr", "nz", "ca", "mx", "za", "us", "il", "tw", "hk",
+        "sg", "gr", "cz", "hu", "ro",
     ]
 
-    /// TLDs that are also common file extensions (shell scripts, apps,
-    /// archives, Perl, C++, Illustrator, shared libraries).
-    static let ambiguousTLDs: Set<String> = ["app", "sh", "zip", "mov", "pl", "cc", "ai", "so", "in"]
+    /// TLDs that are also common file extensions: shell scripts, apps,
+    /// archives, Perl, C++, Illustrator, shared libraries, Org mode
+    /// (`todo.org`), Texinfo (`emacs.info`), PyTorch models (`model.pt`),
+    /// LilyPond (`score.ly`), Lisp and OpenCL (`kernel.cl`), Brotli
+    /// (`app.js.br`), static libraries (`libfoo.ar`), Sun audio (`.au`),
+    /// tracker modules (`.it`), troff (`.tr`) and `read.me`.
+    static let ambiguousTLDs: Set<String> = [
+        "app", "sh", "zip", "mov", "pl", "cc", "ai", "so", "in",
+        "org", "info", "pt", "ly", "cl", "br", "ar", "au", "it", "tr", "me",
+    ]
 }
