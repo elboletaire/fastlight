@@ -10,7 +10,7 @@ object per line.
 - **Global mode (opt-in):** a few results in the extension's own section,
   next to Applications and Files, when it answers within 80 ms.
 
-Fastlight ships with two, built the same way:
+Fastlight ships with these, built the same way:
 
 - **Emoji.** Type `:` and a name or keyword (`:joy`, `:thumbs`, `:tada:`), or
   `emoji ` and the same. ↵ pastes into the app you were using, ⌘↵ copies.
@@ -26,6 +26,28 @@ Fastlight ships with two, built the same way:
   `sin`/`cos`/`tan` and their inverses (radians), `deg` and `rad`. Decimals
   take `.`, and `,` too where that's the decimal separator. Division by zero
   has no result.
+- **System Settings.** Type a pane's name in normal search (`bluetooth`,
+  `wi-fi`, `displays`, `battery`, `login items`, `desktop & dock`) or a
+  Privacy & Security page (`full disk access`, `screen recording`,
+  `camera`), and ↵ opens it. Other names work too (`dark mode`, `dock`,
+  `updates`, `fda`). Type `settings ` or `pref ` to list them all, and to
+  also search what's inside each pane (`settings pair` finds Bluetooth).
+  The panes are read from the installed System Settings, in your language,
+  so they match your macOS.
+- **Shortcuts.** Your shortcuts from the Shortcuts app: in normal search
+  when the name matches word by word (`resize`, `go sleep`), or all of them
+  after `sc `, `shortcut ` or `shortcuts `. ↵ runs it, ⌘↵ opens it in
+  Shortcuts. In keyword mode, what you type after a whole name is passed
+  as input: `sc translate good morning` runs Translate with "good morning".
+- **System.** Lock Screen, Sleep, Sleep Displays, Start Screen Saver,
+  Toggle Dark Mode and Eject All Disks run on ↵. Empty Trash, Log Out,
+  Restart and Shut Down ask first: ↵ turns the result into "Confirm
+  Restart?" for 5 seconds, and only ↵ on that does it (⌘↵ cancels). Normal
+  search only offers them for their name or a 4+ letter start of it
+  (`sleep`, `lock`, `rest`; not `sleep.txt` or `sleeping`); `sys ` lists
+  them all. Toggle Dark Mode, Empty Trash, Log Out, Restart and Shut Down
+  send Apple events, so macOS asks once to let Fastlight control System
+  Events, Finder or loginwindow.
 
 <img src="images/emoji-keyword-light.jpg" width="640" alt="Keyword mode: the Emoji pill in the search bar, results for “joy”, and an action bar naming Paste Emoji and Copy Emoji">
 

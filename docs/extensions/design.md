@@ -41,6 +41,8 @@ Status: implemented in protocol version **1**. Author-facing docs live in
    the bundled emoji picker, a normal protocol-1 extension
  Sources/FastlightCalc + Sources/fastlight-calc
    the bundled calculator, likewise
+ Sources/FastlightSystem + Sources/fastlight-system
+   System Settings, Shortcuts and System: three built-ins, one helper
 ```
 
 Apps, files and extensions all implement `ResultProvider`:
@@ -364,6 +366,98 @@ parser and an evaluator, so answers take microseconds.
   (`1920 × 1080 =`). ↵ copies the answer without grouping, so it pastes
   into code and spreadsheets; ⌘↵ pastes it, as in Raycast.
 
+## System Settings, Shortcuts and System
+
+Three more built-ins (`com.elboletaire.fastlight.settings`, `.shortcuts`
+and `.system`), all served by `Sources/fastlight-system`: the manifests
+in `Extensions/settings`, `shortcuts` and `system` run the same helper
+with `settings`, `shortcuts` or `actions` as its argument. The logic is
+the `FastlightSystem` library; anything that would touch the system goes
+through a `CommandRunner` or `SystemExecutor` protocol, so tests check
+the exact commands with fakes and never run them.
+
+**System Settings** (keywords `settings`, `pref`; global, 3 results for
+3+ characters).
+
+- Panes are discovered, not listed: every bundle in
+  `/System/Library/ExtensionKit/Extensions` whose extension point is
+  `com.apple.Settings.extension.ui` and that sets
+  `allowsXAppleSystemPreferencesURLScheme`. Its bundle id is what
+  `x-apple.systempreferences:<id>` opens, so the URLs are the ones the
+  running macOS accepts (`com.apple.BluetoothSettings`,
+  `com.apple.wifi-settings-extension`…), from 14 to 26.
+- The name is the bundle's `CFBundleDisplayName` in the user's language
+  (`InfoPlist.loctable`, or `InfoPlist.strings` in `.lproj` folders), with
+  the English one as an alias, so "keyboard" also finds Teclat. Bundles
+  without one (Battery, whose name is in its `Localizable` strings, and
+  "Energy" on Macs without a battery) get it from `SettingsCatalog`, which
+  also adds aliases (`wifi`, `dock`, `dark mode`, `fda`), and SF Symbols for
+  the few bundles Finder can't draw an icon for. Code names
+  (`PowerPreferences`) never show.
+- Pages: each pane's `.searchTerms` file names its sections, and those keys
+  are the URL anchors (`Privacy_AllFiles`). The catalog lists the pages
+  worth a result (Full Disk Access, Accessibility, Screen & System Audio
+  Recording, Input Monitoring, Automation, Camera…, FileVault, Lockdown
+  Mode), each offered only when the installed pane lists its anchor, and
+  named in the user's language when the pane's strings have it.
+- Normal search matches names and aliases word by word (`full disk`,
+  `blue`, `desktop and dock`); keyword mode also matches the search terms
+  (titles and index words of every setting in the pane). Third-party
+  `.prefPane` bundles in `/Library/PreferencePanes` and
+  `~/Library/PreferencePanes` are included and opened by path.
+- Scanning reads a few hundred small plists (about half a second, cold),
+  so the index is cached in `FASTLIGHT_DATA_DIR/settings.json`, keyed by
+  macOS version, languages and battery, and rebuilt in the background
+  after every handshake. Until there's an index, normal search has
+  nothing and keyword mode waits for it (up to 2 s).
+
+**Shortcuts** (keywords `sc`, `shortcut`, `shortcuts`; global, 3 results
+for 3+ characters).
+
+- `/usr/bin/shortcuts list --show-identifiers`, plus one listing per
+  folder for the subtitle, in the background after the handshake and on a
+  search when the list is over 30 s old; cached in
+  `FASTLIGHT_DATA_DIR/shortcuts.json` with when each was last run, which
+  orders the empty query.
+- Normal search shows a shortcut only when every word typed starts a word
+  of its name (`go sleep`, `resize web`), not for parts of words.
+- ↵ is a `run` action: `shortcuts run <id> [--input-path <file>]`, which
+  is given a second to fail (an unknown shortcut) and then left to finish
+  on its own, since shortcuts can run for minutes. In keyword mode, text
+  after a whole name is input: written to a temporary `.txt` file,
+  removed once the shortcut ends. ⌘↵ opens
+  `shortcuts://open-shortcut?name=…`.
+
+**System** (keyword `sys`; global, 3 results for 3+ characters).
+
+| Action | How | Asks first | Permission |
+|---|---|---|---|
+| Lock Screen | `SACLockScreenImmediate` (login framework, as the Apple menu) | | none |
+| Sleep, Sleep Displays | `pmset sleepnow`, `pmset displaysleepnow` | | none |
+| Start Screen Saver | `open -b com.apple.ScreenSaver.Engine` | | none |
+| Toggle Dark Mode | `osascript`: System Events' appearance preferences | | Automation (System Events) |
+| Eject All Disks | `diskutil eject` per external, removable, image or network volume | | none |
+| Empty Trash | `osascript`: Finder's `empty trash` | yes | Automation (Finder) |
+| Log Out, Restart, Shut Down | `osascript`: loginwindow's `aevtrlgo`, `aevtrrst`, `aevtrsdn` | yes | Automation (loginwindow) |
+
+The loginwindow events skip its own confirmation dialog (Fastlight has
+asked already), but apps still get to save or cancel, as with the Apple
+menu. Nothing needs Accessibility.
+
+- Normal search is strict: the query must be plain words (no `.`, `/`,
+  `~`) that are a name or alias (`reboot`, `power off`) or, from 4
+  letters on, the start of one. `sleep`, `lock`, `rest` offer actions;
+  `sleep.txt`, `sleeping beauty`, `log` don't.
+- Confirmation is a small state machine in the extension. The first ↵ on
+  a disruptive action is `run "arm"` with `then: "refresh"`: it records the
+  action and the time, and the list is searched again. The armed action
+  now reads "Confirm Restart?", comes first in keyword mode and is the
+  Top Hit in normal search (a built-in may), so the next ↵ lands on it:
+  `run "confirm"`, which runs the command only if that same action was
+  armed in the last 5 seconds, and uses the arming up either way. ⌘↵ is
+  `disarm`. `perform` (the one-step action) refuses disruptive actions,
+  so no reply shape can skip the second step.
+
 ## Testing
 
 All in `Tests/` with Swift Testing, deterministic and offline:
@@ -383,11 +477,21 @@ All in `Tests/` with Swift Testing, deterministic and offline:
 - Calculator: precedence and associativity, operator spellings, numbers and
   locales, percentages, functions, every error, formatting, the
   "looks like math" rule, and its protocol replies.
+- System Settings: discovery against fixture bundles (names per language,
+  old `.strings`, code names, hidden and non-URL bundles, Battery or
+  Energy, icons, pages only with their anchor), URLs, ranking and its
+  negatives, the cache, plus a read-only pass over the installed panes.
+- Shortcuts: `shortcuts list` parsing, folders, caching and staleness,
+  input after a name, run commands and input files, through a fake runner.
+- System: strict matching (with negatives), the confirmation state
+  machine, and every command, through a fake executor.
 - The shipped manifests and examples load together without problems.
 
 The UI is checked with `scripts/snapshot.sh`, which renders keyword mode,
 global sections and the consent notice with the real emoji and calculator
-extensions running through the real host.
+extensions running through the real host. The System Settings, Shortcuts
+(with sample shortcuts) and System scenes include the Confirm Shut Down?
+step.
 
 ## Not in this version
 
