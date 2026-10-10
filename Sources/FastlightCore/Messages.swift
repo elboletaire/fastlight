@@ -76,38 +76,3 @@ struct StatusResponse: Decodable {
 
     enum CodingKeys: String, CodingKey { case ok, error }
 }
-
-/// What the UI shows: a path, plus the matched line for content hits.
-public struct SearchResult: Sendable, Hashable, Identifiable {
-    public var path: String
-    public var isDirectory: Bool
-    public var line: Int?
-    public var snippet: String?
-
-    public var id: String { line.map { "\(path):\($0)" } ?? path }
-    public var name: String { (path as NSString).lastPathComponent }
-    public var parent: String { (path as NSString).deletingLastPathComponent }
-
-    public init(path: String, isDirectory: Bool = false, line: Int? = nil, snippet: String? = nil) {
-        self.path = path
-        self.isDirectory = isDirectory
-        self.line = line
-        self.snippet = snippet
-    }
-}
-
-extension SearchResponse {
-    /// Flattens name hits and content matches into one list, in daemon order.
-    public var results: [SearchResult] {
-        var out = (hits ?? []).map { SearchResult(path: $0.path, isDirectory: $0.kind == "dir") }
-        for f in files ?? [] {
-            if f.matches.isEmpty {
-                out.append(SearchResult(path: f.path))
-            }
-            for m in f.matches {
-                out.append(SearchResult(path: f.path, line: m.line, snippet: m.text.trimmingCharacters(in: .whitespaces)))
-            }
-        }
-        return out
-    }
-}

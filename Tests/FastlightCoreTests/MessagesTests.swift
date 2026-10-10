@@ -17,19 +17,19 @@ import Testing
         #expect(resp.ok)
         #expect(resp.id == 3)
         #expect(resp.tookUs == 812)
-        let results = resp.results
-        #expect(results.map(\.name) == ["main.rs", "src"])
-        #expect(results.map(\.isDirectory) == [false, true])
-        #expect(results[0].parent == "/Users/me/src")
+        let hits = try #require(resp.hits)
+        #expect(hits.map(\.path) == ["/Users/me/src/main.rs", "/Users/me/src"])
+        #expect(hits.map(\.kind) == ["file", "dir"])
+        #expect(hits[0].size == 120)
+        #expect(hits[0].mtime == 1_760_000_000)
+        #expect(hits[0].score == 900)
     }
 
     @Test func decodesContentMatches() throws {
         let line = #"{"ok":true,"took_us":5000,"source":"index","candidates":3,"read":3,"complete":true,"indexing":0,"files":[{"path":"/a/b.swift","matches":[{"line":4,"text":"   func apply() {"},{"line":9,"text":"apply()"}]}],"id":1}"#
-        let results = try JSONDecoder().decode(SearchResponse.self, from: Data(line.utf8)).results
-        #expect(results.count == 2)
-        #expect(results[0].line == 4)
-        #expect(results[0].snippet == "func apply() {")
-        #expect(results[0].id != results[1].id)
+        let files = try #require(try JSONDecoder().decode(SearchResponse.self, from: Data(line.utf8)).files)
+        #expect(files.map(\.path) == ["/a/b.swift"])
+        #expect(files[0].matches == [GrepMatch(line: 4, text: "   func apply() {"), GrepMatch(line: 9, text: "apply()")])
     }
 
     @Test func decodesStatus() throws {
