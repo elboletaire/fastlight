@@ -69,10 +69,12 @@ struct Stubborn: ResultProvider {
     }
 
     @Test func dropsProvidersOverBudget() async {
-        let late = FakeProvider(id: "ext", delay: .seconds(3), budget: .milliseconds(80))
+        // Far slower than any CI machine is: done well before it means it
+        // wasn't waited for (1.5 s against a 3 s provider was too tight).
+        let late = FakeProvider(id: "ext", delay: .seconds(10), budget: .milliseconds(80))
         let started = Date()
         let r = await run(SearchFanout(), "q", [FakeProvider(id: "apps"), late]) { $0.updates.last?.isFinal == true }
-        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(Date().timeIntervalSince(started) < 4)
         guard case .timedOut = r.updates.last?.outcomes["ext"] else {
             Issue.record("expected a timeout")
             return

@@ -223,8 +223,8 @@ import Testing
         t.cancel()
         let started = Date()
         await #expect(throws: CancellationError.self) { try await t.value }
-        // Not waiting for the 3 s reply (generous for slow CI machines).
-        #expect(Date().timeIntervalSince(started) < 1.5)
+        // Not waiting for the 3 s reply (with room for slow CI machines).
+        #expect(Date().timeIntervalSince(started) < 2.5)
         // The extension is free again once it answered the dropped query.
         #expect(try await host.search(ext, query: "next", mode: .keyword, limit: 5).map(\.title) == ["next"])
     }
@@ -280,7 +280,7 @@ import Testing
         waiting.cancel()
         await #expect(throws: CancellationError.self) { try await waiting.value }
         // Without waiting for "slower" to finish.
-        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(Date().timeIntervalSince(started) < 2.5)
         #expect(try await busy.value.map(\.title) == ["slower"])
     }
 
