@@ -203,10 +203,16 @@ public final class AppUsage: @unchecked Sendable {
         stats = defaults.dictionary(forKey: key) as? [String: [Double]] ?? [:]
     }
 
+    /// Launches older than this are forgotten: their boost has halved twelve
+    /// times by then, and the app may well be gone.
+    static let forgetAfter: TimeInterval = 365 * 86_400
+
     public func record(_ path: String, at date: Date = Date()) {
         lock.withLock {
             let count = (stats[path]?.first ?? 0) + 1
             stats[path] = [count, date.timeIntervalSince1970]
+            let cutoff = date.timeIntervalSince1970 - Self.forgetAfter
+            stats = stats.filter { $0.value.count == 2 && $0.value[1] >= cutoff }
             defaults.set(stats, forKey: key)
         }
     }
