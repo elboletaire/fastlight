@@ -326,10 +326,14 @@ public enum UnitParser {
     }
 
     /// Fuel economy is a reciprocal, so it must be positive: "0 mpg" has
-    /// no L/100km.
+    /// no L/100km. Nothing is colder than absolute zero: "-300 c" has no
+    /// kelvin. (Kelvin is temperature's base unit.)
     static func possible(_ a: Amount) -> Bool {
-        if a.quantity == .fuel { return a.value > 0 }
-        return true
+        switch a.quantity {
+        case .fuel: a.value > 0
+        case .temperature: a.unit.unit.converter.baseUnitValue(fromValue: a.value) > -1e-9
+        default: true
+        }
     }
 
     /// Number-unit pairs from the start; at least one.
