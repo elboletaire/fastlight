@@ -17,7 +17,8 @@ public enum Access: String, Sendable, CaseIterable {
 
 /// One of the stores, with what the permission items say about it.
 public struct PIMDomain: Sendable {
-    /// "Contacts", "Calendars", "Reminders": as System Settings names them.
+    /// "Contacts", "Calendars", "Reminders": as System Settings names them,
+    /// in English (see `localizedName`).
     public var name: String
     /// The anchor of its pane in System Settings › Privacy & Security.
     public var pane: String
@@ -32,39 +33,66 @@ public struct PIMDomain: Sendable {
         "x-apple.systempreferences:com.apple.preference.security?\(pane)"
     }
 
+    /// One of three phrasings, by store: each language words them its own
+    /// way ("als contactes", "a los calendarios"), so no name is spliced in.
+    func pick(_ contacts: String, _ calendars: String, _ reminders: String) -> String {
+        switch pane {
+        case PIMDomain.calendars.pane: calendars
+        case PIMDomain.reminders.pane: reminders
+        default: contacts
+        }
+    }
+
+    /// The name as Privacy & Security lists it, in the user's language.
+    public var localizedName: String {
+        pick(L("Contacts"), L("Calendars"), L("Reminders"))
+    }
+
     /// The item to show in keyword mode when Fastlight can't read the store,
     /// or nil when it can. Asking is a `run` action, so the system prompt
     /// only ever follows something the user picked.
     public func accessItem(for access: Access) -> [String: Any]? {
-        let settings = "System Settings › Privacy & Security › \(name)"
+        let openSettings = ["type": "open", "target": settingsURL, "title": L("Open System Settings")]
         switch access {
         case .authorized:
             return nil
         case .notDetermined:
             return [
                 "id": "allow-access",
-                "title": "Allow Access to \(name)…",
-                "subtitle": "macOS asks once. Fastlight only reads \(name), on this Mac.",
+                "title": pick(L("Allow Access to Contacts…"), L("Allow Access to Calendars…"), L("Allow Access to Reminders…")),
+                "subtitle": pick(L("macOS asks once. Fastlight only reads Contacts, on this Mac."),
+                                 L("macOS asks once. Fastlight only reads Calendars, on this Mac."),
+                                 L("macOS asks once. Fastlight only reads Reminders, on this Mac.")),
                 "icon": symbol,
-                "actions": [["type": "run", "name": "requestAccess", "title": "Allow Access…", "then": "close"]],
+                "actions": [["type": "run", "name": "requestAccess", "title": L("Allow Access…"), "then": "close"]],
             ]
         case .denied, .writeOnly:
             return [
                 "id": "access-off",
-                "title": access == .writeOnly ? "Fastlight Can't Read \(name)" : "Access to \(name) Is Off",
-                "subtitle": "Turn on Fastlight in \(settings)",
+                "title": access == .writeOnly
+                    ? pick(L("Fastlight Can't Read Contacts"), L("Fastlight Can't Read Calendars"), L("Fastlight Can't Read Reminders"))
+                    : pick(L("Access to Contacts Is Off"), L("Access to Calendars Is Off"), L("Access to Reminders Is Off")),
+                "subtitle": L("Turn on Fastlight in System Settings › Privacy & Security › %@", localizedName),
                 "icon": "lock",
-                "actions": [["type": "open", "target": settingsURL, "title": "Open System Settings"]],
+                "actions": [openSettings],
             ]
         case .restricted:
             return [
                 "id": "access-restricted",
-                "title": "Access to \(name) Is Restricted",
-                "subtitle": "A profile or Screen Time on this Mac doesn't allow it",
+                "title": pick(L("Access to Contacts Is Restricted"), L("Access to Calendars Is Restricted"),
+                              L("Access to Reminders Is Restricted")),
+                "subtitle": L("A profile or Screen Time on this Mac doesn't allow it"),
                 "icon": "lock",
-                "actions": [["type": "open", "target": settingsURL, "title": "Open System Settings"]],
+                "actions": [openSettings],
             ]
         }
+    }
+
+    /// The row for a store that couldn't be read just now.
+    public var readErrorItem: [String: Any] {
+        ["id": "error",
+         "title": pick(L("Couldn't Read Contacts"), L("Couldn't Read Calendars"), L("Couldn't Read Reminders")),
+         "subtitle": L("Try again in a moment"), "icon": "exclamationmark.triangle"]
     }
 }
 
@@ -284,8 +312,7 @@ open class StoreExtension<Value: Sendable>: @unchecked Sendable {
         let wait = global ? globalWait : loader.cached == nil ? keywordWait : refreshWait
         guard let value = loader.get(maxAge: maxAge, wait: wait) else {
             if global { return [] }
-            return [["id": "error", "title": "Couldn't Read \(domain.name)", "subtitle": "Try again in a moment",
-                     "icon": "exclamationmark.triangle"]]
+            return [domain.readErrorItem]
         }
         return Array(results(in: value, query: q, global: global, limit: limit).prefix(limit))
     }

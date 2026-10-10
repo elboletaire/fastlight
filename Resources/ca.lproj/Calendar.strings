@@ -1,0 +1,18 @@
+/* The Calendar and Reminders extensions. Keys are the English text. */
+"No Upcoming Events" = "No hi ha esdeveniments propers";
+"New Event" = "Nou esdeveniment";
+"Show in Calendar" = "Mostra al Calendari";
+"Copy Event Details" = "Copia els detalls de l’esdeveniment";
+"No Reminders" = "No hi ha recordatoris";
+"Everything's done" = "Ho tens tot fet";
+"New Reminder" = "Nou recordatori";
+"Show in Reminders" = "Mostra a Recordatoris";
+"Copy Reminder" = "Copia el recordatori";
+"Today" = "Avui";
+"Tomorrow" = "Demà";
+"Yesterday" = "Ahir";
+"%@, all day" = "%@, tot el dia";
+"Until %@" = "Fins a %@";
+"Now, until %@" = "Ara, fins a les %@";
+"Now, until %1$@, %2$@" = "Ara, fins a %1$@, a les %2$@";
+"Overdue · %@" = "Vençut · %@";

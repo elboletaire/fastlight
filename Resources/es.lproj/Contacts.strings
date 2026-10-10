@@ -1,0 +1,18 @@
+/* The Contacts extension. Keys are the English text. */
+"Search Contacts" = "Buscar contactos";
+"Type a name, company, email address or phone number" = "Escribe un nombre, una empresa, un correo electrónico o un número de teléfono";
+"Open in Contacts" = "Abrir en Contactos";
+"Copy Email Address" = "Copiar correo electrónico";
+"Copy Phone Number" = "Copiar número de teléfono";
+"Copy Name" = "Copiar nombre";
+"Email" = "Correo electrónico";
+"Send Email" = "Enviar correo electrónico";
+"Phone" = "Teléfono";
+"Call" = "Llamar";
+"Message %@" = "Enviar mensaje a %@";
+"Send Message" = "Enviar mensaje";
+"Copy" = "Copiar";
+"FaceTime %@" = "FaceTime con %@";
+"FaceTime Video" = "FaceTime de vídeo";
+"FaceTime Audio" = "FaceTime de audio";
+"No Name" = "Sin nombre";

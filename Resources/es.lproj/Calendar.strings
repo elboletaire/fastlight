@@ -1,0 +1,18 @@
+/* The Calendar and Reminders extensions. Keys are the English text. */
+"No Upcoming Events" = "No hay próximos eventos";
+"New Event" = "Nuevo evento";
+"Show in Calendar" = "Mostrar en Calendario";
+"Copy Event Details" = "Copiar detalles del evento";
+"No Reminders" = "No hay recordatorios";
+"Everything's done" = "Lo tienes todo hecho";
+"New Reminder" = "Nuevo recordatorio";
+"Show in Reminders" = "Mostrar en Recordatorios";
+"Copy Reminder" = "Copiar recordatorio";
+"Today" = "Hoy";
+"Tomorrow" = "Mañana";
+"Yesterday" = "Ayer";
+"%@, all day" = "%@, todo el día";
+"Until %@" = "Hasta %@";
+"Now, until %@" = "Ahora, hasta las %@";
+"Now, until %1$@, %2$@" = "Ahora, hasta %1$@, a las %2$@";
+"Overdue · %@" = "Atrasado · %@";

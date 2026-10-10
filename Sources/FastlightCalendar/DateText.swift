@@ -16,8 +16,9 @@ public struct DateText: Sendable {
         self.init(calendar: clock.calendar, now: clock.now())
     }
 
-    func formatter(_ template: String) -> DateFormatter {
+    func formatter(_ template: String, context: Formatter.Context = .unknown) -> DateFormatter {
         let f = DateFormatter()
+        f.formattingContext = context
         f.calendar = calendar
         f.locale = calendar.locale ?? .current
         f.timeZone = calendar.timeZone
@@ -32,17 +33,34 @@ public struct DateText: Sendable {
 
     /// "Today", "Tomorrow", "Yesterday", a weekday within the next six
     /// days, else a short date ("Mon 26 Oct", with the year when it isn't
-    /// this one).
+    /// this one). As the start of a phrase: "Dilluns", "Avui".
     public func day(_ d: Date) -> String {
+        day(d, context: .beginningOfSentence)
+    }
+
+    /// The same inside a phrase ("Fins a demà", "Hasta el lunes"). English
+    /// keeps its capitals ("Until Tomorrow"), as Calendar's lists do.
+    public func inlineDay(_ d: Date) -> String {
+        let s = day(d, context: .middleOfSentence)
+        guard (-1...1).contains(days(to: d)), language != "en" else { return s }
+        return s.prefix(1).lowercased() + s.dropFirst()
+    }
+
+    func day(_ d: Date, context: Formatter.Context) -> String {
         switch days(to: d) {
-        case 0: return "Today"
-        case 1: return "Tomorrow"
-        case -1: return "Yesterday"
-        case 2...6: return formatter("EEEE").string(from: d)
+        case 0: return L("Today")
+        case 1: return L("Tomorrow")
+        case -1: return L("Yesterday")
+        case 2...6: return formatter("EEEE", context: context).string(from: d)
         default:
             let sameYear = calendar.component(.year, from: d) == calendar.component(.year, from: now)
-            return formatter(sameYear ? "EEEdMMM" : "EEEdMMMy").string(from: d)
+            return formatter(sameYear ? "EEEdMMM" : "EEEdMMMy", context: context).string(from: d)
         }
+    }
+
+    /// The language dates are written in.
+    var language: String {
+        (calendar.locale ?? .current).language.languageCode?.identifier ?? "en"
     }
 
     /// "10:00" or "10:00 AM", as the locale has it.
@@ -51,8 +69,8 @@ public struct DateText: Sendable {
     }
 
     /// The full date, for copying: "Friday, 9 October 2026".
-    public func fullDay(_ d: Date) -> String {
-        formatter("EEEEdMMMMy").string(from: d)
+    public func fullDay(_ d: Date, context: Formatter.Context = .beginningOfSentence) -> String {
+        formatter("EEEEdMMMMy", context: context).string(from: d)
     }
 
     /// The last day an all-day event covers: EventKit ends them at the
@@ -65,29 +83,30 @@ public struct DateText: Sendable {
     public func when(_ e: CalendarEvent) -> String {
         if e.isAllDay {
             let last = lastDay(e)
-            if calendar.isDate(e.start, inSameDayAs: last) { return "\(day(e.start)), all day" }
+            if calendar.isDate(e.start, inSameDayAs: last) { return L("%@, all day", day(e.start)) }
             // Started already: what matters is when it ends.
-            return e.start < now ? "Until \(day(last))" : "\(day(e.start)) – \(day(last))"
+            return e.start < now ? L("Until %@", inlineDay(last)) : "\(day(e.start)) – \(inlineDay(last))"
         }
         let sameDay = calendar.isDate(e.start, inSameDayAs: e.end)
         if e.start <= now, now < e.end {
-            return "Now, until " + (calendar.isDate(e.end, inSameDayAs: now) ? time(e.end) : "\(day(e.end)), \(time(e.end))")
+            if calendar.isDate(e.end, inSameDayAs: now) { return L("Now, until %@", time(e.end)) }
+            return L("Now, until %1$@, %2$@", inlineDay(e.end), time(e.end))
         }
         if sameDay { return "\(day(e.start)), \(time(e.start)) – \(time(e.end))" }
-        return "\(day(e.start)), \(time(e.start)) – \(day(e.end)), \(time(e.end))"
+        return "\(day(e.start)), \(time(e.start)) – \(inlineDay(e.end)), \(time(e.end))"
     }
 
     /// The same, with absolute dates, for the clipboard.
     public func fullWhen(_ e: CalendarEvent) -> String {
         if e.isAllDay {
             let last = lastDay(e)
-            if calendar.isDate(e.start, inSameDayAs: last) { return "\(fullDay(e.start)), all day" }
-            return "\(fullDay(e.start)) – \(fullDay(last))"
+            if calendar.isDate(e.start, inSameDayAs: last) { return L("%@, all day", fullDay(e.start)) }
+            return "\(fullDay(e.start)) – \(fullDay(last, context: .middleOfSentence))"
         }
         if calendar.isDate(e.start, inSameDayAs: e.end) {
             return "\(fullDay(e.start)), \(time(e.start)) – \(time(e.end))"
         }
-        return "\(fullDay(e.start)), \(time(e.start)) – \(fullDay(e.end)), \(time(e.end))"
+        return "\(fullDay(e.start)), \(time(e.start)) – \(fullDay(e.end, context: .middleOfSentence)), \(time(e.end))"
     }
 
     /// Past due: a time that has gone by, or a day before today.
@@ -101,7 +120,7 @@ public struct DateText: Sendable {
     public func due(_ r: Reminder) -> String? {
         guard let due = r.due else { return nil }
         let when = r.dueHasTime ? "\(day(due)), \(time(due))" : day(due)
-        return isOverdue(r) ? "Overdue · \(when)" : when
+        return isOverdue(r) ? L("Overdue · %@", when) : when
     }
 
     /// "!!!", "!!" or "!", as Reminders marks priority.
