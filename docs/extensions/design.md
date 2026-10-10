@@ -41,6 +41,13 @@ Status: implemented in protocol version **1**. Author-facing docs live in
    the bundled emoji picker, a normal protocol-1 extension
  Sources/FastlightCalc + Sources/fastlight-calc
    the bundled calculator, likewise
+ Sources/FastlightConvert + Sources/fastlight-convert
+   the bundled conversions (units, clocks, dates), likewise
+ Sources/FastlightSystem + Sources/fastlight-system
+   System Settings, Shortcuts and System: three built-ins, one helper
+ Sources/FastlightDictionary + Sources/fastlight-dict
+ Sources/FastlightWeb + Sources/fastlight-web
+   the bundled dictionary and web addresses/search, likewise
 ```
 
 Apps, files and extensions all implement `ResultProvider`:
@@ -364,6 +371,265 @@ parser and an evaluator, so answers take microseconds.
   (`1920 × 1080 =`). ↵ copies the answer without grouping, so it pastes
   into code and spreadsheets; ⌘↵ pastes it, as in Raycast.
 
+## Conversions
+
+`Sources/fastlight-convert` is the third built-in (`id
+com.elboletaire.fastlight.convert`, keyword `convert`, global with one
+result). `FastlightConvert` parses three kinds of question, in this order:
+dates, clocks, units. Everything is in-process and offline; a reply takes
+well under a millisecond once the tables are built, which happens before
+the handshake.
+
+- Units: Foundation `Dimension`s and their converters, redefined with the
+  exact factor where Foundation rounds (a pound, US cups, km/h). Aliases
+  are folded (case, diacritics, `²`, `µ`), numbers are split from units
+  (`10km`, `72°f`, `5'11"`), and an amount may have several terms of one
+  kind (`3 ft 4 in`, `1 h 30 min`). Numbers follow the locale like the
+  calculator's, and so does formatting, at six significant digits.
+- Clocks: every city in `TimeZone.knownTimeZoneIdentifiers`, minus
+  Antarctica and names that are everyday words (`christmas`, `easter`),
+  plus a small table of countries, big cities and abbreviations. `PST`
+  means Pacific time, so it reads PDT in summer. Offsets (`utc+5:30`) work.
+- Dates: on calendar days in the local time zone, so DST never shifts an
+  answer. A day without a year is the next one (the last one for `since`);
+  weeks are ISO 8601.
+- Global search answers only when the query clearly is one (see the
+  extension guide), so it never competes with the calculator: units, places
+  and date words are unknown names to it, and plain math has no unit.
+  Keyword mode also takes a place, a day or an ambiguous unit on its own.
+
+## System Settings, Shortcuts and System
+
+Three more built-ins (`com.elboletaire.fastlight.settings`, `.shortcuts`
+and `.system`), all served by `Sources/fastlight-system`: the manifests
+in `Extensions/settings`, `shortcuts` and `system` run the same helper
+with `settings`, `shortcuts` or `actions` as its argument. The logic is
+the `FastlightSystem` library; anything that would touch the system goes
+through a `CommandRunner` or `SystemExecutor` protocol, so tests check
+the exact commands with fakes and never run them.
+
+**System Settings** (keywords `settings`, `pref`; global, 3 results for
+3+ characters).
+
+- Panes are discovered, not listed: every bundle in
+  `/System/Library/ExtensionKit/Extensions` whose extension point is
+  `com.apple.Settings.extension.ui` and that sets
+  `allowsXAppleSystemPreferencesURLScheme`. Its bundle id is what
+  `x-apple.systempreferences:<id>` opens, so the URLs are the ones the
+  running macOS accepts (`com.apple.BluetoothSettings`,
+  `com.apple.wifi-settings-extension`…), from 14 to 26.
+- The name is the bundle's `CFBundleDisplayName` in the user's language
+  (`InfoPlist.loctable`, or `InfoPlist.strings` in `.lproj` folders), with
+  the English one as an alias, so "keyboard" also finds Teclat. Bundles
+  without one (Battery, whose name is in its `Localizable` strings, and
+  "Energy" on Macs without a battery) get it from `SettingsCatalog`, which
+  also adds aliases (`wifi`, `dock`, `dark mode`, `fda`), and SF Symbols for
+  the few bundles Finder can't draw an icon for. Code names
+  (`PowerPreferences`) never show.
+- Pages: each pane's `.searchTerms` file names its sections, and those keys
+  are the URL anchors (`Privacy_AllFiles`). The catalog lists the pages
+  worth a result (Full Disk Access, Accessibility, Screen & System Audio
+  Recording, Input Monitoring, Automation, Camera…, FileVault, Lockdown
+  Mode), each offered only when the installed pane lists its anchor, and
+  named in the user's language when the pane's strings have it.
+- Normal search matches names and aliases word by word (`full disk`,
+  `blue`, `desktop and dock`); keyword mode also matches the search terms
+  (titles and index words of every setting in the pane). Third-party
+  `.prefPane` bundles in `/Library/PreferencePanes` and
+  `~/Library/PreferencePanes` are included and opened by path.
+- Scanning reads a few hundred small plists (about half a second, cold),
+  so the index is cached in
+  `FASTLIGHT_DATA_DIR/settings.json`, keyed by macOS version, languages
+  and battery, and rebuilt in the background after the handshake only when
+  it's missing or a day old (for third-party panes), since a scan costs
+  about 0.6 s of CPU. Until there's an index, normal search has
+  nothing and keyword mode waits for it (up to 2 s).
+
+**Shortcuts** (keywords `sc`, `shortcut`, `shortcuts`; global, 3 results
+for 3+ characters).
+
+- `/usr/bin/shortcuts list --show-identifiers`, plus one listing per
+  folder for the subtitle, in the background after the handshake and on a
+  search when the list is over 30 s old; cached in
+  `FASTLIGHT_DATA_DIR/shortcuts.json` with when each was last run, which
+  orders the empty query.
+- Normal search shows a shortcut only when every word typed starts a word
+  of its name (`go sleep`, `resize web`), not for parts of words.
+- ↵ is a `run` action: `shortcuts run <id> [--input-path <file>]`, which
+  is given a second to fail (an unknown shortcut) and then left to finish
+  on its own, since shortcuts can run for minutes. In keyword mode, text
+  after a whole name is input: written to a temporary `.txt` file,
+  removed once the shortcut ends. ⌘↵ opens
+  `shortcuts://open-shortcut?name=…`.
+
+**System** (keyword `sys`; global, 3 results for 3+ characters).
+
+| Action | How | Asks first | Permission |
+|---|---|---|---|
+| Lock Screen | `SACLockScreenImmediate` (login framework, as the Apple menu) | | none |
+| Sleep, Sleep Displays | `pmset sleepnow`, `pmset displaysleepnow` | | none |
+| Start Screen Saver | `open -b com.apple.ScreenSaver.Engine` | | none |
+| Toggle Dark Mode | `osascript`: System Events' appearance preferences | | Automation (System Events) |
+| Eject All Disks | `diskutil eject` per external, removable, image or network volume | | none |
+| Empty Trash | `osascript`: Finder's `empty trash` | yes | Automation (Finder) |
+| Log Out, Restart, Shut Down | `osascript`: loginwindow's `aevtrlgo`, `aevtrrst`, `aevtrsdn` | yes | Automation (loginwindow) |
+
+The loginwindow events skip its own confirmation dialog (Fastlight has
+asked already), but apps still get to save or cancel, as with the Apple
+menu. Nothing needs Accessibility.
+
+- Normal search is strict: the query must be plain words (no `.`, `/`,
+  `~`) that are a name or alias (`reboot`, `power off`) or, from 4
+  letters on, the start of one. `sleep`, `lock`, `rest` offer actions;
+  `sleep.txt`, `sleeping beauty`, `log` don't.
+- Confirmation is a small state machine in the extension. The first ↵ on
+  a disruptive action is `run "arm"` with `then: "refresh"`: it records the
+  action and the time, and the list is searched again. The armed action
+  now reads "Confirm Restart?", comes first in keyword mode and is the
+  Top Hit in normal search (a built-in may), so the next ↵ lands on it:
+  `run "confirm"`, which runs the command only if that same action was
+  armed in the last 5 seconds, and uses the arming up either way. ⌘↵ is
+  `disarm`. `perform` (the one-step action) refuses disruptive actions,
+  so no reply shape can skip the second step.
+
+## Contacts, Calendar and Reminders
+
+Three more built-ins (`com.elboletaire.fastlight.contacts`,
+`…calendar`, `…reminders`) read the system's personal-information stores.
+`Sources/fastlight-contacts` uses the Contacts framework;
+`Sources/fastlight-calendar` uses EventKit and serves both Calendar
+(`fastlight-calendar events`) and Reminders (`fastlight-calendar
+reminders`), two manifests on one binary, because the protocol doesn't tell
+an extension which of its keywords was typed. Everything but the framework
+calls lives in `FastlightContacts` and `FastlightCalendar` behind
+`ContactSource` and `CalendarSource`, so it's tested with fakes;
+`FastlightPIM` holds what the three share (`StoreExtension`).
+
+- **Permissions.** The helpers are Fastlight's children, so TCC attributes
+  their requests to Fastlight, the responsible app: the prompts name
+  Fastlight, use its `NSContactsUsageDescription`,
+  `NSCalendarsFullAccessUsageDescription` and
+  `NSRemindersFullAccessUsageDescription` (macOS 14's full-access keys; the
+  older ones only matter for apps that run on 13), and the switches in
+  System Settings are Fastlight's. Under the hardened runtime (a real
+  signing identity in `scripts/bundle.sh`), TCC also wants
+  `com.apple.security.personal-information.addressbook` and `.calendars`
+  (which covers Reminders) on the responsible app, or it denies without a
+  prompt; `Resources/Fastlight.entitlements` gives them to the app and to
+  the two helpers. Ad-hoc builds have no hardened runtime and are signed
+  without entitlements.
+- **When it asks.** Never on its own. The helpers check the authorization
+  status (which never prompts) on every search. Without access, global
+  search returns nothing, and keyword mode returns one item: *Allow Access
+  to Contacts…* (a `run` action that calls `requestAccess` /
+  `requestFullAccessToEvents` / `requestFullAccessToReminders` and closes
+  the panel, so the alert is in front), or, when denied or write-only, a
+  link to `x-apple.systempreferences:com.apple.preference.security?Privacy_Contacts`
+  (`Privacy_Calendars`, `Privacy_Reminders`); restricted says so.
+- **Speed.** Right after the handshake, and only when access is already
+  on, the helper reads the store in the background: every card (name parts,
+  nickname, company, job title, emails, phones), events from the start of
+  today to 14 days ahead, incomplete reminders. Searches run over that copy
+  in memory. It's read again in the background once older than 60 s; keyword
+  mode waits up to 0.3 s for the fresher copy (2.5 s for the first), global
+  search at most 30 ms and otherwise answers empty for that keystroke.
+  Losing access drops the copy.
+- **Matching.** Words are folded (case, accents, width) and every query
+  word must start a word. Contacts: name, then nickname, then company, then
+  email; whole words beat prefixes, a given name beats a family name, the
+  exact full name wins; `@` (or a dot and no spaces) searches addresses, a
+  query of digits (spaces, `+`, `-`, parentheses allowed) searches numbers.
+  Global search only takes strong matches: names, nicknames, companies, the
+  start of an address (3+ characters) or 4+ digits. Events and reminders:
+  title matches first, then location, calendar, notes or list; global
+  search only takes title matches.
+- **Links.** Cards open with `addressbook://<identifier>` (Contacts'
+  identifier already ends in `:ABPerson`), events with
+  `ical://ekevent/<calendarItemIdentifier>?method=show&options=more` (a
+  repeating event adds the occurrence's start,
+  `ical://ekevent/20261016T090000Z/<id>?…`, UTC for timed events, the wall
+  clock for all-day ones), reminders with
+  `x-apple-reminderkit://REMCDReminder/<calendarItemIdentifier>`. None of
+  these schemes is documented. Mail is `mailto:`, calls `tel:` (FaceTime
+  places them), Messages `sms:`, FaceTime `facetime:` and `facetime-audio:`.
+- **Dates** are in English, like the rest of Fastlight, with the region's
+  conventions (24-hour clock, day-month order) and the user's time zone:
+  "Today, 10:00 – 10:30", "Now, until 09:15", "Tomorrow, all day",
+  "Thursday, 10:00 – 12:00", "Sun, 18 Oct, 19:00 – 20:00",
+  "Overdue · Yesterday".
+- **Screenshots.** `--sample [access-file]` makes a helper answer from
+  made-up people and events instead, with the access state read from that
+  file. `scripts/snapshot.sh` runs the built-ins that way, so it never
+  touches (or asks for) the real stores.
+
+## The dictionary
+
+`Sources/fastlight-dict` (`id com.elboletaire.fastlight.dictionary`,
+keywords `define` and `dict`, keyword mode only). The logic is the
+`FastlightDictionary` library.
+
+- Source: the public `DCSCopyTextDefinition` with no dictionary, which asks
+  the dictionaries turned on in Dictionary › Settings in their order, like
+  Look Up. Offline. The private DictionaryServices calls
+  (`DCSGetActiveDictionaries`, `DCSCopyRecordsForSearchString`,
+  `DCSRecordCopyData`) would give each dictionary's name, every dictionary's
+  entry and structured HTML instead of one flattened line, but they are
+  undocumented and could change with any macOS release, so they're not used.
+  The cost: one entry (the first dictionary's) and a text to shape.
+- Shaping (`DefinitionText`): the headword (the query when the entry starts
+  with it, else the entry's first word: `flies` finds `fly`), the
+  pronunciation between the first pipes, then senses split on sense numbers
+  (`1`, `2`…, `①`) and parts of speech in the languages macOS ships
+  dictionaries for most (`noun`, `transitive verb`, `nom masculí`,
+  `feminine noun`…). Each sense is cut at its examples (`:`), sub-senses
+  (`•`), phrases (`▸`) and second sentence; `ORIGIN`, `DERIVATIVES` and the
+  like are dropped. Every dictionary flattens entries differently, so this
+  is a heuristic tested against real entries from the Oxford, bilingual,
+  Larousse and Japanese dictionaries. The lookup sits behind a
+  `DefinitionSource` protocol, so tests don't depend on what's installed;
+  one test uses the real API and is skipped when nothing answers.
+- Rows: the sense is the title, since it's what you came for, and
+  `headword · part of speech · pronunciation` the subtitle. ↵ opens
+  `dict://word` in Dictionary.app, ⌘↵ copies the sense. Keyword mode shows
+  up to 8 senses, or says there's no entry.
+- Not in normal search: a definition matches most common words
+  (`invoice`, `party`), and its row would sit above Files on each of them.
+  Normal search stays apps and files; `define ` is one word away.
+- Timing: the first lookup in a process loads the dictionaries, 30–60 ms;
+  after that a lookup takes 1–3 ms. Keyword searches have 3 s, so there's
+  no warm-up: it would cost the same on the first request.
+
+## The web extension
+
+`Sources/fastlight-web` (`id com.elboletaire.fastlight.web`, keyword `web`,
+global with one result). The logic is the `FastlightWeb` library. It never
+makes a request: `open` actions hand the URL to the default browser, whose
+icon the address row shows.
+
+- Addresses (`WebAddress`): `http(s)://` and a host as typed; `localhost`
+  with a port or path, and IPv4 addresses, with `http://`; otherwise a
+  domain of valid labels whose TLD is in a short list of common ones, with
+  an optional port and path, with `https://`. TLDs that double as file
+  extensions (`app`, `sh`, `zip`, `mov`, `pl`, `cc`, `ai`, `so`, `in`) also
+  need `www.`, a port or a path; other TLDs need the scheme. No spaces, no
+  `@`, no other schemes. In global mode an address is the Top Hit (the web
+  extension is a built-in): typing one and pressing ↵ goes there.
+- Search: `web <query>` lists every engine, the default first, as
+  `Search Google for “query”`. The query is percent-encoded as one opaque
+  value (everything but `A–Z a–z 0–9 - . _ ~`, spaces as `%20`), so it is
+  safe in a query string or a path. If the query is also an address,
+  opening it comes first. Per-engine keywords (`g `, `ddg `) would need the
+  search request to say which keyword was typed; one engine list under one
+  keyword doesn't, and keeps one-letter keywords from shadowing searches.
+- Settings: `settings.json` in `FASTLIGHT_DATA_DIR`, read on every keyword
+  search so edits apply at once. `engine` picks the default, `engines` adds
+  or replaces engines (`id`, `name`, an `http(s)` `url` with `%s`). Problems
+  are listed as rows and the valid parts still apply. The **Default Search
+  Engine** row, shown for an empty query, is a `run` action that writes a
+  starting file if there's none and opens it with `open -t`.
+- Normal search never gets a "search the web" row: it would sit above
+  Files on every query.
+
 ## Testing
 
 All in `Tests/` with Swift Testing, deterministic and offline:
@@ -383,11 +649,34 @@ All in `Tests/` with Swift Testing, deterministic and offline:
 - Calculator: precedence and associativity, operator spellings, numbers and
   locales, percentages, functions, every error, formatting, the
   "looks like math" rule, and its protocol replies.
+- Conversions: units, aliases and exact factors, parsing variants and
+  locales, places and offsets, DST on fixed dates, date math against a fixed
+  "now", strict global gating, and the boundary with the calculator.
+- System Settings: discovery against fixture bundles (names per language,
+  old `.strings`, code names, hidden and non-URL bundles, Battery or
+  Energy, icons, pages only with their anchor), URLs, ranking and its
+  negatives, the cache, plus a read-only pass over the installed panes.
+- Shortcuts: `shortcuts list` parsing, folders, caching and staleness,
+  input after a name, run commands and input files, through a fake runner.
+- System: strict matching (with negatives), the confirmation state
+  machine, and every command, through a fake executor.
+- Contacts, Calendar and Reminders, against fake stores (never the real
+  ones): matching and ranking, global gating, detail rows, every access
+  state and that nothing asks or reads without access, URL construction,
+  date formatting and the 14-day window with a fixed clock, time zone and
+  locale, the background loader's staleness and time bounds.
+- Dictionary: shaping real entries from several kinds of dictionary, the
+  `dict://` links, protocol replies, and one lookup
+  through the real DictionaryServices (skipped when no dictionary answers).
+- Web: addresses and many file names and filters that aren't, query
+  encoding, engines, settings parsing and its problems, protocol replies.
 - The shipped manifests and examples load together without problems.
 
 The UI is checked with `scripts/snapshot.sh`, which renders keyword mode,
-global sections and the consent notice with the real emoji and calculator
-extensions running through the real host.
+global sections and the consent notice with the real built-in extensions
+running through the real host. The System Settings, Shortcuts (with sample
+shortcuts) and System scenes include the Confirm Shut Down? step, and
+Contacts, Calendar and Reminders answer from sample data.
 
 ## Not in this version
 

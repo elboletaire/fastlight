@@ -18,6 +18,11 @@ enum Snapshot {
         var selection = 0
         /// Leave the example extensions unapproved, to show the notice.
         var pending = false
+        /// A `run` action to send first: (extension id, action name, item id).
+        var run: (ext: String, name: String, item: String)?
+        /// What the sample Contacts, Calendar and Reminders pretend macOS
+        /// allows (an `Access` raw value).
+        var access = "authorized"
     }
 
     /// Sample files, in place of fsearch.
@@ -57,12 +62,15 @@ enum Snapshot {
             }
         }
         let exe = Bundle.main.executableURL?.deletingLastPathComponent()
-        let library = ExtensionLibrary(builtInRoot: ExtensionCenter.builtInRoot(), userRoot: userRoot,
+        let accessFile = scratch.appendingPathComponent("sample-access")
+        let builtIns = sampleBuiltIns(ExtensionCenter.builtInRoot(), in: scratch, accessFile: accessFile)
+        let library = ExtensionLibrary(builtInRoot: builtIns, userRoot: userRoot,
                                        helperDirs: [exe].compactMap { $0 }, appVersion: AppInfo.version)
         defaults.removePersistentDomain(forName: suite + ".consent")
         let consent = ConsentStore(defaults: UserDefaults(suiteName: suite + ".consent")!)
         let host = ExtensionHost(appVersion: AppInfo.version, consent: consent,
                                  dataRoot: scratch.appendingPathComponent("Data"), logRoot: scratch.appendingPathComponent("Logs"))
+        seedShortcuts(in: scratch.appendingPathComponent("Data"))
         let extensions = ExtensionCenter(library: library, consent: consent, host: host)
         for issue in library.issues { print("extension problem: \(issue.description)") }
         defer {
@@ -85,6 +93,7 @@ enum Snapshot {
             all.append(Scene(name: "live-\(String(slug))", query: q, files: files))
         }
         for scene in all {
+            try? scene.access.write(to: accessFile, atomically: true, encoding: .utf8)
             for ext in library.extensions where !ext.builtIn {
                 if scene.pending { consent.revoke(ext.id) } else { consent.approve(ext) }
             }
@@ -94,6 +103,14 @@ enum Snapshot {
                 model.offline = true
                 model.filesOverride = SampleFiles(files: scene.files)
                 model.fileState = scene.state
+                if let run = scene.run, let ext = library.extension(id: run.ext) {
+                    var sent = false
+                    Task { @MainActor in
+                        try? await host.run(ext, name: run.name, item: run.item, data: .string(run.item), query: "")
+                        sent = true
+                    }
+                    spin(until: { sent }, timeout: 3)
+                }
                 model.query = scene.query
                 // Let the providers (and extension processes) answer.
                 spin(until: { !model.isSearching }, timeout: 3)
@@ -105,6 +122,46 @@ enum Snapshot {
         }
         renderSettings(into: dir, suite: suite)
         renderAbout(into: dir)
+    }
+
+    /// Sample shortcuts, so snapshots don't show the user's own: a cache
+    /// dated in the future, which the extension takes as fresh and so
+    /// doesn't list the real ones.
+    private static func seedShortcuts(in dataRoot: URL) {
+        let names = [("Resize Images for Web", "Media"), ("Start Focus Session", "Work"), ("Translate", nil),
+                     ("Make GIF", "Media"), ("Log Water", nil), ("Text Last Image", nil)]
+        let shortcuts: [[String: String]] = names.enumerated().map { i, n in
+            var s = ["name": n.0, "id": String(format: "00000000-0000-0000-0000-%012d", i)]
+            if let folder = n.1 { s["folder"] = folder }
+            return s
+        }
+        let cache: [String: Any] = ["updated": Date.distantFuture.timeIntervalSinceReferenceDate, "lastRun": [:],
+                                    "shortcuts": shortcuts]
+        let dir = dataRoot.appendingPathComponent("com.elboletaire.fastlight.shortcuts")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        if let data = try? JSONSerialization.data(withJSONObject: cache) {
+            try? data.write(to: dir.appendingPathComponent("shortcuts.json"))
+        }
+    }
+
+    /// A copy of the built-ins whose Contacts, Calendar and Reminders run
+    /// with `--sample`: made-up people and events, so screenshots never show
+    /// (or ask for) the real ones.
+    private static func sampleBuiltIns(_ root: URL?, in scratch: URL, accessFile: URL) -> URL? {
+        guard let root else { return nil }
+        let fm = FileManager.default
+        let copy = scratch.appendingPathComponent("BuiltIn")
+        guard (try? fm.copyItem(at: root, to: copy)) != nil else { return root }
+        for name in (try? fm.contentsOfDirectory(atPath: copy.path)) ?? [] {
+            let file = copy.appendingPathComponent(name).appendingPathComponent("extension.json")
+            guard let data = try? Data(contentsOf: file),
+                  var o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let command = o["command"] as? [String],
+                  ["fastlight-contacts", "fastlight-calendar"].contains(command.first ?? "") else { continue }
+            o["command"] = command + ["--sample", accessFile.path]
+            try? JSONSerialization.data(withJSONObject: o).write(to: file)
+        }
+        return copy
     }
 
     // MARK: About
@@ -292,7 +349,41 @@ enum Snapshot {
             Scene(name: "calculator-global", query: "15% of 80", files: [
                 f("Documents/Budget/15 percent rule.pdf", size: 98_000, ago: 60 * day),
             ]),
+            Scene(name: "convert-keyword", query: "convert "),
+            Scene(name: "convert-units", query: "convert 10 km"),
+            Scene(name: "convert-global", query: "10 km in mi", files: [
+                f("Documents/Running/10 km plan.pdf", size: 120_000, ago: 30 * day),
+            ]),
+            Scene(name: "convert-time", query: "3pm london in nyc"),
+            Scene(name: "convert-days", query: "days until dec 25"),
             Scene(name: "indexing", query: "", state: .indexing),
+            // Keyword mode first: it waits for the first scan of the panes,
+            // which normal search then answers from.
+            Scene(name: "system-settings-keyword", query: "settings priv"),
+            Scene(name: "system-settings-global", query: "full disk", files: [
+                f("Documents/Backups/full-disk-image.dmg", size: 4_200_000_000, ago: 30 * day),
+            ]),
+            Scene(name: "shortcuts-keyword", query: "sc "),
+            Scene(name: "shortcuts-input", query: "sc translate good morning"),
+            Scene(name: "system-keyword", query: "sys "),
+            Scene(name: "system-global", query: "restart", files: [
+                f("src/notes/restart-checklist.md", size: 2_048, ago: 4 * day),
+            ]),
+            Scene(name: "system-confirm", query: "shut down",
+                  run: (ext: "com.elboletaire.fastlight.system", name: "arm", item: "shutDown")),
+            Scene(name: "contacts-keyword", query: "contact elena"),
+            Scene(name: "contacts-global", query: "elena", files: [
+                f("Documents/Northwind/Elena - brand deck.key", size: 18_400_000, ago: 4 * day),
+            ]),
+            Scene(name: "contacts-access", query: "contact ", access: "notDetermined"),
+            Scene(name: "calendar-agenda", query: "cal "),
+            Scene(name: "reminders-keyword", query: "remind "),
+            Scene(name: "reminders-denied", query: "remind ", access: "denied"),
+            Scene(name: "dictionary-keyword", query: "define serendipity"),
+            Scene(name: "web-keyword", query: "web swift concurrency"),
+            Scene(name: "web-global", query: "github.com/elboletaire/fastlight", files: [
+                f("src/fastlight", dir: true, ago: 3600),
+            ]),
         ]
     }
 }

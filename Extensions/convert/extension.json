@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.convert",
+  "name": "Conversions",
+  "version": "1.0.0",
+  "description": "Converts units, tells the time around the world and counts days: 10 km in mi, time in tokyo, days until dec 25.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "arrow.left.arrow.right",
+  "keywords": ["convert"],
+  "command": ["fastlight-convert"],
+  "global": { "maxResults": 1, "minQueryLength": 3 }
+}

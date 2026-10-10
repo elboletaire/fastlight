@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.calendar",
+  "name": "Calendar",
+  "version": "1.0.0",
+  "description": "Today's agenda and your events for the next two weeks. Reads Calendar on this Mac once you allow it.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": { "app": "com.apple.iCal" },
+  "keywords": ["cal", "calendar", "event", "events", "agenda"],
+  "command": ["fastlight-calendar", "events"],
+  "global": { "maxResults": 2, "minQueryLength": 3 }
+}

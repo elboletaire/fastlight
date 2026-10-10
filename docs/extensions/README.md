@@ -10,7 +10,7 @@ object per line.
 - **Global mode (opt-in):** a few results in the extension's own section,
   next to Applications and Files, when it answers within 80 ms.
 
-Fastlight ships with two, built the same way:
+Fastlight ships with these, built the same way:
 
 - **Emoji.** Type `:` and a name or keyword (`:joy`, `:thumbs`, `:tada:`), or
   `emoji ` and the same. ↵ pastes into the app you were using, ⌘↵ copies.
@@ -26,6 +26,124 @@ Fastlight ships with two, built the same way:
   `sin`/`cos`/`tan` and their inverses (radians), `deg` and `rad`. Decimals
   take `.`, and `,` too where that's the decimal separator. Division by zero
   has no result.
+- **Conversions.** Type a conversion in normal search and the answer is the
+  Top Hit, or type `convert ` first for a few conversions at once, world
+  clocks and the week number. ↵ copies the answer (numbers without
+  thousands separators), ⌘↵ pastes it. All offline.
+  - Units: `10 km in mi`, `10km to miles`, `72f in c`, `100 °F`,
+    `5 gb in mb`, `1 GiB in MB`, `3 ft 4 in in cm`, `60 mph in km/h`,
+    `2 cups in ml`, `1 acre in m2`, `30 mpg in l/100km`,
+    `how many ml in 2 cups`. Length, mass, temperature, volume (US cups,
+    gallons and fluid ounces; `imp gal` for imperial), area, speed, data
+    (`KB` is 1000 bytes, `KiB` 1024), time, energy, power, pressure, angle
+    and fuel economy. With no target (`10 km`) it picks the usual one.
+  - Time: `time in tokyo`, `tokyo time`, `utc`, `pst time`,
+    `3pm london in nyc`, `15:00 in tokyo` (from here), `9am pst` (to here).
+    Cities come from the time zone database, plus common names and
+    abbreviations (NYC, SF, PST, CET).
+  - Dates: `days until dec 25`, `days since 2024-01-01`,
+    `how long until friday`, `days between 2026-01-01 and 2026-12-31`,
+    `today + 90 days`, `90 days ago`, `in 2 weeks`, `week number` (ISO 8601).
+
+  Normal search only answers what is clearly a conversion: a number and a
+  unit with a target (`5 m in ft`), or a unit that can't be anything else
+  (`10 km`, but not `3 in`, `5 m` or `3 days`); `time in …` or `… time`
+  with a known place; a time of day with a place; the date phrases above.
+  `time machine`, `tokyo` or `dec 25` stay plain searches; `convert tokyo`
+  or `convert dec 25` answer.
+- **System Settings.** Type a pane's name in normal search (`bluetooth`,
+  `wi-fi`, `displays`, `battery`, `login items`, `desktop & dock`) or a
+  Privacy & Security page (`full disk access`, `screen recording`,
+  `camera`), and ↵ opens it. Other names work too (`dark mode`, `dock`,
+  `updates`, `fda`). Type `settings ` or `pref ` to list them all, and to
+  also search what's inside each pane (`settings pair` finds Bluetooth).
+  The panes are read from the installed System Settings, in your language,
+  so they match your macOS.
+- **Shortcuts.** Your shortcuts from the Shortcuts app: in normal search
+  when the name matches word by word (`resize`, `go sleep`), or all of them
+  after `sc `, `shortcut ` or `shortcuts `. ↵ runs it, ⌘↵ opens it in
+  Shortcuts. In keyword mode, what you type after a whole name is passed
+  as input: `sc translate good morning` runs Translate with "good morning".
+- **System.** Lock Screen, Sleep, Sleep Displays, Start Screen Saver,
+  Toggle Dark Mode and Eject All Disks run on ↵. Empty Trash, Log Out,
+  Restart and Shut Down ask first: ↵ turns the result into "Confirm
+  Restart?" for 5 seconds, and only ↵ on that does it (⌘↵ cancels). Normal
+  search only offers them for their name or a 4+ letter start of it
+  (`sleep`, `lock`, `rest`; not `sleep.txt` or `sleeping`); `sys ` lists
+  them all. Toggle Dark Mode, Empty Trash, Log Out, Restart and Shut Down
+  send Apple events, so macOS asks once to let Fastlight control System
+  Events, Finder or loginwindow.
+- **Contacts.** Type `contact ` (or `contacts `) and a name, nickname,
+  company, email address or phone number (`contact elena`, `contact acme`,
+  `contact elena@`, `contact 612 345`). ↵ opens the card in Contacts, ⌘↵
+  copies the email address (or number). When one person is in view, their
+  addresses and numbers follow as rows of their own: ↵ emails or calls
+  (through FaceTime and your iPhone), ⌘↵ copies, plus Message and FaceTime
+  rows (⌘↵ on FaceTime is audio only). Names of 3+ letters also show up to 3
+  people in normal search.
+- **Calendar.** `cal ` (or `calendar `, `event `, `events `, `agenda `) on
+  its own is the agenda: what's left of today, all-day events first, then
+  the next two weeks. With words (`cal review`), the events whose title,
+  place, calendar or notes match, soonest first. ↵ shows the event in
+  Calendar, ⌘↵ copies what, when and where. Normal search shows up to 2
+  upcoming events whose title matches 3+ letters.
+- **Reminders.** `remind ` (or `reminder `, `reminders `) on its own lists
+  what isn't done: by due date, so overdue first, then undated ones, newest
+  first, with priority as `!!!`/`!!`/`!`. With words, it searches titles,
+  notes and lists. ↵ shows the reminder in Reminders, ⌘↵ copies it. Normal
+  search shows up to 2 whose title matches.
+
+Contacts, Calendar and Reminders only read, never write, and only from this
+Mac's own stores (which include the accounts synced to it, like iCloud):
+nothing leaves the Mac. macOS asks before Fastlight can read any of them,
+once each, and Fastlight only lets it ask when you pick **Allow Access to
+Contacts…** (or Calendars…, Reminders…), which is what the keyword shows
+until then. Typing in normal search never asks; those sections just stay
+empty without access. If you said no, the keyword shows a shortcut to
+System Settings › Privacy & Security, where Fastlight's switch is.
+- **Dictionary.** Type `define ` or `dict ` and a word (`define serendipity`)
+  for its senses, from the dictionaries macOS ships, offline. ↵ opens the word
+  in Dictionary.app, ⌘↵ copies the definition. It uses the dictionaries
+  turned on in Dictionary › Settings, in their order, like Look Up: the first
+  one that has the word answers, so a bilingual dictionary gives
+  translations. Definitions only show after `define ` or `dict `, never in
+  normal search, which stays apps and files: most words have an entry, and
+  a definition under every query would push your files down.
+- **Web.** Type a web address in normal search (`github.com`,
+  `example.org/path`, `localhost:3000`, `https://…`) and opening it is the
+  Top Hit. Type `web ` and anything to search the web: ↵ searches with the
+  default engine, and the rows below it search with the others (DuckDuckGo,
+  Bing, Ecosia, Wikipedia in your language, YouTube). ⌘↵ copies the link.
+  There's no "search the web" row in normal search, where it would sit
+  above your files; `web ` is for that. Fastlight makes no requests: your
+  browser opens the page.
+
+Address detection is strict so file names stay file names: a domain needs a
+TLD from a short list of common ones (`.com`, `.org`, `.io`, `.dev`, country
+codes…). TLDs that are also file extensions (`.app`, `.sh`, `.zip`, `.ai`,
+`.so`, `.pl`, `.cc`, `.in`, `.mov`) also need `www.`, a port or a path
+(`brew.sh/`), and any other one needs the scheme (`https://my-nas.local`).
+So `notes.md`, `main.swift` and `Safari.app` are never addresses.
+
+The default engine is Google, as in Safari. To change it, or add engines,
+pick **Default Search Engine** after typing `web ` (it creates the file and
+opens it), or edit
+`~/Library/Application Support/Fastlight/ExtensionData/com.elboletaire.fastlight.web/settings.json`:
+
+```json
+{
+  "engine": "duckduckgo",
+  "engines": [
+    {"id": "kagi", "name": "Kagi", "url": "https://kagi.com/search?q=%s"}
+  ]
+}
+```
+
+`engine` is the id of the default: `google`, `duckduckgo`, `bing`, `ecosia`,
+`wikipedia`, `youtube`, or one of yours. `engines` adds engines (or replaces a
+built-in with the same id); `%s` is where the query goes, percent-encoded.
+Both keys are optional, changes apply on the next search, and problems show
+up as a row in `web ` results while the rest still works.
 
 <img src="images/emoji-keyword-light.jpg" width="640" alt="Keyword mode: the Emoji pill in the search bar, results for “joy”, and an action bar naming Paste Emoji and Copy Emoji">
 
@@ -92,7 +210,7 @@ extension's stderr goes to `~/Library/Logs/Fastlight/Extensions/<id>.log`
 | `id` | yes | Lowercase reverse-DNS, like `com.example.bc`. Unique. |
 | `name` | yes | Up to 40 characters. Shown on the pill, the section and the menu. |
 | `version` | yes | Semantic version, like `1.0.0` or `1.1.0-beta.1`. |
-| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
+| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`, `convert`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
 | `command` | yes | Executable and arguments. Relative paths are inside the folder (and must be executable: `chmod +x`); absolute ones are for interpreters (`/bin/sh`, `/usr/bin/osascript`). Runs with the folder as working directory. |
 | `description` | | Up to 200 characters; shown when asking for approval. |
 | `author` | | Up to 100 characters. |

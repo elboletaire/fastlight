@@ -69,7 +69,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
   "installUrl": "https://github.com/elboletaire/fastlight/releases/latest",
   "codeRepository": "https://github.com/elboletaire/fastlight",
   "license": "https://github.com/elboletaire/fastlight/blob/main/LICENSE",
-  "featureList": ["Applications and files in separate sections", "Whole-disk file search with typo tolerance", "Search inside files", "Emoji picker", "Calculator", "Extensions in any language"],
+  "featureList": ["Applications and files in separate sections", "Whole-disk file search with typo tolerance", "Search inside files", "Emoji picker", "Calculator", "Unit, time zone and date conversions", "System Settings, Shortcuts and system actions", "Contacts, Calendar and Reminders", "Dictionary", "Web search", "Extensions in any language"],
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "author": { "@type": "Person", "name": "elboletaire", "url": "https://github.com/elboletaire" }
@@ -274,6 +274,11 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
         <ul class="sections-list">
           <li><strong>Emoji</strong> — type <kbd>:</kbd> then a name (<code>:joy</code>, <code>:tada:</code>); ↵ pastes it where you were typing.</li>
           <li><strong>Calculator</strong> — type math (<code>1920*1080</code>, <code>15% of 80</code>) and the answer is the Top Hit, or start with <kbd>=</kbd>; ↵ copies it.</li>
+          <li><strong>Conversions</strong> — units, world clocks and dates (<code>10 km in mi</code>, <code>time in tokyo</code>, <code>days until dec 25</code>), the same way, offline.</li>
+          <li><strong>System</strong> — open a System Settings pane (<code>bluetooth</code>, <code>full disk access</code>), run your Shortcuts, or lock, sleep and restart the Mac; restarting asks first.</li>
+          <li><strong>Contacts, Calendar, Reminders</strong> — type a name and the person is there, ready to email, call or message; <code>cal&nbsp;</code> is today's agenda, <code>remind&nbsp;</code> what's due.</li>
+          <li><strong>Dictionary</strong> — type <code>define</code> or <code>dict</code> and a word for its definitions, from the dictionaries built into macOS; ↵ opens Dictionary. Only there, so normal search stays apps and files.</li>
+          <li><strong>Web</strong> — type an address (<code>github.com</code>) and ↵ opens it, or <code>web</code> and anything to search in your browser.</li>
           <li><strong>Your own</strong> — any language: a folder with an <code>extension.json</code> and a script that speaks JSON lines.</li>
         </ul>
         <pre><code>{
@@ -366,7 +371,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
       <div class="faq">
         <details>
           <summary>Does anything leave my Mac?</summary>
-          <p>No. The index, the queries and the results stay on your Mac. Fastlight and fsearch talk over a local socket in <code>~/Library/Application Support/FSearch</code>; there is no account, no analytics and no network access. Extensions you install can do whatever their code does; the built-in emoji picker and calculator never use the network.</p>
+          <p>No. The index, the queries and the results stay on your Mac. Fastlight and fsearch talk over a local socket in <code>~/Library/Application Support/FSearch</code>; there is no account, no analytics and no network access. Extensions you install can do whatever their code does; the built-in extensions never use the network (web search opens your browser). Contacts, Calendar and Reminders are read from your Mac's own stores, only after you allow it, and never changed.</p>
         </details>
         <details>
           <summary>Why does it need Full Disk Access?</summary>
@@ -379,7 +384,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
         </details>
         <details>
           <summary>Can I extend it?</summary>
-          <p>Yes: an extension is a folder with an <code>extension.json</code> and a program in any language that answers JSON lines. Drop it in <code>~/Library/Application Support/Fastlight/Extensions/</code>. The emoji picker and the calculator are built the same way and come with the app. <a href="https://github.com/elboletaire/fastlight/blob/main/docs/extensions/README.md">Read the extension guide</a>.</p>
+          <p>Yes: an extension is a folder with an <code>extension.json</code> and a program in any language that answers JSON lines. Drop it in <code>~/Library/Application Support/Fastlight/Extensions/</code>. The emoji picker, calculator, conversions, dictionary, web search, System Settings, Shortcuts, System, Contacts, Calendar and Reminders are built the same way and come with the app. <a href="https://github.com/elboletaire/fastlight/blob/main/docs/extensions/README.md">Read the extension guide</a>.</p>
         </details>
         <details>
           <summary>Are extensions safe?</summary>
