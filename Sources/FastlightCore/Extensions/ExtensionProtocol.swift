@@ -153,6 +153,10 @@ public struct ExtensionItem: Sendable, Hashable, Identifiable {
     public var icon: ItemIcon?
     public var accessory: String?
     public var actions: [ItemAction]
+    /// Asks to be the Top Hit in global search. Only built-in extensions
+    /// get it (a calculation is the answer); others are ignored, so no
+    /// extension can take ↵ away from apps and files.
+    public var topHit = false
 
     public init(id: String, title: String, subtitle: String? = nil, icon: ItemIcon? = nil,
                 accessory: String? = nil, actions: [ItemAction] = []) {
@@ -167,7 +171,7 @@ public struct ExtensionItem: Sendable, Hashable, Identifiable {
     static func parse(_ any: Any, path: String) throws -> ExtensionItem {
         guard let o = any as? [String: Any] else { throw ValidationError(path, "must be an object") }
         let r = JSONReader(o, path: path)
-        try r.rejectUnknownKeys(allowed: ["id", "title", "subtitle", "icon", "accessory", "actions"])
+        try r.rejectUnknownKeys(allowed: ["id", "title", "subtitle", "icon", "accessory", "actions", "topHit"])
         let id = try r.string("id", required: true, maxLength: 512)!
         // Display strings are cut rather than rejected: they come from data
         // (file names, web pages) the extension doesn't control.
@@ -178,8 +182,10 @@ public struct ExtensionItem: Sendable, Hashable, Identifiable {
         let actions = try (r.array("actions") ?? []).enumerated().map { i, a in
             try ItemAction.parse(a, path: "\(r.at("actions"))[\(i)]")
         }
-        return ExtensionItem(id: id, title: title, subtitle: subtitle?.isEmpty == true ? nil : subtitle,
-                             icon: icon, accessory: accessory?.isEmpty == true ? nil : accessory, actions: actions)
+        var item = ExtensionItem(id: id, title: title, subtitle: subtitle?.isEmpty == true ? nil : subtitle,
+                                 icon: icon, accessory: accessory?.isEmpty == true ? nil : accessory, actions: actions)
+        item.topHit = try r.bool("topHit") ?? false
+        return item
     }
 }
 

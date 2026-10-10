@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.calculator",
+  "name": "Calculator",
+  "version": "1.0.0",
+  "description": "Answers arithmetic as you type: 1920*1080, 2^10, sqrt(2), 15% of 80.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "plus.forwardslash.minus",
+  "keywords": ["="],
+  "command": ["fastlight-calc"],
+  "global": { "maxResults": 1, "minQueryLength": 2 }
+}
