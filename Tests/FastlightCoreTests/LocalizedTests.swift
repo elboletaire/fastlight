@@ -33,6 +33,21 @@ import FastlightL10n
         inLanguage("es") { #expect(SymbolicHotKey.spotlight.title == "Mostrar búsqueda Spotlight") }
     }
 
+    /// What to type is fsearch's syntax, the same in every language; only
+    /// the explanations are translated.
+    @Test func searchSyntaxStaysAsTyped() {
+        let english = (QuerySyntax.operators.map(\.syntax), QuerySyntax.filters.map { [$0.key] + $0.aliases + $0.examples },
+                       QuerySyntax.ranges.dropLast().map(\.syntax), QuerySyntax.operators.map(\.meaning))
+        for lang in ["ca", "es"] {
+            inLanguage(lang) {
+                #expect(QuerySyntax.operators.map(\.syntax) == english.0)
+                #expect(QuerySyntax.filters.map { [$0.key] + $0.aliases + $0.examples } == english.1)
+                #expect(Array(QuerySyntax.ranges.dropLast().map(\.syntax)) == Array(english.2))
+                #expect(QuerySyntax.operators.map(\.meaning) != english.3)
+            }
+        }
+    }
+
     @Test func searchSyntaxAndSections() {
         inLanguage("es") {
             #expect(QuerySyntax.operators.first?.meaning == "Aproximada; las palabras de 5 letras o más admiten una errata")
