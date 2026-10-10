@@ -33,6 +33,9 @@ import Testing
         #expect(show("week number", "ca")[0] == "Setmana 41")
         #expect(show("dec 25", "ca", mode: false)[1] == "d’aquí a 76 dies")
         #expect(show("oct 1 2026", "ca", mode: false)[1] == "fa 9 dies")
+        let between = show("days between jan 1 and dec 31", "ca")
+        #expect(between[0] == "364 dies")
+        #expect(between[1].hasPrefix("del divendres, 1 de gener d") && between[1].contains(" al divendres, 31 de desembre d"), "\(between[1])")
     }
 
     @Test func spanishDates() {
@@ -41,6 +44,9 @@ import Testing
         #expect(show("90 days ago", "es")[1] == "Hoy − 90 días")
         #expect(show("dec 25", "es", mode: false)[1] == "dentro de 76 días")
         #expect(show("today", "es", mode: false)[1] == "Hoy")
+        let between = show("days between 2026-01-01 and 2026-02-01", "es", locale: "ca_AD")
+        #expect(between[0] == "31 días")
+        #expect(between[1].hasPrefix("del jueves, 1 de enero de 2026") && between[1].hasSuffix(" al domingo, 1 de febrero de 2026"), "\(between[1])")
     }
 
     @Test func clocks() {

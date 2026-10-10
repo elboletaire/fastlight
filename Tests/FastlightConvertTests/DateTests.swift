@@ -12,8 +12,10 @@ import Testing
     }
 
     func count(_ q: String) -> Int? {
-        if case .count(let n, _, _) = p.parse(q, global: true) { return n }
-        return nil
+        switch p.parse(q, global: true) {
+        case .count(let n, _, _), .between(let n, _, _, _): n
+        default: nil
+        }
     }
 
     func shifted(_ q: String) -> String? {
@@ -70,6 +72,24 @@ import Testing
     @Test func between() {
         #expect(count("days between 2026-01-01 and 2026-12-31") == 364)
         #expect(count("days from 2024-02-01 to 2024-03-01") == 29) // leap year
+        #expect(count("days between 2026-12-31 and 2026-01-01") == -364)
+    }
+
+    /// Without a year, the second day is the first one on or after the
+    /// first, not the one nearest today (today is Oct 10, 2026).
+    @Test func betweenYearlessDays() {
+        #expect(count("days between jan 1 and dec 31") == 364)
+        #expect(count("days between jan 1 and oct 20") == 292)
+        #expect(count("days between dec 25 and jan 6") == 12)
+        #expect(count("days between oct 1 and oct 1") == 0)
+        #expect(count("days between monday and friday") == 4)
+        #expect(count("days between friday and friday") == 0)
+        #expect(count("days between 2026-01-01 and dec 31") == 364)
+        guard case .between(_, _, let from, let to) = p.parse("days between jan 1 and dec 31", global: true) else {
+            Issue.record("no answer")
+            return
+        }
+        #expect(ymd(from) == "2027-01-01" && ymd(to) == "2027-12-31")
     }
 
     @Test func shifts() {

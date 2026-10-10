@@ -57,6 +57,16 @@ import Testing
         #expect(show(try reply(e, "30 mpg in l/100km").first)[0] == "7.84049 L/100km")
     }
 
+    /// "between" isn't "until" or "since": both days can be in the past.
+    @Test func betweenSaysFromTo() throws {
+        let past = show(try reply(ext(), "days between 2024-01-01 and 2024-03-01").first)
+        #expect(past[0] == "60 days")
+        #expect(past[1] == "from Monday, January 1, 2024 to Friday, March 1, 2024")
+        let yearless = show(try reply(ext(), "days between jan 1 and dec 31").first)
+        #expect(yearless[0] == "364 days")
+        #expect(yearless[1] == "from Friday, January 1, 2027 to Friday, December 31, 2027")
+    }
+
     @Test func spotlightExamples() throws {
         let e = ext()
         let cases: [(String, [String])] = [

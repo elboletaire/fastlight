@@ -197,23 +197,16 @@ public final class ConvertExtension {
     func dateItem(_ d: DateQuery, _ p: DateParser) -> [String: Any] {
         switch d {
         case .count(let days, let unit, let to):
-            let n = abs(days)
-            let title: String
-            let copy: String
-            var accessory = ""
-            if unit == .weeks {
-                title = ConvertFormat.weeks(n, locale: locale)
-                copy = title
-            } else {
-                title = ConvertFormat.count(n, .day, locale: locale)
-                copy = String(n)
-                if n >= 14 { accessory = ConvertFormat.weeks(n, locale: locale) }
-            }
             // The date always starts with its weekday, which keeps "fins al
             // divendres" and "hasta el viernes" right for every date.
             let date = format(to, timeZone, template: "EEEEdMMMMyyyy")
             let sub = days == 0 ? L("Today, %@", date) : days > 0 ? L("until %@", date) : L("since %@", date)
-            return answer(id: "answer", title: title, copy: copy, subtitle: sub, accessory: accessory, icon: "calendar")
+            return countItem(days, unit, subtitle: sub)
+        case .between(let days, let unit, let from, let to):
+            // Neither "until" nor "since": both days may be past or future.
+            let sub = L("from %@ to %@", format(from, timeZone, template: "EEEEdMMMMyyyy"),
+                        format(to, timeZone, template: "EEEEdMMMMyyyy"))
+            return countItem(days, unit, subtitle: sub)
         case .shifted(let date, let from, let by, let unit):
             let title = format(date, timeZone, template: "EEEEdMMMMyyyy")
             let base = p.days(from: p.today, to: from) == 0 ? L("Today") : format(from, timeZone, template: "dMMMyyyy")
@@ -231,6 +224,23 @@ public final class ConvertExtension {
             return answer(id: "answer", title: title, copy: title, subtitle: sub,
                           accessory: L("Week %d", p.isoWeek(date)), icon: "calendar")
         }
+    }
+
+    /// "76 days" (and "10 weeks, 6 days" beside it), or "10 weeks, 6 days".
+    func countItem(_ days: Int, _ unit: DateQuery.CountUnit, subtitle: String) -> [String: Any] {
+        let n = abs(days)
+        let title: String
+        let copy: String
+        var accessory = ""
+        if unit == .weeks {
+            title = ConvertFormat.weeks(n, locale: locale)
+            copy = title
+        } else {
+            title = ConvertFormat.count(n, .day, locale: locale)
+            copy = String(n)
+            if n >= 14 { accessory = ConvertFormat.weeks(n, locale: locale) }
+        }
+        return answer(id: "answer", title: title, copy: copy, subtitle: subtitle, accessory: accessory, icon: "calendar")
     }
 
     func answer(id: String, title: String, copy: String, subtitle: String, accessory: String, icon: String) -> [String: Any] {
