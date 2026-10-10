@@ -152,10 +152,10 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
 
     public func items(for query: String, global: Bool, limit: Int) -> [[String: Any]] {
         guard let all = global ? list.value : list.wait(timeout: 2) else {
-            return global ? [] : [Self.notice("Can't list your shortcuts", "The shortcuts command didn't answer")]
+            return global ? [] : [Self.notice(L("Can't list your shortcuts"), L("The shortcuts command didn't answer"))]
         }
         if all.isEmpty, !global {
-            return [Self.notice("No shortcuts yet", "Make some in the Shortcuts app")]
+            return [Self.notice(L("No shortcuts yet"), L("Make some in the Shortcuts app"))]
         }
         let q = TextMatch.words(query)
         if q.isEmpty {
@@ -211,11 +211,11 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
         return [
             "id": (s.id ?? s.name) + (input == nil ? "" : "#input"),
             "title": s.name,
-            "subtitle": input.map { "Run with “\($0)” as input" } ?? s.folder ?? "Shortcut",
+            "subtitle": input.map { L("Run with “%@” as input", $0) } ?? s.folder ?? L("Shortcut"),
             "icon": ["app": Self.appID],
             "actions": [
-                ["type": "run", "name": "run", "data": data, "title": "Run Shortcut"],
-                ["type": "open", "target": ShortcutsCLI.editURL(s), "title": "Edit in Shortcuts"],
+                ["type": "run", "name": "run", "data": data, "title": L("Run Shortcut")],
+                ["type": "open", "target": ShortcutsCLI.editURL(s), "title": L("Edit in Shortcuts")],
             ],
         ]
     }
@@ -236,7 +236,7 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
             do {
                 try Data(input.utf8).write(to: file, options: .atomic)
             } catch {
-                throw RunError("Couldn't pass the input to “\(shortcutName)”")
+                throw RunError(L("Couldn't pass the input to “%@”", shortcutName))
             }
         }
         do {
@@ -248,7 +248,7 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
         } catch {
             if let file { try? FileManager.default.removeItem(at: file) }
             let why = (error as? RunError)?.message ?? error.localizedDescription
-            throw RunError("Couldn't run “\(shortcutName)”: \(why)")
+            throw RunError(L("Couldn't run “%@”: %@", shortcutName, why))
         }
         lock.withLock { lastRun[s.id ?? s.name] = now() }
         save()

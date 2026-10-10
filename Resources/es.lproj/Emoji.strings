@@ -1,0 +1,13 @@
+/* Emoji: keys are the English text. Generated rows; edit freely. */
+"Paste Emoji" = "Pegar emoji";
+"Copy Emoji" = "Copiar emoji";
+"Skin Tone: %@" = "Tono de piel: %@";
+"Default" = "Por omisión";
+"Light" = "Claro";
+"Medium-Light" = "Medio claro";
+"Medium" = "Medio";
+"Medium-Dark" = "Medio oscuro";
+"Dark" = "Oscuro";
+"Used for emoji that come in skin tones" = "Para los emojis que tienen tonos de piel";
+"Use This Tone" = "Usar este tono";
+"Current" = "Actual";

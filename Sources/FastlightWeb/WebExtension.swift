@@ -60,16 +60,16 @@ public final class WebExtension {
         if q.isEmpty {
             out.append([
                 "id": "help",
-                "title": "Type what to search the web for",
-                "subtitle": "↵ searches with \(settings.defaultEngine.name); the other engines are listed below it",
+                "title": L("Type what to search the web for"),
+                "subtitle": L("↵ searches with %@; the other engines are listed below it", settings.defaultEngine.name),
                 "icon": "magnifyingglass",
             ])
             out.append([
                 "id": "settings",
-                "title": "Default Search Engine: \(settings.defaultEngine.name)",
-                "subtitle": "Change it, or add engines, in settings.json",
+                "title": L("Default Search Engine: %@", settings.defaultEngine.name),
+                "subtitle": L("Change it, or add engines, in settings.json"),
                 "icon": "gearshape",
-                "actions": [["type": "run", "name": "editSettings", "title": "Edit Settings"]],
+                "actions": [["type": "run", "name": "editSettings", "title": L("Edit Settings")]],
             ])
         } else {
             if let url = WebAddress.url(from: q) { out.append(open(url)) }
@@ -77,12 +77,12 @@ public final class WebExtension {
                 guard let url = engine.url(for: q) else { continue }
                 out.append([
                     "id": "search-\(engine.id)",
-                    "title": "Search \(engine.name) for “\(q)”",
+                    "title": L("Search %@ for “%@”", engine.name, q),
                     "subtitle": url.host ?? engine.name,
                     "icon": "magnifyingglass",
                     "actions": [
-                        ["type": "open", "target": url.absoluteString, "title": "Search \(engine.name)"],
-                        ["type": "copy", "text": url.absoluteString, "title": "Copy Link"],
+                        ["type": "open", "target": url.absoluteString, "title": L("Search %@", engine.name)],
+                        ["type": "copy", "text": url.absoluteString, "title": L("Copy Link")],
                     ],
                 ])
             }
@@ -91,10 +91,10 @@ public final class WebExtension {
         for (i, p) in settings.problems.enumerated() {
             out.append([
                 "id": "problem-\(i)",
-                "title": "settings.json: \(p)",
-                "subtitle": "The rest of the settings still apply",
+                "title": L("settings.json: %@", p),
+                "subtitle": L("The rest of the settings still apply"),
                 "icon": "exclamationmark.triangle",
-                "actions": [["type": "run", "name": "editSettings", "title": "Edit Settings"]],
+                "actions": [["type": "run", "name": "editSettings", "title": L("Edit Settings")]],
             ])
         }
         return Array(out.prefix(max(1, limit)))
@@ -103,12 +103,12 @@ public final class WebExtension {
     func open(_ url: URL) -> [String: Any] {
         var item: [String: Any] = [
             "id": "open",
-            "title": "Open \(WebAddress.display(url))",
+            "title": L("Open %@", WebAddress.display(url)),
             "subtitle": url.absoluteString,
             "icon": "globe",
             "actions": [
-                ["type": "open", "target": url.absoluteString, "title": "Open in Browser"],
-                ["type": "copy", "text": url.absoluteString, "title": "Copy Link"],
+                ["type": "open", "target": url.absoluteString, "title": L("Open in Browser")],
+                ["type": "copy", "text": url.absoluteString, "title": L("Copy Link")],
             ],
         ]
         if let browser { item["icon"] = ["app": browser] }
@@ -117,13 +117,13 @@ public final class WebExtension {
 
     /// Writes a starting settings file if there's none, then opens it.
     func editSettings() -> String? {
-        guard let file = settingsFile else { return "No data folder to keep settings in" }
+        guard let file = settingsFile else { return L("No data folder to keep settings in") }
         if !FileManager.default.fileExists(atPath: file.path) {
             do {
                 try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try Data(WebSettings.template.utf8).write(to: file, options: .withoutOverwriting)
             } catch {
-                return "Couldn't create \(file.path): \(error.localizedDescription)"
+                return L("Couldn't create %@: %@", file.path, error.localizedDescription)
             }
         }
         edit(file)

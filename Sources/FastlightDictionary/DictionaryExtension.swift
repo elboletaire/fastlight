@@ -53,18 +53,18 @@ public final class DictionaryExtension {
         if q.isEmpty {
             return [[
                 "id": "help",
-                "title": "Type a word to look it up",
-                "subtitle": "From the dictionaries turned on in Dictionary › Settings",
+                "title": L("Type a word to look it up"),
+                "subtitle": L("From the dictionaries turned on in Dictionary › Settings"),
                 "icon": "character.book.closed",
             ]]
         }
         guard let entry = lookUp(q) else {
             return [[
                 "id": "none",
-                "title": "No definition for “\(q)”",
-                "subtitle": "Search Dictionary.app, or turn on more dictionaries in its settings",
+                "title": L("No definition for “%@”", q),
+                "subtitle": L("Search Dictionary.app, or turn on more dictionaries in its settings"),
                 "icon": "character.book.closed",
-                "actions": [["type": "open", "target": Self.dictionaryURL(q), "title": "Search in Dictionary"]],
+                "actions": [["type": "open", "target": Self.dictionaryURL(q), "title": L("Search in Dictionary")]],
             ]]
         }
         return entry.senses.indices.prefix(max(1, min(limit, Self.maxSenses))).map { item(entry, sense: $0) }
@@ -90,8 +90,8 @@ public final class DictionaryExtension {
             "subtitle": about.joined(separator: " · "),
             "icon": ["app": "com.apple.Dictionary"],
             "actions": [
-                ["type": "open", "target": Self.dictionaryURL(entry.headword), "title": "Open in Dictionary"],
-                ["type": "copy", "text": sense.definition, "title": "Copy Definition"],
+                ["type": "open", "target": Self.dictionaryURL(entry.headword), "title": L("Open in Dictionary")],
+                ["type": "copy", "text": sense.definition, "title": L("Copy Definition")],
             ],
         ]
     }
