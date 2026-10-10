@@ -41,8 +41,10 @@ public final class Background<Value: Sendable>: @unchecked Sendable {
         return current
     }
 
-    /// Runs `work` on a background queue unless a refresh is already
-    /// running; a nil result keeps the old value.
+    /// Runs `work` on a thread of its own unless a refresh is already
+    /// running; a nil result keeps the old value. Not a global queue: those
+    /// share a few threads per core, and blocked ones (other work, or a
+    /// whole test suite on a 3-core CI runner) could hold this up for good.
     public func refresh(_ work: @escaping @Sendable () -> Value?) {
         condition.lock()
         guard !running else {
@@ -51,7 +53,7 @@ public final class Background<Value: Sendable>: @unchecked Sendable {
         }
         running = true
         condition.unlock()
-        DispatchQueue.global(qos: .utility).async { [self] in
+        Thread.detachNewThread { [self] in
             let v = work()
             condition.lock()
             if let v { current = v }

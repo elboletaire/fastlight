@@ -57,24 +57,26 @@ public struct ProcessRunner: CommandRunner {
         let out = Pipe(), err = Pipe()
         p.standardOutput = out
         p.standardError = err
-        let stderr = Sink()
-        stderr.attach(err)
         let ended = DispatchSemaphore(value: 0)
         p.terminationHandler = { _ in ended.signal() }
         try p.run()
-        // Read stdout here, so a big listing can't fill the pipe and stall it.
-        let reader = DispatchQueue.global(qos: .utility)
-        let stdout = Sink()
+        // Read both pipes to the end meanwhile, so a big listing can't fill
+        // one and stall the program, and the error text is all in before
+        // it's looked at. Threads of their own: these reads block until the
+        // end, and global queues have few threads to block.
+        let stdout = Sink(), stderr = Sink()
         let drained = DispatchSemaphore(value: 0)
-        reader.async {
-            stdout.append(out.fileHandleForReading.readDataToEndOfFile())
-            drained.signal()
+        for (pipe, sink) in [(out, stdout), (err, stderr)] {
+            Thread.detachNewThread {
+                sink.append(pipe.fileHandleForReading.readDataToEndOfFile())
+                drained.signal()
+            }
         }
         if ended.wait(timeout: .now() + timeout) == .timedOut {
             p.terminate()
             throw RunError("\(URL(fileURLWithPath: argv[0]).lastPathComponent) took longer than \(Int(timeout)) s")
         }
-        _ = drained.wait(timeout: .now() + 1)
+        for _ in 0..<2 { _ = drained.wait(timeout: .now() + 1) }
         guard p.terminationStatus == 0 else {
             throw RunError(Self.firstLine(stderr.text) ?? "\(URL(fileURLWithPath: argv[0]).lastPathComponent) failed (\(p.terminationStatus))")
         }

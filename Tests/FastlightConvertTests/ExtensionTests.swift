@@ -21,6 +21,12 @@ import Testing
 
     /// Title, subtitle, accessory and the copied text, with ICU's narrow
     /// spaces made plain.
+    /// What the extension shows as a zone's short name at the test's "now":
+    /// "GMT-4" in some languages, "EDT" in US English.
+    func abbreviation(_ zone: String, at date: Date = Self.now) -> String {
+        TimeZone(identifier: zone)?.abbreviation(for: date) ?? ""
+    }
+
     func show(_ item: [String: Any]?) -> [String] {
         let actions = item?["actions"] as? [[String: Any]] ?? []
         let values: [Any?] = [item?["title"], item?["subtitle"], item?["accessory"], actions.first?["text"]]
@@ -77,7 +83,8 @@ import Testing
 
     @Test func worldClock() throws {
         let item = try #require(try reply(ext("en_GB"), "time in tokyo").first)
-        #expect(show(item) == ["00:25", "Tokyo · Sunday 11 October · 7 h ahead", "GMT+9", "00:25"])
+        // The zone's short name follows the Mac's language ("GMT+9", "JST").
+        #expect(show(item) == ["00:25", "Tokyo · Sunday 11 October · 7 h ahead", abbreviation("Asia/Tokyo"), "00:25"])
         #expect(item["icon"] as? String == "clock")
         #expect(show(try reply(ext("en_GB"), "utc").first)[0...1] == ["15:25", "UTC · Saturday 10 October · 2 h behind"])
         #expect(show(try reply(ext("en_GB"), "time in india").first)[1] == "India · Saturday 10 October · 3 h 30 min ahead")
@@ -88,7 +95,7 @@ import Testing
     @Test func clockConversionFollowsDaylightSaving() throws {
         // Oct 10: London on BST, New York on EDT, five hours apart.
         #expect(show(try reply(ext("en_GB"), "3pm london in nyc").first)
-            == ["10:00", "15:00 London → New York", "GMT-4", "10:00"])
+            == ["10:00", "15:00 London → New York", abbreviation("America/New_York"), "10:00"])
         // Mar 20: New York is already on EDT, London not yet on BST: four hours.
         let march = ext("en_GB", now: instant("2026-03-20T12:00:00Z"))
         #expect(show(try reply(march, "3pm london in nyc").first)[0] == "11:00")
