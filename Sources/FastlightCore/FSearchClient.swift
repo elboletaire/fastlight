@@ -19,16 +19,47 @@ public enum FSearchError: Error, LocalizedError, Equatable {
 /// drops. Not thread-safe: drive it from one serial queue.
 public final class FSearchClient: @unchecked Sendable {
     public let dataDir: URL
+    /// Checks who serves the socket before each new connection. nil (tests,
+    /// tools) means whatever answers is used.
+    public let supervisor: DaemonSupervisor?
     private var socket: UnixSocket?
     private var nextID: UInt64 = 1
 
-    public static var defaultDataDir: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/FSearch", isDirectory: true)
+    /// $HOME first, as fsearch derives its data dir from it; that also lets
+    /// a test run point both at a scratch home.
+    public static var home: String {
+        if let h = ProcessInfo.processInfo.environment["HOME"], !h.isEmpty { return h }
+        return FileManager.default.homeDirectoryForCurrentUser.path
     }
 
-    public init(dataDir: URL = FSearchClient.defaultDataDir) {
+    public static var defaultDataDir: URL {
+        URL(fileURLWithPath: home).appendingPathComponent("Library/Application Support/FSearch", isDirectory: true)
+    }
+
+    public init(dataDir: URL = FSearchClient.defaultDataDir, supervisor: DaemonSupervisor? = nil) {
         self.dataDir = dataDir
+        self.supervisor = supervisor
+    }
+
+    /// The client the app uses: it insists on the daemon bundled with it.
+    public static func forApp(bundle: URL = Bundle.main.bundleURL) -> FSearchClient {
+        let dir = defaultDataDir
+        return FSearchClient(dataDir: dir, supervisor: DaemonSupervisor(dataDir: dir, bundle: bundle))
+    }
+
+    /// Whether the daemon serving the socket is our bundled one.
+    public var daemonIsOwn: Bool { supervisor?.daemonIsOwn ?? false }
+
+    /// Restarts our own daemon, e.g. so it picks up Full Disk Access granted
+    /// after it started. Does nothing (and returns false) for anyone else's.
+    @discardableResult
+    public func restartOwnDaemon() -> Bool {
+        guard let supervisor, supervisor.stopOwnDaemon() else { return false }
+        socket = nil
+        // Start it now rather than on the next request, so it's crawling
+        // while the user looks at the "restarting" notice.
+        _ = try? connected()
+        return true
     }
 
     public var socketPath: String { dataDir.appendingPathComponent("fsearch.sock").path }
@@ -74,6 +105,7 @@ public final class FSearchClient: @unchecked Sendable {
 
     private func connected() throws -> UnixSocket {
         if let socket { return socket }
+        supervisor?.ensureOwnDaemon()
         if let s = try? UnixSocket(path: socketPath) {
             socket = s
             return s
@@ -96,14 +128,14 @@ public final class FSearchClient: @unchecked Sendable {
 }
 
 /// Finds the fsearch binary and starts `fsearch serve`. Only used when
-/// nothing answers on the socket: a daemon started by another fsearch binary
-/// (say, `fsearch install --login`) is simply reused, since the index format
-/// and socket protocol are the same.
+/// nothing answers on the socket. Inside the app, `DaemonSupervisor` has
+/// already stopped any daemon that isn't the bundled one (except fsearch's
+/// own login agent); without a bundle, whatever runs is reused.
 public enum DaemonLauncher {
     /// The copy shipped inside Fastlight.app wins, so the app works with
     /// nothing else installed; the rest cover `swift run` and older setups.
     public static func candidates(bundle: URL = Bundle.main.bundleURL) -> [String] {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let home = FSearchClient.home
         return [
             bundledBinary(in: bundle).path,
             "\(home)/.local/bin/fsearch",
