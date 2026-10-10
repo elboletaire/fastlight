@@ -60,7 +60,7 @@ final class ExtensionCenter {
 
     /// Cheap enough for every panel show: only changed folders are re-read.
     func refresh(force: Bool = false) {
-        let changed = library.refresh(force: force)
+        let changed = library.refresh(force: force) { [consent] in !consent.isDisabled($0) }
         router = library.router(including: Set(library.extensions.filter { !consent.isDisabled($0.id) }.map(\.id)))
         host.sync(with: library.extensions, reset: force)
         for issue in library.issues where changed {

@@ -47,7 +47,9 @@ public enum ExtensionError: Error, LocalizedError, Equatable, Sendable {
         case .crashed(let why): L("%@ stopped unexpectedly (%@).", name, why)
         case .stopped: L("%@ was stopped before it answered.", name)
         case .superseded: L("%@ was superseded by a newer query.", name)
-        case .badReply(let why): L("%@ sent an invalid reply: %@", name, why)
+        // `why` is for the extension's developer, in English like the
+        // protocol it quotes; the sentence around it is the user's.
+        case .badReply(let why): L("%@ sent a reply Fastlight can’t read. For its developer: %@", name, why)
         case .reported(let msg): msg
         }
     }
