@@ -4,7 +4,7 @@
 
 # Fastlight
 
-*A Spotlight-style launcher for macOS that finds any app or file in about a millisecond.*
+*A Spotlight-style launcher for macOS that finds any app or file in microseconds.*
 
 [![CI](https://github.com/elboletaire/fastlight/actions/workflows/ci.yml/badge.svg)](https://github.com/elboletaire/fastlight/actions/workflows/ci.yml)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-15161B?style=flat-square&logo=apple)
@@ -14,7 +14,7 @@
 
 [Features](#features) • [Install](#install) • [Usage](#usage) • [Replace Spotlight](#replace-spotlight) • [Extensions](#extensions) • [Build from source](#build-from-source) • [How it works](#how-it-works) • [Website](https://elboletaire.github.io/fastlight/)
 
-<img src="site/og.png" alt="Fastlight: find anything on your Mac in a millisecond" width="800">
+<img src="site/og.png" alt="Fastlight: find anything on your Mac in microseconds" width="800">
 
 </div>
 
@@ -23,7 +23,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 ## Features
 
 - **Apps and files, kept apart.** A Top Hit, then Applications with their real icons, then Files, each in its own section.
-- **Fast, all the time.** Name search over millions of files in about a millisecond, so results update on every keystroke with no debounce.
+- **Fast, all the time.** Name search over millions of files in microseconds, so results update on every keystroke with no debounce.
 - **Forgiving matching.** `vsc` finds Visual Studio Code, `sys set` finds System Settings, `mian.rs` still finds `main.rs`. Apps you open often move up.
 - **Search inside files.** `grep:`, `regex:` and `sym:` search file contents through fsearch's index and show the matching line. ↵ opens it at that line in VS Code, Cursor, VSCodium, Zed, BBEdit or TextMate, when one of them is the file's default app.
 - **Power-user filters.** `ext:`, `in:`, `size:`, `mtime:`, `kind:` and more, straight from the search field.
@@ -65,7 +65,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 > [!TIP]
 > Want another shortcut? Pick one in **Settings…** from the menu bar icon. For **⌘Space**, see [Replace Spotlight](#replace-spotlight).
 
-The first time it runs, fsearch indexes the whole disk (around 20 seconds) and Fastlight shows its progress. After that the index stays current on its own and survives restarts. Apps are searched from the start, even while files are still being indexed.
+The first time it runs, fsearch indexes the whole disk (under a minute, even with millions of files) and Fastlight shows its progress. After that the index stays current on its own and survives restarts. Apps are searched from the start, even while files are still being indexed.
 
 ### Troubleshooting
 
