@@ -8,8 +8,9 @@ import Testing
         #expect(ResultFilter.filterKeys(in: "invoice ext:pdf mtime:<30d") == ["ext", "mtime"])
         #expect(ResultFilter.filterKeys(in: "!in:~/Library foo") == ["in"])
         #expect(ResultFilter.filterKeys(in: "http://example") == [])
-        #expect(ResultFilter(query: "grep:TODO ext:swift", home: home).content)
-        #expect(!ResultFilter(query: "readme in:~/src", home: home).content)
+        // Aliases count too.
+        #expect(ResultFilter.filterKeys(in: "content:TODO symbol:main modified:<1d re:^a limit:5")
+            == ["content", "symbol", "modified", "re", "limit"])
     }
 
     @Test func hidesAppsAndNoiseForPlainQueries() {

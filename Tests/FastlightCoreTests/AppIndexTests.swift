@@ -115,6 +115,18 @@ import Testing
         #expect(reloaded.boost("/b.app", now: then) == 0)
     }
 
+    @Test func usageForgetsLaunchesAfterAYear() throws {
+        let name = "fastlight.tests.\(UUID().uuidString)"
+        let d = try #require(UserDefaults(suiteName: name))
+        defer { d.removePersistentDomain(forName: name) }
+        let then = Date(timeIntervalSince1970: 1_700_000_000)
+        let usage = AppUsage(defaults: d)
+        usage.record("/old.app", at: then)
+        usage.record("/new.app", at: then.addingTimeInterval(400 * 86_400))
+        let kept = d.dictionary(forKey: "fastlight.appUsage")?.keys.sorted()
+        #expect(kept == ["/new.app"])
+    }
+
     @Test func emptyQueryFindsNothing() {
         #expect(names("").isEmpty)
         #expect(names("   ").isEmpty)

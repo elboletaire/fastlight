@@ -97,3 +97,61 @@ final class FakeDaemon: @unchecked Sendable {
         unlink(path)
     }
 }
+
+@Suite struct ClientResilienceTests {
+    @Test func hungDaemonTimesOutWithoutRetrying() throws {
+        let dir = try FakeDaemon.tempDir()
+        let calls = Counter()
+        // Never answers: the reply closure blocks its connection forever.
+        let daemon = try FakeDaemon(dir: dir) { _ in
+            calls.bump()
+            Thread.sleep(forTimeInterval: 60)
+            return "{}"
+        }
+        defer { daemon.stop() }
+
+        let client = FSearchClient(dataDir: dir)
+        client.timeout = 0.2
+        let started = Date()
+        #expect(throws: FSearchError.timedOut) { try client.search("x") }
+        #expect(Date().timeIntervalSince(started) < 1)
+        #expect(calls.value == 1)
+    }
+
+    @Test func doesNotRelaunchADaemonThatNeverBinds() throws {
+        let dir = try FakeDaemon.tempDir()
+        let launches = Counter()
+        let client = FSearchClient(dataDir: dir)
+        client.bindWait = 0.05
+        client.launch = { _ in launches.bump() }
+
+        #expect(throws: FSearchError.self) { try client.search("a") }
+        #expect(throws: FSearchError.self) { try client.status() }
+        #expect(launches.value == 1)
+
+        // Once the delay is over, it tries again.
+        client.relaunchDelay = 0
+        #expect(throws: FSearchError.self) { try client.search("b") }
+        #expect(launches.value > 1)
+    }
+
+    @Test func rotatesALargeLog() throws {
+        let dir = try FakeDaemon.tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let log = dir.appendingPathComponent("daemon.log").path
+        FileManager.default.createFile(atPath: log, contents: Data(count: 100))
+        DaemonLauncher.rotateLog(at: log, maxBytes: 200)
+        #expect(FileManager.default.fileExists(atPath: log))
+
+        DaemonLauncher.rotateLog(at: log, maxBytes: 50)
+        #expect(!FileManager.default.fileExists(atPath: log))
+        #expect(FileManager.default.fileExists(atPath: log + ".1"))
+    }
+}
+
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var n = 0
+    var value: Int { lock.withLock { n } }
+    func bump() { lock.withLock { n += 1 } }
+}

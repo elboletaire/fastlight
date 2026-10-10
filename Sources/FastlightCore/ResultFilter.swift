@@ -5,14 +5,14 @@ import Foundation
 /// typing a name wants. An explicit filter (`in:`, `ext:`, …) means the
 /// user knows what they're after, so then nothing is hidden.
 public struct ResultFilter: Sendable {
+    /// Every key fsearch's query parser takes (`Query::filter` in query.rs),
+    /// aliases included.
     public static let filterKeys: Set<String> = [
-        "ext", "type", "kind", "in", "size", "mtime", "path", "grep", "regex", "sym",
+        "ext", "type", "kind", "in", "size", "mtime", "modified", "re", "path", "limit",
+        "grep", "content", "regex", "sym", "symbol",
     ]
-    public static let contentKeys: Set<String> = ["grep", "regex", "sym"]
 
     public let explicit: Bool
-    /// `grep:`, `regex:` or `sym:`: results are lines, not names.
-    public let content: Bool
     private let wantsHidden: Bool
     private let noisyPrefixes: [String]
     private let keptPrefixes: [String]
@@ -21,9 +21,8 @@ public struct ResultFilter: Sendable {
     public init(query: String, home: String = NSHomeDirectory()) {
         let keys = Self.filterKeys(in: query)
         explicit = !keys.isEmpty
-        content = !keys.isDisjoint(with: Self.contentKeys)
         // Someone typing ".zshrc" wants dotfiles.
-        wantsHidden = query.split(separator: " ").contains { $0.hasPrefix(".") || $0.hasPrefix("'.") }
+        wantsHidden = query.split(whereSeparator: \.isWhitespace).contains { $0.hasPrefix(".") || $0.hasPrefix("'.") }
         // ~/Library is app data (mail attachments, caches, game saves), not
         // documents; iCloud Drive and cloud storage folders are the exception.
         keptPrefixes = ["\(home)/Library/Mobile Documents/", "\(home)/Library/CloudStorage/"]

@@ -7,7 +7,9 @@ final class UnixSocket {
     private let fd: Int32
     private var buffer = Data()
 
-    init(path: String) throws {
+    /// `timeout` bounds each read and write, so a hung peer can't block
+    /// the caller forever; nil waits as long as it takes.
+    init(path: String, timeout: TimeInterval? = nil) throws {
         fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw Self.posixError("socket") }
 
@@ -35,6 +37,13 @@ final class UnixSocket {
         // Don't let a dead daemon kill us with SIGPIPE.
         var on: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
+        if let timeout {
+            let secs = Int(timeout)
+            var tv = timeval(tv_sec: secs, tv_usec: Int32((timeout - Double(secs)) * 1_000_000))
+            let size = socklen_t(MemoryLayout<timeval>.size)
+            setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, size)
+            setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, size)
+        }
     }
 
     deinit { close(fd) }
@@ -48,6 +57,7 @@ final class UnixSocket {
                 let n = write(fd, raw.baseAddress! + sent, raw.count - sent)
                 if n < 0 {
                     if errno == EINTR { continue }
+                    if errno == EAGAIN { throw FSearchError.timedOut }
                     throw Self.posixError("write")
                 }
                 sent += n
@@ -66,6 +76,7 @@ final class UnixSocket {
             let n = read(fd, &chunk, chunk.count)
             if n < 0 {
                 if errno == EINTR { continue }
+                if errno == EAGAIN { throw FSearchError.timedOut }
                 throw Self.posixError("read")
             }
             if n == 0 { throw FSearchError.unreachable("daemon closed the connection") }
