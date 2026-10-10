@@ -305,7 +305,7 @@ func targets(_ item: [String: Any]) -> [String] {
         let ext = ContactsExtension(source: source)
         let started = Date()
         #expect(search(ext, "elena", global: true).isEmpty)
-        #expect(Date().timeIntervalSince(started) < 0.2)
+        #expect(Date().timeIntervalSince(started) < 1)
     }
 
     @Test func protocolReplies() throws {
@@ -326,7 +326,7 @@ final class SlowContacts: ContactSource, @unchecked Sendable {
     func access() -> Access { .authorized }
     func requestAccess(_ done: @escaping @Sendable (Bool) -> Void) { done(true) }
     func contacts() throws -> [Contact] {
-        Thread.sleep(forTimeInterval: 0.5)
+        Thread.sleep(forTimeInterval: 2)
         return SampleContacts.cards
     }
 }

@@ -23,7 +23,7 @@ struct Stubborn: ResultProvider {
 
     func results(for query: ProviderQuery) async throws -> [ResultEntry] {
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-            DispatchQueue.global().asyncAfter(deadline: .now() + 5) { c.resume() }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 10) { c.resume() }
         }
         return []
     }
@@ -120,8 +120,8 @@ struct Stubborn: ResultProvider {
         let stubborn = Stubborn(id: "ext", budget: .milliseconds(80))
         let started = Date()
         let r = await run(SearchFanout(), "q", [stubborn]) { $0.updates.last?.isFinal == true }
-        // Generous for slow CI machines; without the race it takes 5 s.
-        #expect(Date().timeIntervalSince(started) < 2.5)
+        // Without the race it takes 10 s; 2.5 s was once missed by 35 ms on CI.
+        #expect(Date().timeIntervalSince(started) < 4)
         guard case .timedOut = r.updates.last?.outcomes["ext"] else {
             Issue.record("expected a timeout")
             return

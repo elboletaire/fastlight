@@ -167,7 +167,7 @@ import Testing
         let consent = ConsentStore(defaults: UserDefaults(suiteName: "fastlight.test.\(UUID().uuidString)")!)
         let host = ExtensionHost(appVersion: "0.2.0", consent: consent,
                                  dataRoot: root.appendingPathComponent("data"), logRoot: root.appendingPathComponent("logs"))
-        // Above the fake's slowest answer (3 s), so only the tests decide
+        // Above the fake's slowest answer (6 s), so only the tests decide
         // when to stop waiting.
         host.timeouts.keyword = 10
         return (host, try #require(lib.extensions.first), root)
@@ -229,8 +229,8 @@ import Testing
         t.cancel()
         let started = Date()
         await #expect(throws: CancellationError.self) { try await t.value }
-        // Not waiting for the 3 s reply (with room for slow CI machines).
-        #expect(Date().timeIntervalSince(started) < 2.5)
+        // Not waiting for the 6 s reply (with room for slow CI machines).
+        #expect(Date().timeIntervalSince(started) < 4)
         // The extension is free again once it answered the dropped query.
         #expect(try await host.search(ext, query: "next", mode: .keyword, limit: 5).map(\.title) == ["next"])
     }
@@ -286,7 +286,7 @@ import Testing
         waiting.cancel()
         await #expect(throws: CancellationError.self) { try await waiting.value }
         // Without waiting for "slower" to finish.
-        #expect(Date().timeIntervalSince(started) < 2.5)
+        #expect(Date().timeIntervalSince(started) < 4)
         #expect(try await busy.value.map(\.title) == ["slower"])
     }
 

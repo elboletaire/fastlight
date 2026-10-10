@@ -206,8 +206,8 @@ import Testing
         try runner.launch(["/usr/bin/true"], grace: 2)
         let ended = DispatchSemaphore(value: 0)
         let started = Date()
-        try runner.launch(["/bin/sleep", "0.5"], grace: 0.05) { _ in ended.signal() }
-        #expect(Date().timeIntervalSince(started) < 0.4)
+        try runner.launch(["/bin/sleep", "3"], grace: 0.05) { _ in ended.signal() }
+        #expect(Date().timeIntervalSince(started) < 1.5)
         #expect(ended.wait(timeout: .now() + 5) == .success)
     }
 }

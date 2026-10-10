@@ -6,7 +6,7 @@ import Foundation
 enum FakeExtension {
     /// The usual reply loop: answers searches with one item titled after the
     /// query. Queries starting with "slow" sleep a second first ("slower",
-    /// three), "crash"
+    /// six), "crash"
     /// exits with status 3, "garbage" prints noise.
     static let echo = #"""
     echo '{"type":"ready","protocol":1}'
@@ -15,7 +15,7 @@ enum FakeExtension {
       [ -z "$id" ] && { printf '%s\n' "$line" >> notes.txt; continue; }
       q=$(printf '%s' "$line" | sed -n 's/.*"query":"\([^"]*\)".*/\1/p')
       case "$q" in
-        slower*) sleep 3 ;;
+        slower*) sleep 6 ;;
         slow*) sleep 1 ;;
         crash*) exit 3 ;;
         garbage*) echo "not json"; echo "{}" ;;
