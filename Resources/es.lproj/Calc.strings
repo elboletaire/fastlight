@@ -1,0 +1,18 @@
+/* The Calculator built-in's results. Keys are the English text. */
+
+/* Rows */
+"Type a calculation" = "Escribe un cálculo";
+"Like 1920*1080, 2^10, (3+4)/2, sqrt(2) or 15% of 80" = "Por ejemplo: 1920*1080, 2^10, (3+4)/2, sqrt(2) o 15% of 80";
+"No result" = "Ningún resultado";
+"Copy Answer" = "Copiar resultado";
+"Paste Answer" = "Pegar resultado";
+
+/* Why an expression has no result. Typed input (names, “of”) stays English. */
+"Type an expression, like 2^10 or 15% of 80" = "Escribe una expresión, como 2^10 o 15% of 80";
+"The expression ends too early" = "La expresión termina demasiado pronto";
+"Unexpected “%@”" = "“%@” inesperado";
+"Unknown name “%@”" = "Nombre desconocido: “%@”";
+"A parenthesis is missing" = "Falta un paréntesis";
+"Division by zero" = "División por cero";
+"%@ isn't defined there" = "%@ no está definido para ese valor";
+"The result is too large" = "El resultado es demasiado grande";

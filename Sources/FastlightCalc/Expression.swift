@@ -13,13 +13,13 @@ public enum CalcError: Error, Equatable, Sendable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .empty: "Type an expression, like 2^10 or 15% of 80"
-        case .unexpected(let t): t.isEmpty ? "The expression ends too early" : "Unexpected “\(t)”"
-        case .unknownName(let n): "Unknown name “\(n)”"
-        case .missingParenthesis: "A parenthesis is missing"
-        case .divisionByZero: "Division by zero"
-        case .outOfDomain(let f): "\(f) isn't defined there"
-        case .tooLarge: "The result is too large"
+        case .empty: L("Type an expression, like 2^10 or 15% of 80")
+        case .unexpected(let t): t.isEmpty ? L("The expression ends too early") : L("Unexpected “%@”", t)
+        case .unknownName(let n): L("Unknown name “%@”", n)
+        case .missingParenthesis: L("A parenthesis is missing")
+        case .divisionByZero: L("Division by zero")
+        case .outOfDomain(let f): L("%@ isn't defined there", f)
+        case .tooLarge: L("The result is too large")
         }
     }
 }

@@ -1,4 +1,5 @@
 import FastlightCalc
+import FastlightL10n
 import Foundation
 
 /// Conversions as people read them.
@@ -12,17 +13,30 @@ public enum ConvertFormat {
         return CalcFormat.display(r, locale: locale)
     }
 
-    /// A count: "1 day", "76 days", "2,110 days".
-    static func count(_ n: Int, _ unit: String, locale: Locale) -> String {
-        "\(CalcFormat.display(Double(n), locale: locale).title) \(unit)\(n == 1 ? "" : "s")"
+    /// A count of calendar units: "1 day", "76 days", "2,110 days".
+    static func count(_ n: Int, _ unit: Calendar.Component, locale: Locale) -> String {
+        let shown = CalcFormat.display(Double(n), locale: locale).title
+        return switch unit {
+        case .weekOfYear: Lp("%@ week", "%@ weeks", count: n, shown)
+        case .month: Lp("%@ month", "%@ months", count: n, shown)
+        case .year: Lp("%@ year", "%@ years", count: n, shown)
+        default: Lp("%@ day", "%@ days", count: n, shown)
+        }
+    }
+
+    /// "10 weeks, 3 days": whole weeks and what's left.
+    static func weeks(_ n: Int, locale: Locale) -> String {
+        let w = count(n / 7, .weekOfYear, locale: locale)
+        return n % 7 > 0 ? L("%@, %@", w, count(n % 7, .day, locale: locale)) : w
     }
 
     /// "7 h ahead", "5 h 30 min behind", "same time as here".
     static func offset(_ seconds: Int) -> String {
-        if seconds == 0 { return "same time as here" }
+        if seconds == 0 { return L("same time as here") }
         let m = abs(seconds) / 60
         let parts = [m / 60 > 0 ? "\(m / 60) h" : nil, m % 60 > 0 ? "\(m % 60) min" : nil].compactMap { $0 }
-        return parts.joined(separator: " ") + (seconds > 0 ? " ahead" : " behind")
+        let span = parts.joined(separator: " ")
+        return seconds > 0 ? L("%@ ahead", span) : L("%@ behind", span)
     }
 }
 
@@ -42,6 +56,15 @@ public final class ConvertExtension {
 
     var decimal: Character { locale.decimalSeparator?.first ?? "." }
 
+    /// Dates inside sentences: `locale` when it speaks the language the
+    /// strings are in, else that language in `locale`'s region, so an
+    /// English sentence never carries a Catalan date, or the reverse.
+    var dateLocale: Locale {
+        let lang = Localizer.current.language
+        if locale.language.languageCode?.identifier == lang { return locale }
+        return Locale(identifier: lang + (locale.region.map { "_" + $0.identifier } ?? ""))
+    }
+
     public static let ready = #"{"type":"ready","protocol":1}"#
 
     /// The reply to a request line; nil for notifications and junk.
@@ -58,7 +81,7 @@ public final class ConvertExtension {
         return encode(["id": id, "items": Array(items.prefix(max(limit, 1)))])
     }
 
-    static let examples = "Like 10 km in mi, 72f in c, time in tokyo, 3pm london in nyc or days until dec 25"
+    static var examples: String { L("Like 10 km in mi, 72f in c, time in tokyo, 3pm london in nyc or days until dec 25") }
 
     /// Global search: one answer, the Top Hit, only when the query clearly
     /// is a conversion; otherwise nothing. Keyword mode always says
@@ -75,7 +98,7 @@ public final class ConvertExtension {
             return [first]
         }
         if !found.isEmpty { return found }
-        return [["id": "none", "title": "No result", "subtitle": Self.examples, "icon": "exclamationmark.triangle"]]
+        return [["id": "none", "title": L("No result"), "subtitle": Self.examples, "icon": "exclamationmark.triangle"]]
     }
 
     func answers(_ q: String, global: Bool, now: Date) -> [[String: Any]] {
@@ -93,7 +116,7 @@ public final class ConvertExtension {
     /// The local time, a few world clocks and the week, then what to type.
     func defaults(_ now: Date) -> [[String: Any]] {
         var out: [[String: Any]] = [[
-            "id": "help", "title": "Type a conversion", "subtitle": Self.examples, "icon": "arrow.left.arrow.right",
+            "id": "help", "title": L("Type a conversion"), "subtitle": Self.examples, "icon": "arrow.left.arrow.right",
         ]]
         out.append(clockItem(.now(Place(name: "Here", zone: timeZone)), now, id: "here"))
         for name in ["utc", "new york", "london", "tokyo"] {
@@ -123,14 +146,21 @@ public final class ConvertExtension {
         let shown = ConvertFormat.number(v, locale: locale)
         let from = amount.terms.map { join(ConvertFormat.number($0.value, locale: locale).title, $0.unit.symbol, $0.value) }
         return answer(id: id, title: join(shown.title, target.symbol, v), copy: shown.copy,
-                      subtitle: from.joined(separator: " ") + " =", accessory: target.name, icon: amount.quantity.icon)
+                      subtitle: from.joined(separator: " ") + " =", accessory: L(target.name), icon: amount.quantity.icon)
     }
 
-    /// "6.2 mi", "2 cups", but "90°".
+    /// "6.2 mi", "2 cups", but "90°". The symbols that are words are
+    /// words in each language.
     func join(_ n: String, _ symbol: String, _ v: Double) -> String {
-        if symbol == "°" { return n + symbol }
-        let word = ["cup", "acre", "turn", "ton"].contains(symbol) && v != 1
-        return "\(n) \(symbol)\(word ? "s" : "")"
+        let count = v == 1 ? 1 : 2
+        switch symbol {
+        case "°": return n + symbol
+        case "cup": return Lp("%@ cup", "%@ cups", count: count, n)
+        case "acre": return Lp("%@ acre", "%@ acres", count: count, n)
+        case "turn": return Lp("%@ turn", "%@ turns", count: count, n)
+        case "ton": return Lp("%@ ton", "%@ tons", count: count, n)
+        default: return "\(n) \(symbol)"
+        }
     }
 
     func clockItem(_ c: ClockQuery, _ now: Date, id: String = "answer") -> [String: Any] {
@@ -139,7 +169,7 @@ public final class ConvertExtension {
             let time = format(now, p.zone, time: true)
             let rel = ConvertFormat.offset(p.zone.secondsFromGMT(for: now) - timeZone.secondsFromGMT(for: now))
             let day = format(now, p.zone, template: "EEEEdMMMM")
-            let sub = p.name == "Here" ? "Here · \(day)" : "\(p.name) · \(day) · \(rel)"
+            let sub = p.name == "Here" ? "\(L("Here")) · \(day)" : "\(p.name) · \(day) · \(rel)"
             return answer(id: id, title: time, copy: time, subtitle: sub,
                           accessory: p.zone.abbreviation(for: now) ?? "", icon: "clock")
         case .at(let h, let m, let from, let to):
@@ -153,9 +183,9 @@ public final class ConvertExtension {
             let at = cal.date(from: parts) ?? now
             let time = format(at, toZone, time: true)
             let dayDelta = Self.dayNumber(at, toZone) - Self.dayNumber(at, fromZone)
-            var sub = "\(format(at, fromZone, time: true)) \(from?.name ?? "here") → \(to?.name ?? "here")"
-            if dayDelta > 0 { sub += " · next day" }
-            if dayDelta < 0 { sub += " · previous day" }
+            var sub = "\(format(at, fromZone, time: true)) \(from?.name ?? L("here")) → \(to?.name ?? L("here"))"
+            if dayDelta > 0 { sub += " · " + L("next day") }
+            if dayDelta < 0 { sub += " · " + L("previous day") }
             return answer(id: id, title: time, copy: time, subtitle: sub,
                           accessory: toZone.abbreviation(for: at) ?? "", icon: "clock")
         }
@@ -169,40 +199,34 @@ public final class ConvertExtension {
             let copy: String
             var accessory = ""
             if unit == .weeks {
-                title = ConvertFormat.count(n / 7, "week", locale: locale) + (n % 7 > 0 ? ", " + ConvertFormat.count(n % 7, "day", locale: locale) : "")
+                title = ConvertFormat.weeks(n, locale: locale)
                 copy = title
             } else {
-                title = ConvertFormat.count(n, "day", locale: locale)
+                title = ConvertFormat.count(n, .day, locale: locale)
                 copy = String(n)
-                if n >= 14 {
-                    accessory = ConvertFormat.count(n / 7, "week", locale: locale) + (n % 7 > 0 ? ", " + ConvertFormat.count(n % 7, "day", locale: locale) : "")
-                }
+                if n >= 14 { accessory = ConvertFormat.weeks(n, locale: locale) }
             }
+            // The date always starts with its weekday, which keeps "fins al
+            // divendres" and "hasta el viernes" right for every date.
             let date = format(to, timeZone, template: "EEEEdMMMMyyyy")
-            let sub = days == 0 ? "Today, \(date)" : days > 0 ? "until \(date)" : "since \(date)"
+            let sub = days == 0 ? L("Today, %@", date) : days > 0 ? L("until %@", date) : L("since %@", date)
             return answer(id: "answer", title: title, copy: copy, subtitle: sub, accessory: accessory, icon: "calendar")
         case .shifted(let date, let from, let by, let unit):
             let title = format(date, timeZone, template: "EEEEdMMMMyyyy")
-            let name: String = switch unit {
-            case .weekOfYear: "week"
-            case .month: "month"
-            case .year: "year"
-            default: "day"
-            }
-            let base = p.days(from: p.today, to: from) == 0 ? "Today" : format(from, timeZone, template: "dMMMyyyy")
-            let sub = "\(base) \(by < 0 ? "−" : "+") \(ConvertFormat.count(abs(by), name, locale: locale))"
+            let base = p.days(from: p.today, to: from) == 0 ? L("Today") : format(from, timeZone, template: "dMMMyyyy")
+            let sub = "\(base) \(by < 0 ? "−" : "+") \(ConvertFormat.count(abs(by), unit, locale: locale))"
             return answer(id: "answer", title: title, copy: title, subtitle: sub, accessory: iso(date), icon: "calendar")
         case .week(let n, let of):
             let (mon, sun) = p.isoWeekRange(of)
             let sub = "\(format(mon, timeZone, template: "EEEdMMM")) – \(format(sun, timeZone, template: "EEEdMMMyyyy"))"
-            return answer(id: "week", title: "Week \(n)", copy: String(n), subtitle: sub, accessory: "ISO 8601", icon: "calendar")
+            return answer(id: "week", title: L("Week %d", n), copy: String(n), subtitle: sub, accessory: "ISO 8601", icon: "calendar")
         case .day(let date):
             let title = format(date, timeZone, template: "EEEEdMMMMyyyy")
             let delta = p.days(from: p.today, to: date)
-            let sub = delta == 0 ? "Today" : delta > 0 ? "in " + ConvertFormat.count(delta, "day", locale: locale)
-                : ConvertFormat.count(-delta, "day", locale: locale) + " ago"
+            let sub = delta == 0 ? L("Today") : delta > 0 ? L("in %@", ConvertFormat.count(delta, .day, locale: locale))
+                : L("%@ ago", ConvertFormat.count(-delta, .day, locale: locale))
             return answer(id: "answer", title: title, copy: title, subtitle: sub,
-                          accessory: "Week \(p.isoWeek(date))", icon: "calendar")
+                          accessory: L("Week %d", p.isoWeek(date)), icon: "calendar")
         }
     }
 
@@ -215,8 +239,8 @@ public final class ConvertExtension {
             // ↵ copies, as the calculator does; ⌘↵ pastes it where you
             // were typing.
             "actions": [
-                ["type": "copy", "text": copy, "title": "Copy Answer"],
-                ["type": "paste", "text": copy, "title": "Paste Answer"],
+                ["type": "copy", "text": copy, "title": L("Copy Answer")],
+                ["type": "paste", "text": copy, "title": L("Paste Answer")],
             ],
         ]
         if !accessory.isEmpty { item["accessory"] = accessory }
@@ -228,10 +252,11 @@ public final class ConvertExtension {
     private var formatters: [String: DateFormatter] = [:]
 
     func format(_ d: Date, _ zone: TimeZone, time: Bool = false, template: String = "") -> String {
-        let key = "\(zone.identifier)|\(time)|\(template)"
+        let loc = dateLocale
+        let key = "\(loc.identifier)|\(zone.identifier)|\(time)|\(template)"
         let f = formatters[key] ?? {
             let f = DateFormatter()
-            f.locale = locale
+            f.locale = loc
             f.timeZone = zone
             if time {
                 f.timeStyle = .short

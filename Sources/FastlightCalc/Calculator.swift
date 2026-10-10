@@ -125,8 +125,8 @@ public final class CalculatorExtension {
             let empty = (error as? CalcError) == .empty
             return [[
                 "id": empty ? "help" : "error",
-                "title": empty ? "Type a calculation" : "No result",
-                "subtitle": empty ? "Like 1920*1080, 2^10, (3+4)/2, sqrt(2) or 15% of 80"
+                "title": empty ? L("Type a calculation") : L("No result"),
+                "subtitle": empty ? L("Like 1920*1080, 2^10, (3+4)/2, sqrt(2) or 15% of 80")
                     : error.localizedDescription,
                 "icon": empty ? "plus.forwardslash.minus" : "exclamationmark.triangle",
             ]]
@@ -143,8 +143,8 @@ public final class CalculatorExtension {
             // ↵ copies, as in Spotlight and Raycast; ⌘↵ pastes it where
             // you were typing.
             "actions": [
-                ["type": "copy", "text": shown.copy, "title": "Copy Answer"],
-                ["type": "paste", "text": shown.copy, "title": "Paste Answer"],
+                ["type": "copy", "text": shown.copy, "title": L("Copy Answer")],
+                ["type": "paste", "text": shown.copy, "title": L("Paste Answer")],
             ],
         ]
     }

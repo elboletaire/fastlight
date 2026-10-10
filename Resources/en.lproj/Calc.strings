@@ -1,0 +1,18 @@
+/* The Calculator built-in's results. Keys are the English text. */
+
+/* Rows */
+"Type a calculation" = "Type a calculation";
+"Like 1920*1080, 2^10, (3+4)/2, sqrt(2) or 15% of 80" = "Like 1920*1080, 2^10, (3+4)/2, sqrt(2) or 15% of 80";
+"No result" = "No result";
+"Copy Answer" = "Copy Answer";
+"Paste Answer" = "Paste Answer";
+
+/* Why an expression has no result. Typed input (names, “of”) stays English. */
+"Type an expression, like 2^10 or 15% of 80" = "Type an expression, like 2^10 or 15% of 80";
+"The expression ends too early" = "The expression ends too early";
+"Unexpected “%@”" = "Unexpected “%@”";
+"Unknown name “%@”" = "Unknown name “%@”";
+"A parenthesis is missing" = "A parenthesis is missing";
+"Division by zero" = "Division by zero";
+"%@ isn't defined there" = "%@ isn't defined there";
+"The result is too large" = "The result is too large";
