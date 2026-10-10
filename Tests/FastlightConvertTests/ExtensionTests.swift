@@ -44,6 +44,19 @@ import Testing
         #expect(actions.map { $0["type"] as? String } == ["copy", "paste"])
     }
 
+    /// Fuel economy is a reciprocal and big amounts overflow: neither is an
+    /// answer, and neither crashes the helper any more.
+    @Test func zeroAndOverflowHaveNoAnswer() throws {
+        let e = ext()
+        let huge = String(repeating: "9", count: 300) + " ly in pm"
+        for q in ["0 mpg", "-0 mpg", "0 km/l", "0 mpg in l/100km", "0 l/100km in mpg", "-5 mpg in l/100km", huge] {
+            #expect(try reply(e, q).isEmpty, "\(q)")
+            let none = try reply(e, q, mode: "keyword")
+            #expect(none.map { $0["id"] as? String } == ["none"], "\(q)")
+        }
+        #expect(show(try reply(e, "30 mpg in l/100km").first)[0] == "7.84049 L/100km")
+    }
+
     @Test func spotlightExamples() throws {
         let e = ext()
         let cases: [(String, [String])] = [

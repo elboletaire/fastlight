@@ -106,9 +106,9 @@ public final class ConvertExtension {
         if let d = dates.parse(q, global: global) { return [dateItem(d, dates)] }
         if let c = ClockParser.parse(q, global: global, here: timeZone) { return [clockItem(c, now)] }
         if let u = UnitParser.parse(q, decimal: decimal), !global || u.clear {
-            if let t = u.target { return [unitItem(u.amount, t, id: "answer")] }
+            if let t = u.target { return [unitItem(u.amount, t, id: "answer")].compactMap { $0 } }
             return u.amount.unit.targets.compactMap { UnitTable.bySymbol[$0] }
-                .map { unitItem(u.amount, $0, id: $0.symbol) }
+                .compactMap { unitItem(u.amount, $0, id: $0.symbol) }
         }
         return []
     }
@@ -141,8 +141,11 @@ public final class ConvertExtension {
 
     // MARK: Items
 
-    func unitItem(_ amount: Amount, _ target: UnitInfo, id: String) -> [String: Any] {
+    /// Nil when the result isn't a number: it overflows ("1e300 ly in pm")
+    /// or has none.
+    func unitItem(_ amount: Amount, _ target: UnitInfo, id: String) -> [String: Any]? {
         let v = amount.unit.value(amount.value, in: target)
+        guard v.isFinite, amount.terms.allSatisfy({ $0.value.isFinite }) else { return nil }
         let shown = ConvertFormat.number(v, locale: locale)
         let from = amount.terms.map { join(ConvertFormat.number($0.value, locale: locale).title, $0.unit.symbol, $0.value) }
         return answer(id: id, title: join(shown.title, target.symbol, v), copy: shown.copy,
