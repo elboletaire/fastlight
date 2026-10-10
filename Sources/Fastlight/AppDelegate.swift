@@ -93,7 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.representedObject = ext.id
             item.state = enabled ? .on : .off
             item.image = ExtensionIcons.menuImage(for: ext.icon)
-            var tip = [ext.manifest.description, "Keywords: " + ext.manifest.keywords.map { "“\($0)”" }.joined(separator: ", "),
+            var tip = [ext.summary, "Keywords: " + ext.manifest.keywords.map { "“\($0)”" }.joined(separator: ", "),
                        "\(ext.id) \(ext.manifest.version)\(ext.builtIn ? " (built in)" : "")"].compactMap { $0 }
             if case .failed(let why) = extensions.host.state(of: ext.id) { tip.append(why) }
             item.toolTip = tip.joined(separator: "\n")

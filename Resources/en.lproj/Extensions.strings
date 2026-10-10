@@ -1,0 +1,24 @@
+/* Built-in extensions' names and descriptions, keyed by the English in
+   their extension.json. The app looks these up for built-ins only. */
+"Calculator" = "Calculator";
+"Answers arithmetic as you type: 1920*1080, 2^10, sqrt(2), 15% of 80." = "Answers arithmetic as you type: 1920*1080, 2^10, sqrt(2), 15% of 80.";
+"Calendar" = "Calendar";
+"Today's agenda and your events for the next two weeks. Reads Calendar on this Mac once you allow it." = "Today's agenda and your events for the next two weeks. Reads Calendar on this Mac once you allow it.";
+"Contacts" = "Contacts";
+"Find people by name, company, email or phone, and email, call or message them. Reads Contacts on this Mac once you allow it." = "Find people by name, company, email or phone, and email, call or message them. Reads Contacts on this Mac once you allow it.";
+"Conversions" = "Conversions";
+"Converts units, tells the time around the world and counts days: 10 km in mi, time in tokyo, days until dec 25." = "Converts units, tells the time around the world and counts days: 10 km in mi, time in tokyo, days until dec 25.";
+"Dictionary" = "Dictionary";
+"Definitions from the dictionaries built into macOS, offline: define serendipity." = "Definitions from the dictionaries built into macOS, offline: define serendipity.";
+"Emoji" = "Emoji";
+"Find an emoji by name or keyword and paste it into the app you were using." = "Find an emoji by name or keyword and paste it into the app you were using.";
+"Reminders" = "Reminders";
+"What's due, overdue first, and any reminder that isn't done yet. Reads Reminders on this Mac once you allow it." = "What's due, overdue first, and any reminder that isn't done yet. Reads Reminders on this Mac once you allow it.";
+"System Settings" = "System Settings";
+"Opens System Settings panes and pages: Bluetooth, Wi‑Fi, Displays, Full Disk Access…" = "Opens System Settings panes and pages: Bluetooth, Wi‑Fi, Displays, Full Disk Access…";
+"Shortcuts" = "Shortcuts";
+"Runs your shortcuts from the Shortcuts app, with what you type after the name as input." = "Runs your shortcuts from the Shortcuts app, with what you type after the name as input.";
+"System" = "System";
+"Lock Screen, Sleep, Toggle Dark Mode, Empty Trash, Restart, Shut Down and more. The disruptive ones ask first." = "Lock Screen, Sleep, Toggle Dark Mode, Empty Trash, Restart, Shut Down and more. The disruptive ones ask first.";
+"Web" = "Web";
+"Opens web addresses you type, and searches the web with web <query>." = "Opens web addresses you type, and searches the web with web <query>.";

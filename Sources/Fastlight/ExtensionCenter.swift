@@ -113,7 +113,7 @@ final class ExtensionCenter {
             alert.messageText = "“\(ext.name)” changed since you allowed it. Allow it to run?"
         }
         var lines: [String] = []
-        if let d = ext.manifest.description { lines.append(d) }
+        if let d = ext.summary { lines.append(d) }
         var about = ["Version \(ext.manifest.version)"]
         if let a = ext.manifest.author { about.insert("By \(a)", at: 0) }
         about.append(ext.id)
