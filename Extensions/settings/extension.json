@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.settings",
+  "name": "System Settings",
+  "version": "1.0.0",
+  "description": "Opens System Settings panes and pages: Bluetooth, Wi‑Fi, Displays, Full Disk Access…",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "gearshape",
+  "keywords": ["settings", "pref"],
+  "command": ["fastlight-system", "settings"],
+  "global": { "maxResults": 3, "minQueryLength": 3 }
+}

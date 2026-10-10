@@ -10,6 +10,7 @@ let package = Package(
         .executable(name: "fastlight-emoji", targets: ["fastlight-emoji"]),
         .executable(name: "fastlight-calc", targets: ["fastlight-calc"]),
         .executable(name: "fastlight-convert", targets: ["fastlight-convert"]),
+        .executable(name: "fastlight-system", targets: ["fastlight-system"]),
     ],
     targets: [
         // Search providers, the fsearch client and the extension host. No
@@ -29,5 +30,13 @@ let package = Package(
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
         .testTarget(name: "FastlightConvertTests", dependencies: ["FastlightConvert", "FastlightCalc"]),
+        // System Settings panes, Shortcuts and system actions: three bundled
+        // extensions served by one executable.
+        .target(name: "FastlightSystem"),
+        .executableTarget(name: "fastlight-system", dependencies: ["FastlightSystem"]),
+        .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
+        .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
+        .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
+        .testTarget(name: "FastlightSystemTests", dependencies: ["FastlightSystem"]),
     ]
 )

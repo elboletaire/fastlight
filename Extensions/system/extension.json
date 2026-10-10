@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.system",
+  "name": "System",
+  "version": "1.0.0",
+  "description": "Lock Screen, Sleep, Toggle Dark Mode, Empty Trash, Restart, Shut Down and more. The disruptive ones ask first.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "power",
+  "keywords": ["sys"],
+  "command": ["fastlight-system", "actions"],
+  "global": { "maxResults": 3, "minQueryLength": 3 }
+}

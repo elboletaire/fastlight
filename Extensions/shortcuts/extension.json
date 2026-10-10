@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.shortcuts",
+  "name": "Shortcuts",
+  "version": "1.0.0",
+  "description": "Runs your shortcuts from the Shortcuts app, with what you type after the name as input.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "square.2.layers.3d",
+  "keywords": ["sc", "shortcut", "shortcuts"],
+  "command": ["fastlight-system", "shortcuts"],
+  "global": { "maxResults": 3, "minQueryLength": 3 }
+}
