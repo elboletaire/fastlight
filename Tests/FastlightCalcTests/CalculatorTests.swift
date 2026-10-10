@@ -42,6 +42,17 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(try value("2·3") == 6)
     }
 
+    /// "x" then digits multiplies only with ASCII digits; superscripts,
+    /// fractions and other scripts' digits used to crash the helper.
+    @Test func xWithOtherDigitsIsAName() throws {
+        #expect(try value("3x4") == 12)
+        #expect(try value("2x10") == 20)
+        for q in ["3x²", "3 x²", "2x3²", "2x½", "3x٣", "1x٣٤"] {
+            #expect(failure(q) != nil, "\(q)")
+            #expect(!Calculator.looksLikeMath(q), "\(q)")
+        }
+    }
+
     @Test func juxtapositionMultiplies() throws {
         #expect(try value("2(3+4)") == 14)
         #expect(try value("(1+1)(2+3)") == 10)
