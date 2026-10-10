@@ -19,14 +19,19 @@ public enum CalcFormat {
     /// The answer to show ("2,073,600", "1.5 × 10²⁰") and the one to copy
     /// ("2073600", "1.5e20"): copies skip grouping so they paste cleanly
     /// into spreadsheets and code.
+    ///
+    /// Total: infinities read "∞" and NaN "NaN", though callers should not
+    /// show them as answers.
     public static func display(_ v: Double, locale: Locale) -> (title: String, copy: String) {
+        if v.isNaN { return ("NaN", "NaN") }
+        if v.isInfinite { return v > 0 ? ("∞", "inf") : ("−∞", "-inf") }
         let r = rounded(v)
         if r != 0, abs(r) >= large || abs(r) < small {
-            var exp = Int(floor(log10(abs(r))))
-            var mantissa = rounded(r / pow(10, Double(exp)))
-            if abs(mantissa) >= 10 {
-                mantissa /= 10
-                exp += 1
+            // printf rounds the mantissa to 12 digits and carries into the
+            // exponent (9.99…e20 is 1e21), with no log10 or pow to underflow.
+            let parts = String(format: "%.11e", r).split(separator: "e")
+            guard parts.count == 2, let mantissa = Double(parts[0]), let exp = Int(parts[1]) else {
+                return (String(r), String(r))
             }
             let m = format(mantissa, locale: locale, grouping: false)
             return ("\(m) × 10\(superscript(exp))", "\(m)e\(exp)")

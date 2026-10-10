@@ -118,6 +118,8 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(failure("2.5!") == .outOfDomain("!"))
         #expect(failure("171!") == .tooLarge)
         #expect(failure("10^400") == .tooLarge)
+        #expect(failure("1e400") == .tooLarge)
+        #expect(failure("1 1e999") == .tooLarge)
         #expect(failure("(-8)^(1/3)") == .outOfDomain("^"))
         #expect(failure("ext:pdf") != nil)
         #expect(failure("1 $ 2") == .unexpected("$"))
@@ -172,6 +174,17 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(CalcFormat.display(42, locale: en).title == "42")
         #expect(CalcFormat.display(-0.0, locale: en).title == "0")
         #expect(CalcFormat.display(-1.5, locale: en).title == "-1.5")
+    }
+
+    /// Display never traps: conversions pass whatever they computed.
+    @Test func nonFiniteValuesDontTrap() {
+        #expect(CalcFormat.display(.infinity, locale: en).title == "∞")
+        #expect(CalcFormat.display(-.infinity, locale: en).title == "−∞")
+        #expect(CalcFormat.display(.nan, locale: en).title == "NaN")
+        #expect(CalcFormat.plain(.infinity) == "inf")
+        #expect(CalcFormat.display(.leastNonzeroMagnitude, locale: en).copy == "4.9406564584e-324")
+        #expect(CalcFormat.display(.greatestFiniteMagnitude, locale: en).copy == "1.7976931349e308")
+        #expect(CalcFormat.display(-2.5e-300, locale: en).copy == "-2.5e-300")
     }
 
     @Test func scientificOnlyWhenNeeded() {

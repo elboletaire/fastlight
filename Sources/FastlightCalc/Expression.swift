@@ -191,6 +191,8 @@ struct Lexer {
         }
         if digits.hasPrefix(".") { digits = "0" + digits }
         guard let v = Double(digits) else { throw CalcError.unexpected(String(chars[start..<i])) }
+        // "1e400" overflows before anything is computed.
+        guard v.isFinite else { throw CalcError.tooLarge }
         return (v, i)
     }
 }
