@@ -247,6 +247,7 @@ public final class ExtensionProcess: @unchecked Sendable {
         p.arguments = config.arguments
         p.currentDirectoryURL = config.directory
         p.environment = config.environment
+        BrokenPipes.ignore()
         let inPipe = Pipe()
         let outPipe = Pipe()
         p.standardInput = inPipe

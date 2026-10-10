@@ -10,6 +10,7 @@ final class UnixSocket {
     /// `timeout` bounds each read and write, so a hung peer can't block
     /// the caller forever; nil (or not positive) waits as long as it takes.
     init(path: String, timeout: TimeInterval? = nil) throws {
+        BrokenPipes.ignore()
         // A local until it's connected: once self.fd is set, a throw runs
         // deinit, which would close the number a second time, by then maybe
         // another thread's file.
