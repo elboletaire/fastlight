@@ -107,7 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !extensions.library.issues.isEmpty {
             menu.addItem(.separator())
             for issue in extensions.library.issues {
-                let text = issue.description
+                // In the user's language; manifest details stay as written.
+                let text = issue.summary
                 let item = NSMenuItem(title: "⚠︎ " + (text.count > 70 ? text.prefix(70) + "…" : text),
                                       action: #selector(revealIssue(_:)), keyEquivalent: "")
                 item.target = self

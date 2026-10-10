@@ -54,7 +54,10 @@
 "%@ didn’t answer in time." = "%@ no ha respondido a tiempo.";
 "%@ stopped unexpectedly (%@)." = "%@ se ha detenido inesperadamente (%@).";
 "%@ was superseded by a newer query." = "Una búsqueda más reciente ha sustituido a %@.";
-"%@ sent an invalid reply: %@" = "%@ ha enviado una respuesta no válida: %@";
+"%@ sent a reply Fastlight can’t read. For its developer: %@" = "%@ ha enviado una respuesta que Fastlight no puede leer. Para quien la desarrolla: %@";
+"%@ can’t be loaded: %@" = "No se puede cargar %@: %@";
+"%@ wasn’t loaded: its id %@ is already used by %@." = "No se ha cargado %@: su identificador, %@, ya lo usa %@.";
+"%@ can’t use the keyword “%@”: %@ already has it." = "%@ no puede usar la palabra clave “%@”: ya la tiene %@.";
 "it didn’t say it was ready within %d s" = "no ha avisado de que estaba lista en %d s";
 "%@ was stopped before it answered." = "%@ se ha detenido antes de responder.";
 "It crashed %d times in a row. Reload extensions to try again." = "Ha fallado %d veces seguidas. Vuelve a cargar las extensiones para intentarlo de nuevo.";

@@ -25,11 +25,36 @@ import Testing
             "f: extension.json: command[0]: missing.sh not found in the extension folder",
             "c: keyword \"a\" is already used by Test",
         ])
+        #expect(lib.issues.map(\.summary) == [
+            "b wasn’t loaded: its id com.test.a is already used by a.",
+            "d can’t be loaded: extension.json: name: is required",
+            "e can’t be loaded: no extension.json in this folder",
+            "f can’t be loaded: extension.json: command[0]: missing.sh not found in the extension folder",
+            "Test can’t use the keyword “a”: Test already has it.",
+        ])
         #expect(!lib.refresh())
         let a = try #require(lib.extension(id: "com.test.a"))
         #expect(a.executable.lastPathComponent == "run.sh")
         #expect(a.fingerprint.count == 64)
         #expect(!a.builtIn)
+    }
+
+    /// A disabled extension's keywords are free (the router gives them to
+    /// the next one), so there's no conflict to report against it.
+    @Test func reportsKeywordConflictsOnlyAmongEnabledExtensions() throws {
+        let root = try FakeExtension.tempDir()
+        try FakeExtension.folder(in: root, name: "a", id: "com.test.a", keywords: ["k"])
+        try FakeExtension.folder(in: root, name: "b", id: "com.test.b", keywords: ["k"])
+        let lib = library(root)
+        lib.refresh()
+        #expect(lib.issues.map(\.description) == ["b: keyword \"k\" is already used by Test"])
+        #expect(lib.refresh { $0 != "com.test.a" })
+        #expect(lib.issues.isEmpty)
+        #expect(lib.router(including: ["com.test.b"]).match("k x")?.extensionID == "com.test.b")
+        lib.refresh { $0 != "com.test.b" }
+        #expect(lib.issues.isEmpty)
+        lib.refresh()
+        #expect(lib.issues.count == 1)
     }
 
     /// The shipped manifests and examples load together, without conflicts.

@@ -20,6 +20,14 @@ import FastlightL10n
             #expect(ExtensionError.crashed("x").message(for: "Web") == "Web se ha detenido inesperadamente (x).")
             #expect(ExtensionError.stopped.message(for: "Web") == "Web se ha detenido antes de responder.")
         }
+        // Protocol details stay as they are, inside a sentence in the user's language.
+        inLanguage("ca") {
+            #expect(ExtensionError.badReply("items[0].title: is required").message(for: "Bc")
+                == "Bc ha enviat una resposta que Fastlight no pot llegir. Per al seu desenvolupador: items[0].title: is required")
+            let issue = LoadIssue(folder: URL(fileURLWithPath: "/x/bc"), message: "extension.json: name: is required")
+            #expect(issue.summary == "No es pot carregar bc: extension.json: name: is required")
+            #expect(issue.description == "bc: extension.json: name: is required")
+        }
         // The extension's own words are left alone.
         inLanguage("ca") { #expect(ExtensionError.reported("Nope").message(for: "X") == "Nope") }
     }

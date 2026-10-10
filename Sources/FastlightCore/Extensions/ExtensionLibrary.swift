@@ -39,10 +39,22 @@ public struct LoadedExtension: Sendable, Hashable, Identifiable {
     }
 }
 
-/// A folder that looked like an extension but couldn't be loaded.
+/// A folder that looked like an extension but couldn't be loaded, or a
+/// keyword it couldn't have.
 public struct LoadIssue: Sendable, Hashable {
     public var folder: URL
+    /// What's wrong, for the log and the extension's developer. Manifest
+    /// errors are in English, like the manifest keys they name.
     public var message: String
+    /// The same as a sentence in the user's language, for the Extensions
+    /// menu; developer details it carries are quoted as they are.
+    public var summary: String
+
+    public init(folder: URL, message: String, summary: String? = nil) {
+        self.folder = folder
+        self.message = message
+        self.summary = summary ?? L("%@ can’t be loaded: %@", folder.lastPathComponent, message)
+    }
 
     public var description: String { "\(folder.lastPathComponent): \(message)" }
 }
@@ -94,14 +106,17 @@ public final class ExtensionLibrary {
     }
 
     /// Keywords of the given extensions (in library order) to their ids.
-    /// Conflicts are reported in `issues` by `refresh`.
+    /// Conflicts among the enabled ones are reported in `issues` by
+    /// `refresh`.
     public func router(including ids: Set<String>) -> KeywordRouter {
         KeywordRouter(extensions.filter { ids.contains($0.id) }.map { ($0.id, $0.manifest.keywords) })
     }
 
-    /// Rescans both roots. Returns whether anything changed.
+    /// Rescans both roots. Returns whether anything changed. Keyword
+    /// conflicts are only reported between extensions `enabled` says yes
+    /// to: a disabled one's keywords are free, as in `router(including:)`.
     @discardableResult
-    public func refresh(force: Bool = false) -> Bool {
+    public func refresh(force: Bool = false, enabled: (String) -> Bool = { _ in true }) -> Bool {
         if force { cache = [:] }
         var found: [(URL, Bool)] = []
         if let builtInRoot { found += Self.folders(in: builtInRoot).map { ($0, true) } }
@@ -127,7 +142,9 @@ public final class ExtensionLibrary {
             switch loaded {
             case .ok(let e):
                 if let owner = owners[e.id] {
-                    problems.append(LoadIssue(folder: dir, message: "id \(e.id) is already used by \(owner.lastPathComponent)"))
+                    problems.append(LoadIssue(folder: dir, message: "id \(e.id) is already used by \(owner.lastPathComponent)",
+                                              summary: L("%@ wasn’t loaded: its id %@ is already used by %@.",
+                                                         dir.lastPathComponent, e.id, owner.lastPathComponent)))
                     continue
                 }
                 owners[e.id] = dir
@@ -136,10 +153,13 @@ public final class ExtensionLibrary {
                 problems.append(LoadIssue(folder: dir, message: msg))
             }
         }
-        for c in KeywordRouter(exts.map { ($0.id, $0.manifest.keywords) }).conflicts {
-            let dir = exts.first { $0.id == c.id }?.directory ?? userRoot
+        for c in KeywordRouter(exts.filter { enabled($0.id) }.map { ($0.id, $0.manifest.keywords) }).conflicts {
+            let ext = exts.first { $0.id == c.id }
             let owner = exts.first { $0.id == c.owner }?.name ?? c.owner
-            problems.append(LoadIssue(folder: dir, message: "keyword \"\(c.keyword)\" is already used by \(owner)"))
+            problems.append(LoadIssue(folder: ext?.directory ?? userRoot,
+                                      message: "keyword \"\(c.keyword)\" is already used by \(owner)",
+                                      summary: L("%@ can’t use the keyword “%@”: %@ already has it.",
+                                                 ext?.name ?? c.id, c.keyword, owner)))
         }
         cache = nextCache
         let changed = exts != extensions || problems != issues
