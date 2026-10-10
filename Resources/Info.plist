@@ -4,12 +4,6 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
-	<key>CFBundleLocalizations</key>
-	<array>
-		<string>en</string>
-		<string>ca</string>
-		<string>es</string>
-	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Fastlight</string>
 	<key>CFBundleExecutable</key>
@@ -18,6 +12,12 @@
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.elboletaire.fastlight</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ca</string>
+		<string>es</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>Fastlight</string>
 	<key>CFBundlePackageType</key>
