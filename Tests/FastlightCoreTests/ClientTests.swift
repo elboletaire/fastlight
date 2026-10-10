@@ -41,6 +41,13 @@ import Testing
     }
 }
 
+/// A search reply with one hit at /tmp/<q>, or /tmp/<tag>/<q>.
+func hitReply(_ request: [String: Any], tag: String? = nil) -> String {
+    let q = request["q"] as? String ?? ""
+    let path = tag.map { "/tmp/\($0)/\(q)" } ?? "/tmp/\(q)"
+    return #"{"ok":true,"hits":[{"path":"\#(path)","kind":"file","size":1,"mtime":0,"score":1}],"id":\#(request["id"] ?? 0)}"#
+}
+
 final class FakeDaemon: @unchecked Sendable {
     private let fd: Int32
     private let path: String
@@ -52,7 +59,12 @@ final class FakeDaemon: @unchecked Sendable {
         return dir
     }
 
-    init(dir: URL, reply: @escaping @Sendable ([String: Any]) -> String) throws {
+    /// Connections accepted so far.
+    let connections = Counter()
+
+    /// `reply` answers each request line; nil hangs up instead, like a
+    /// daemon that died (or restarted) mid-request.
+    init(dir: URL, reply: @escaping @Sendable ([String: Any]) -> String?) throws {
         // Locals, not self: the accept thread below needs fd before init ends.
         let path = dir.appendingPathComponent("fsearch.sock").path
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -69,27 +81,35 @@ final class FakeDaemon: @unchecked Sendable {
         }
         guard bound == 0, listen(fd, 4) == 0 else { throw FSearchError.unreachable("bind") }
 
+        let connections = connections
         Thread.detachNewThread {
             while true {
                 let conn = accept(fd, nil, nil)
                 if conn < 0 { return }
-                // A client that gave up (timed out) must not SIGPIPE the
-                // test process when its late reply is written.
-                var on: Int32 = 1
-                setsockopt(conn, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
-                let input = FileHandle(fileDescriptor: conn, closeOnDealloc: true)
-                var buf = Data()
-                while true {
-                    let chunk = input.availableData
-                    if chunk.isEmpty { break }
-                    buf.append(chunk)
-                    while let nl = buf.firstIndex(of: 0x0A) {
-                        let line = buf[buf.startIndex..<nl]
-                        buf.removeSubrange(buf.startIndex...nl)
-                        let req = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] ?? [:]
-                        guard (try? input.write(contentsOf: Data((reply(req) + "\n").utf8))) != nil else { break }
-                    }
-                }
+                connections.bump()
+                // One thread per connection, as a client that gave up on a
+                // slow reply comes back on a new one.
+                Thread.detachNewThread { Self.serve(conn, reply: reply) }
+            }
+        }
+    }
+
+    private static func serve(_ conn: Int32, reply: @Sendable ([String: Any]) -> String?) {
+        // A client that gave up (timed out) must not SIGPIPE the test
+        // process when its late reply is written.
+        var on: Int32 = 1
+        setsockopt(conn, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
+        let input = FileHandle(fileDescriptor: conn, closeOnDealloc: true)
+        var buf = Data()
+        while true {
+            let chunk = input.availableData
+            if chunk.isEmpty { return }
+            buf.append(chunk)
+            while let nl = buf.firstIndex(of: 0x0A) {
+                let line = buf[buf.startIndex..<nl]
+                buf.removeSubrange(buf.startIndex...nl)
+                let req = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] ?? [:]
+                guard let out = reply(req), (try? input.write(contentsOf: Data((out + "\n").utf8))) != nil else { return }
             }
         }
     }
@@ -120,6 +140,74 @@ final class FakeDaemon: @unchecked Sendable {
         #expect(throws: FSearchError.timedOut) { try client.search("x") }
         #expect(Date().timeIntervalSince(started) < 1)
         #expect(calls.value == 1)
+    }
+
+    @Test func retriesOnceWhenTheDaemonHangsUp() throws {
+        let dir = try FakeDaemon.tempDir()
+        let calls = Counter()
+        // The second request finds the daemon gone (it restarted, say).
+        let daemon = try FakeDaemon(dir: dir) { calls.next() == 2 ? nil : hitReply($0) }
+        defer { daemon.stop() }
+
+        let client = FSearchClient(dataDir: dir)
+        #expect(try client.search("one").results.map(\.path) == ["/tmp/one"])
+        #expect(try client.search("two").results.map(\.path) == ["/tmp/two"])
+        #expect(calls.value == 3)
+        #expect(daemon.connections.value == 2)
+        // And it stays on the new connection.
+        #expect(try client.search("three").results.map(\.path) == ["/tmp/three"])
+        #expect(daemon.connections.value == 2)
+    }
+
+    @Test func reconnectsToARestartedDaemon() throws {
+        let dir = try FakeDaemon.tempDir()
+        let calls = Counter()
+        let old = try FakeDaemon(dir: dir) { calls.next() == 1 ? hitReply($0, tag: "old") : nil }
+        let client = FSearchClient(dataDir: dir)
+        #expect(try client.search("a").results.map(\.path) == ["/tmp/old/a"])
+
+        // A new daemon takes over the socket path; the old one hangs up on
+        // the connection the client still holds.
+        old.stop()
+        let new = try FakeDaemon(dir: dir) { hitReply($0, tag: "new") }
+        defer { new.stop() }
+        #expect(try client.search("b").results.map(\.path) == ["/tmp/new/b"])
+        #expect(calls.value == 2)
+    }
+
+    @Test func givesUpAfterOneRetry() throws {
+        let dir = try FakeDaemon.tempDir()
+        let calls = Counter()
+        let daemon = try FakeDaemon(dir: dir) { _ in
+            calls.bump()
+            return nil
+        }
+        defer { daemon.stop() }
+
+        let client = FSearchClient(dataDir: dir)
+        client.launch = { _ in Issue.record("a daemon was listening; nothing to launch") }
+        let error = #expect(throws: FSearchError.self) { try client.status() }
+        if case .unreachable = error {} else { Issue.record("expected unreachable, got \(String(describing: error))") }
+        #expect(calls.value == 2)
+        #expect(daemon.connections.value == 2)
+    }
+
+    @Test func dropsTheLateReplyOfATimedOutRequest() throws {
+        let dir = try FakeDaemon.tempDir()
+        // The first request is answered after the client gave up on it.
+        let daemon = try FakeDaemon(dir: dir) { req in
+            if req["q"] as? String == "slow" { Thread.sleep(forTimeInterval: 0.5) }
+            return hitReply(req)
+        }
+        defer { daemon.stop() }
+
+        let client = FSearchClient(dataDir: dir)
+        client.timeout = 0.2
+        #expect(throws: FSearchError.timedOut) { try client.search("slow") }
+        client.timeout = 5
+        // A new connection: never the stale "/tmp/slow".
+        #expect(try client.search("fast").results.map(\.path) == ["/tmp/fast"])
+        #expect(daemon.connections.value == 2)
     }
 
     @Test func doesNotRelaunchADaemonThatNeverBinds() throws {
@@ -168,4 +256,6 @@ final class Counter: @unchecked Sendable {
     private var n = 0
     var value: Int { lock.withLock { n } }
     func bump() { lock.withLock { n += 1 } }
+    /// Bumps and returns the new count.
+    func next() -> Int { lock.withLock { n += 1; return n } }
 }
