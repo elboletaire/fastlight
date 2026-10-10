@@ -189,8 +189,9 @@ small, real example).
    done
    ```
 
-4. Open Fastlight and type `bc 2*21`. The first time, Fastlight asks whether
-   to allow it, showing what it will run. Then the result shows up; ↵ copies.
+4. Open Fastlight and type `bc 2*21`. The first time, the panel says the
+   extension needs your permission; ↵ (or Review…) asks whether to allow
+   it, showing what it will run. Then the result shows up; ↵ copies.
 
 There is also a Python example, [quicklinks](../../examples/extensions/quicklinks)
 (`go gh` opens GitHub). It needs `python3`, which macOS only has once the
@@ -238,6 +239,9 @@ languages buffer stdout when it isn't a terminal: `flush=True` in Python,
 | `FASTLIGHT_LANGUAGE` | The language Fastlight's UI is in (`en`, `ca`, `es`…), in case you want to match it. Optional: Fastlight shows your titles as you send them. |
 
 `PATH` is `/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`.
+`HOME`, `USER`, `LOGNAME`, `TMPDIR`, `LANG`, `LC_ALL` and `SHELL` are passed
+on from Fastlight when set (`LANG` defaults to `en_US.UTF-8`); nothing else
+is.
 
 ### Handshake
 
@@ -331,11 +335,15 @@ Any action can have a `"title"`, shown in the action bar.
 - In global mode you have 80 ms per keystroke, process start included (it
   starts when the panel opens). Later answers are dropped.
 - Keyword searches time out after 3 s, `run` after 10 s. Three timeouts in a
-  row restart you; crashing three times in a minute turns you off until
-  Extensions › Reload Extensions.
+  row restart you, and that counts as a crash: three crashes in a minute
+  (restarts for timeouts included) turn you off until Extensions › Reload
+  Extensions.
 - Up to 20 lines that aren't protocol messages are tolerated (and logged), and
   no line may exceed 1 MiB. Log to stderr instead.
-- Idle for 5 minutes, you're stopped; you're started again on next use.
+- Idle for 5 minutes, you're stopped: stdin closes, then SIGTERM after
+  0.5 s if you're still running, then SIGKILL at 1.5 s. You're started again
+  on next use. When Fastlight quits, stdin closes and SIGTERM follows at
+  once, with no SIGKILL after it: exit on EOF or SIGTERM.
 
 ## Security
 

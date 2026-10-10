@@ -148,8 +148,9 @@ extension's stdin and reads its stdout. stderr goes to
 ### Startup and handshake
 
 Fastlight starts the process on first use with the working directory set to
-the extension folder and this environment (plus `HOME`, `USER`, `LANG`,
-`TMPDIR`, and `PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`):
+the extension folder and this environment (plus `HOME`, `USER`, `LOGNAME`,
+`TMPDIR`, `LANG` (`en_US.UTF-8` when unset), `LC_ALL` and `SHELL` passed on
+when set, and `PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin`):
 
 | Variable | Value |
 |---|---|
@@ -260,11 +261,12 @@ Either an object with exactly one key, or a string shorthand:
 | Global search slower than 80 ms | Section left out for that keystroke. |
 | Keyword search slower than 3 s | "X didn't answer in time" notice. |
 | `run` slower than 10 s | Error toast. |
-| 3 timeouts in a row | Process killed; restarted on next use. |
-| Process exits or crashes | Pending requests fail; restarted on next use. 3 crashes within 60 s mark it **failed** until Reload Extensions or the files change. |
+| 3 timeouts in a row | Process killed; restarted on next use. The kill counts as a crash (below). |
+| Process exits or crashes | Pending requests fail; restarted on next use. 3 crashes within 60 s (kills for timeouts, garbage or a missing `ready` included) mark it **failed** until Reload Extensions or the files change. |
 | Non-JSON or unexpected lines on stdout | Logged and ignored; after 20 of them, or one line over 1 MiB, the process is killed (counts as a crash). |
-| Idle for 5 minutes | stdin closed, then SIGTERM, then SIGKILL after 1 s. |
-| Fastlight quits | Same as idle shutdown for every extension. Extensions should also exit when stdin closes (EOF), which covers a crash of Fastlight itself. |
+| Idle for 5 minutes | stdin closed, then SIGTERM at 0.5 s if still running, then SIGKILL at 1.5 s. |
+| Reload Extensions, or its files change | Stopped like when idle; a request still waiting fails with "X was stopped before it answered." |
+| Fastlight quits | stdin closed and SIGTERM at once for every extension; nothing runs after Fastlight exits, so there is no SIGKILL. Extensions should exit when stdin closes (EOF), which also covers a crash of Fastlight itself. |
 
 The process manager is callback based and lock-protected; nothing on the main
 thread blocks on an extension.
@@ -307,10 +309,14 @@ Access. So:
   the one the library hashed (or the last start verified) and only re-hashes
   when it moved, so starting an unchanged extension costs a directory
   listing, not a read of every file.
-- The first time a new or changed extension would run (its keyword is typed,
-  or the user picks it in the menu), Fastlight hides the panel and asks with
-  a standard alert showing the name, id, version, folder and command, and
-  whether it is new or changed since an approved version. Global search never
+- Typing the keyword of a new or changed extension shows an inline notice
+  in the panel ("X needs your permission before it can run.") with a
+  Review… button; ↵ does the same. Review (or picking the extension in the
+  Extensions menu) hides the panel and asks with a standard alert showing
+  the name, id, version, folder and command, and whether it is new or
+  changed since an approved version. If the files change after the last
+  rescan, the host refuses the start, and keyword mode rescans and shows
+  the same notice, so Review asks about the files now on disk. Global search never
   prompts: unapproved extensions are just skipped, and the idle panel shows
   "N extensions need your approval" with a Review button.
 - Any extension can be disabled from the menu (stored by id; a disabled
