@@ -1,0 +1,12 @@
+{
+  "id": "com.example.quicklinks",
+  "name": "Quicklinks",
+  "version": "1.0.0",
+  "description": "Opens your favourite URLs: type “go ” and part of a name. Needs python3.",
+  "author": "Fastlight examples",
+  "homepage": "https://github.com/elboletaire/fastlight/tree/main/examples/extensions/quicklinks",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "link",
+  "keywords": ["go"],
+  "command": ["/usr/bin/python3", "quicklinks.py"]
+}

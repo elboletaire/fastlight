@@ -1,0 +1,13 @@
+{
+  "id": "com.example.calculator",
+  "name": "Calculator",
+  "version": "1.0.0",
+  "description": "Arithmetic with bc: type =2*(3+4), or just 2*(3+4) in the normal search.",
+  "author": "Fastlight examples",
+  "homepage": "https://github.com/elboletaire/fastlight/tree/main/examples/extensions/calculator",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "plus.forwardslash.minus",
+  "keywords": ["="],
+  "command": ["/bin/sh", "calc.sh"],
+  "global": { "maxResults": 1, "minQueryLength": 3 }
+}
