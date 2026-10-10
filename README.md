@@ -75,7 +75,7 @@ Then add Fastlight back to the Full Disk Access list. Its log is in `~/Library/A
 | ⌫ on an empty field | Leave an extension's keyword mode |
 | ⎋ | Clear, then close |
 
-The search field takes fsearch's query language. Words are fuzzy; `'exact`, `^prefix`, `suffix$` and `!exclude` narrow them down, and filters do the rest:
+The search field takes fsearch's query language. Words are fuzzy, and words of five letters or more survive one typo; operators narrow them down, and filters do the rest:
 
 ```text
 invoice ext:pdf mtime:<30d       PDFs named like "invoice", changed this month
@@ -84,6 +84,30 @@ type:image size:>5mb             big images
 grep:TODO ext:swift              lines containing TODO in Swift files
 sym:applyFilter                  where a symbol is defined
 ```
+
+| Operator | Does |
+|---|---|
+| `'exact` | Match the word as typed, no fuzziness |
+| `^prefix` | Name starts with |
+| `suffix$` | Name ends with |
+| `!word` | Leave out names that contain it |
+| `"two words"` | Quotes keep spaces in one word or value: `in:"~/My Notes"` |
+
+| Filter | Does |
+|---|---|
+| `ext:` | Extension; commas for several: `ext:jpg,png` |
+| `type:` | `image`, `video`, `audio`, `doc`, `code`, `archive`, `font` or `app`; commas for several |
+| `kind:` | `file` (`f`), `dir` (`folder`, `d`) or `link` (`symlink`, `l`) |
+| `in:` | Only under a folder: `in:~/src` |
+| `size:` | `size:>5mb`, `size:1m..10m` |
+| `mtime:` | Modified within (`mtime:<7d`) or longer ago than (`mtime:>1y`). Also `modified:` |
+| `re:` | Regex over the name: `re:^IMG_\d+` |
+| `path:` | Regex over the full path: `path:/tests?/` |
+| `grep:` | Text inside files; ignores case unless it has capitals. Also `content:` |
+| `regex:` | Regex inside files: `regex:fn\s+main` |
+| `sym:` | Where a symbol is defined, case and all. Also `symbol:` |
+
+`size:` and `mtime:` take `>`, `>=`, `<`, `<=`, a range `a..b`, or an exact value. Sizes are in `b`, `k`/`kb`, `m`/`mb`, `g`/`gb` or `t`/`tb`; times in `s`, `m`/`min`, `h`, `d`, `w`, `mo` or `y`, and a bare number means days. The same reference is in **About Fastlight**.
 
 Plain queries leave out noise like app bundles, dot-folders, `node_modules` and `~/Library`. Any filter turns that off, so `in:~/Library` searches there as usual.
 
