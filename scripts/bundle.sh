@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builds build/Fastlight.app: the SwiftPM executable plus the vendored fsearch
-# daemon, so the app needs nothing else installed. No Xcode needed.
+# daemon and the built-in extensions, so the app needs nothing else
+# installed. No Xcode needed.
 #
 #   scripts/bundle.sh [--universal] [debug|release]
 #
@@ -37,7 +38,11 @@ if [ "$universal" = 1 ]; then
   swift_flags+=(--arch arm64 --arch x86_64)
 fi
 swift build "${swift_flags[@]}" --product Fastlight
-bin="$(swift build "${swift_flags[@]}" --show-bin-path)/Fastlight"
+# Built-in extensions' executables (Extensions/<name>/extension.json names them).
+helpers=(fastlight-emoji)
+for h in "${helpers[@]}"; do swift build "${swift_flags[@]}" --product "$h"; done
+bindir="$(swift build "${swift_flags[@]}" --show-bin-path)"
+bin="$bindir/Fastlight"
 
 app=build/Fastlight.app
 rm -rf "$app"
@@ -47,19 +52,29 @@ cp "$bin" "$app/Contents/MacOS/Fastlight"
 # Helpers/, not MacOS/: Contents/MacOS is for the bundle's main executable,
 # and Apple's bundle layout reserves Contents/Helpers for helper tools.
 cp "$fsearch" "$app/Contents/Helpers/fsearch"
+for h in "${helpers[@]}"; do cp "$bindir/$h" "$app/Contents/Helpers/$h"; done
+# Their manifests and data; the executables stay in Helpers, where code
+# belongs in a bundle, and the extension host looks for them there.
+mkdir -p "$app/Contents/Resources/Extensions"
+for d in Extensions/*/; do
+  ditto --norsrc --noextattr "$d" "$app/Contents/Resources/Extensions/$(basename "$d")"
+done
 
 # Artwork is optional so the bundle still builds without it.
 for f in AppIcon.icns MenuBarIcon.png MenuBarIcon@2x.png; do
   if [ -f "Resources/$f" ]; then cp "Resources/$f" "$app/Contents/Resources/$f"; fi
 done
 
-# Inside out: the helper first, then the app, whose seal covers the helper's
-# signature. --deep would re-sign the helper without its identifier, so don't.
+# Inside out: the helpers first, then the app, whose seal covers the helpers'
+# signatures. --deep would re-sign them without their identifiers, so don't.
 sign_flags=(--force --sign "$identity")
 if [ "$identity" != "-" ]; then
   sign_flags+=(--options runtime --timestamp)
 fi
 codesign "${sign_flags[@]}" --identifier com.elboletaire.fastlight.fsearch "$app/Contents/Helpers/fsearch"
+for h in "${helpers[@]}"; do
+  codesign "${sign_flags[@]}" --identifier "com.elboletaire.fastlight.$h" "$app/Contents/Helpers/$h"
+done
 codesign "${sign_flags[@]}" "$app"
 codesign --verify --deep --strict "$app"
 
