@@ -90,8 +90,10 @@ final class FakeDaemon: @unchecked Sendable {
         }
     }
 
+    /// Unlinks the socket but leaves the descriptor open: closing it would let
+    /// a parallel test's new socket reuse the number while the accept thread
+    /// above still loops on it, answering the wrong test's client.
     func stop() {
-        close(fd)
         unlink(path)
     }
 }
