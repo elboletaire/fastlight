@@ -211,8 +211,9 @@ final class SearchModel: ObservableObject {
         guard let s = scope else { return }
         scope = nil
         clear()
-        query = String(s.trigger.dropLast())
-        search()
+        let back = String(s.trigger.dropLast())
+        // Setting a different query searches by itself.
+        if query == back { search() } else { query = back }
     }
 
     // MARK: Daemon status
