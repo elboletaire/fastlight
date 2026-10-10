@@ -38,7 +38,9 @@ Status: implemented in protocol version **1**. Author-facing docs live in
    SearchModel (scope pill, sections) · PanelController (keys, actions,
    paste) · ExtensionsMenu · consent alert · Toast
  Sources/FastlightEmoji + Sources/fastlight-emoji
-   the bundled emoji picker: a normal protocol-1 extension
+   the bundled emoji picker, a normal protocol-1 extension
+ Sources/FastlightCalc + Sources/fastlight-calc
+   the bundled calculator, likewise
 ```
 
 Apps, files and extensions all implement `ResultProvider`:
@@ -60,32 +62,34 @@ keystroke cancels the previous generation, so stale answers never reach the
 UI.
 
 Sections in global mode: Top Hit, Applications, one section per global
-extension (registry order, built-ins first), Files. Extension items never
-become the Top Hit, so an extension can't hijack ↵ for app launching.
+extension (registry order, built-ins first), Files. Extension items don't
+become the Top Hit, so an extension can't hijack ↵ for app launching. The
+one exception is an item a **built-in** marks `"topHit": true`: the
+calculator's answer, which is what someone typing `1920*1080` is after.
 
 ## Extension folder and manifest
 
 ```text
 ~/Library/Application Support/Fastlight/Extensions/
-  calculator/                 # folder name is free; the id is in the manifest
+  bc/                         # folder name is free; the id is in the manifest
     extension.json
-    calc.sh
+    bc.sh
 ```
 
 `extension.json`:
 
 ```json
 {
-  "id": "com.example.calculator",
-  "name": "Calculator",
+  "id": "com.example.bc",
+  "name": "bc",
   "version": "1.0.0",
   "description": "Evaluates arithmetic with bc.",
   "author": "Jane Doe",
-  "homepage": "https://example.com/calculator",
-  "source": "https://github.com/example/fastlight-calculator",
-  "icon": "plus.forwardslash.minus",
-  "keywords": ["="],
-  "command": ["/bin/sh", "calc.sh"],
+  "homepage": "https://example.com/bc",
+  "source": "https://github.com/example/fastlight-bc",
+  "icon": "terminal",
+  "keywords": ["bc"],
+  "command": ["/bin/sh", "bc.sh"],
   "global": { "maxResults": 1, "minQueryLength": 3 },
   "minFastlightVersion": "0.2.0"
 }
@@ -330,6 +334,36 @@ results for queries of 3+ characters). The search logic is the
   that tone.
 - Actions: Paste Emoji (↵), Copy Emoji (⌘↵).
 
+## The calculator
+
+`Sources/fastlight-calc` is the second built-in (`id
+com.elboletaire.fastlight.calculator`, keyword `=`, global with one result).
+It needs no `bc` or shell: `FastlightCalc` has its own lexer, a Pratt
+parser and an evaluator, so answers take microseconds.
+
+- Precedence, low to high: `+ −`; `× ÷` and juxtaposition (`2π`,
+  `3(4+5)`, but not `1 2`); unary minus; `^`/`**`, right-associative (so
+  `−2^2` is −4 and `2^3^2` is 512); postfix `%` and `!`.
+- `%` is a hundredth on its own, a share of the left side after `+`/`−`
+  (`80 + 10%` = 88), and `15% of 80` = 12. Functions take one argument,
+  with or without parentheses (`sqrt 2`). Trig is in radians; `deg`/`rad`
+  convert.
+- Numbers: `.` is always a decimal point; `,` is one where the locale says
+  so, and elsewhere only valid as thousands grouping (`1,000,000`).
+  `x` multiplies only between numbers (`3x4`).
+- No result, never a crash, for syntax errors, unknown names, division by
+  zero (no "∞": it is almost always a typo), out-of-domain input
+  (`sqrt(-1)`), and anything that overflows.
+- Normal search only shows an answer when the query computes something: a
+  bare number (`2026`), a constant alone (`pi`), dates (`2026-10-10`,
+  `10/10/2026`) and anything that doesn't parse are left alone. Then it is
+  the Top Hit. Keyword mode always answers or says why not.
+- Display: rounded to 12 significant digits (0.1 + 0.2 = 0.3), at most 10
+  decimals, the locale's grouping (`2,073,600`), and `1.5 × 10²⁰` beyond
+  10¹⁵ or below 10⁻⁹. The subtitle is the expression as understood
+  (`1920 × 1080 =`). ↵ copies the answer without grouping, so it pastes
+  into code and spreadsheets; ⌘↵ pastes it, as in Raycast.
+
 ## Testing
 
 All in `Tests/` with Swift Testing, deterministic and offline:
@@ -346,10 +380,14 @@ All in `Tests/` with Swift Testing, deterministic and offline:
 - `SearchFanout` with fake providers: first paint, time budget, stale
   generations.
 - Emoji data parsing, search ranking, skin tones, recents.
+- Calculator: precedence and associativity, operator spellings, numbers and
+  locales, percentages, functions, every error, formatting, the
+  "looks like math" rule, and its protocol replies.
+- The shipped manifests and examples load together without problems.
 
 The UI is checked with `scripts/snapshot.sh`, which renders keyword mode,
-global sections and the consent notice with the real emoji extension running
-through the real host.
+global sections and the consent notice with the real emoji and calculator
+extensions running through the real host.
 
 ## Not in this version
 
