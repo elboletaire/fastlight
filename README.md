@@ -167,7 +167,7 @@ make            # build/Fastlight.app, with fsearch embedded
 
 Releasing is merging a version bump: when `CFBundleShortVersionString` in `Resources/Info.plist` changes on `main` to a version with no tag yet, [`tag-release.yml`](.github/workflows/tag-release.yml) tags it and runs the release workflow. Tags aren't pushed by hand.
 
-The bundled fsearch keeps itself current: every Monday, [`fsearch.yml`](.github/workflows/fsearch.yml) checks fsearch's `main`. If it has moved on, it opens a PR (branch `deps/fsearch`) that updates the submodule, bumps the patch version and lists the upstream changes. CI runs on it, and merging it releases the new version. `scripts/bump-fsearch.sh` does the same locally. The workflow can also be run from the Actions tab at any time.
+The bundled fsearch keeps itself current: every Monday, [`fsearch.yml`](.github/workflows/fsearch.yml) checks fsearch's `main`. If it has moved on, it opens a PR (branch `deps/fsearch`) that updates the submodule, bumps the patch version and lists the upstream changes. CI runs on it, and merging it releases the new version. Until then it keeps that PR current when upstream moves on again (or `main`'s version changes), but never rewrites the branch once someone else has pushed to it: it comments on the PR instead. `scripts/bump-fsearch.sh` does the same locally. The workflow can also be run from the Actions tab at any time.
 
 > [!IMPORTANT]
 > Local builds are signed ad hoc, and macOS ties Full Disk Access to the signature. Grant it again after each rebuild, or sign with a real identity.
