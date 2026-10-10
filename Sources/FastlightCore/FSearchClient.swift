@@ -11,7 +11,9 @@ public enum FSearchError: Error, LocalizedError, Equatable {
         switch self {
         case .notInstalled: L("The bundled fsearch helper is missing. Reinstall Fastlight, or install fsearch to ~/.local/bin.")
         case .unreachable(let why): L("Cannot reach the fsearch daemon: %@", why)
-        case .daemon(let msg): msg
+        // fsearch's own words, in English: framed so the rest reads in the
+        // user's language. "Indexing" is shown as a state, never as text.
+        case .daemon(let msg): isQueryError ? L("fsearch didn't understand the query: %@", msg) : msg
         case .timedOut: L("The fsearch daemon didn't answer in time.")
         }
     }

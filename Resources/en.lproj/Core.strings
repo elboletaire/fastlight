@@ -2,6 +2,7 @@
 "The bundled fsearch helper is missing. Reinstall Fastlight, or install fsearch to ~/.local/bin." = "The bundled fsearch helper is missing. Reinstall Fastlight, or install fsearch to ~/.local/bin.";
 "Cannot reach the fsearch daemon: %@" = "Cannot reach the fsearch daemon: %@";
 "The fsearch daemon didn't answer in time." = "The fsearch daemon didn't answer in time.";
+"fsearch didn't understand the query: %@" = "fsearch didn't understand the query: %@";
 ". Also %@" = ". Also %@";
 "Fuzzy, and words of 5 letters or more survive one typo" = "Fuzzy, and words of 5 letters or more survive one typo";
 "No fuzziness" = "No fuzziness";
