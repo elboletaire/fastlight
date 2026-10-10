@@ -11,6 +11,9 @@ let package = Package(
         .executable(name: "fastlight-calc", targets: ["fastlight-calc"]),
         .executable(name: "fastlight-convert", targets: ["fastlight-convert"]),
         .executable(name: "fastlight-system", targets: ["fastlight-system"]),
+        // Contacts, and Calendar + Reminders (one helper, two extensions).
+        .executable(name: "fastlight-contacts", targets: ["fastlight-contacts"]),
+        .executable(name: "fastlight-calendar", targets: ["fastlight-calendar"]),
     ],
     targets: [
         // Search providers, the fsearch client and the extension host. No
@@ -26,17 +29,25 @@ let package = Package(
         // Units, world clocks and date math; numbers formatted like the calculator's.
         .target(name: "FastlightConvert", dependencies: ["FastlightCalc"]),
         .executableTarget(name: "fastlight-convert", dependencies: ["FastlightConvert"]),
-        .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
-        .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
-        .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
-        .testTarget(name: "FastlightConvertTests", dependencies: ["FastlightConvert", "FastlightCalc"]),
         // System Settings panes, Shortcuts and system actions: three bundled
         // extensions served by one executable.
         .target(name: "FastlightSystem"),
         .executableTarget(name: "fastlight-system", dependencies: ["FastlightSystem"]),
+        // Contacts, Calendar and Reminders: the logic in libraries behind a
+        // store protocol (tested with fakes), the framework calls in the
+        // executables. FastlightPIM is what they share: access states,
+        // permission items, the background loader.
+        .target(name: "FastlightPIM"),
+        .target(name: "FastlightContacts", dependencies: ["FastlightPIM"]),
+        .executableTarget(name: "fastlight-contacts", dependencies: ["FastlightContacts", "FastlightPIM"]),
+        .target(name: "FastlightCalendar", dependencies: ["FastlightPIM"]),
+        .executableTarget(name: "fastlight-calendar", dependencies: ["FastlightCalendar", "FastlightPIM"]),
         .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
+        .testTarget(name: "FastlightConvertTests", dependencies: ["FastlightConvert", "FastlightCalc"]),
         .testTarget(name: "FastlightSystemTests", dependencies: ["FastlightSystem"]),
+        .testTarget(name: "FastlightContactsTests", dependencies: ["FastlightContacts", "FastlightPIM"]),
+        .testTarget(name: "FastlightCalendarTests", dependencies: ["FastlightCalendar", "FastlightPIM"]),
     ]
 )

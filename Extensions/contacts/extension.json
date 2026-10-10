@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.contacts",
+  "name": "Contacts",
+  "version": "1.0.0",
+  "description": "Find people by name, company, email or phone, and email, call or message them. Reads Contacts on this Mac once you allow it.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": { "app": "com.apple.AddressBook" },
+  "keywords": ["contact", "contacts"],
+  "command": ["fastlight-contacts"],
+  "global": { "maxResults": 3, "minQueryLength": 3 }
+}

@@ -487,6 +487,76 @@ menu. Nothing needs Accessibility.
   `disarm`. `perform` (the one-step action) refuses disruptive actions,
   so no reply shape can skip the second step.
 
+## Contacts, Calendar and Reminders
+
+Three more built-ins (`com.elboletaire.fastlight.contacts`,
+`…calendar`, `…reminders`) read the system's personal-information stores.
+`Sources/fastlight-contacts` uses the Contacts framework;
+`Sources/fastlight-calendar` uses EventKit and serves both Calendar
+(`fastlight-calendar events`) and Reminders (`fastlight-calendar
+reminders`), two manifests on one binary, because the protocol doesn't tell
+an extension which of its keywords was typed. Everything but the framework
+calls lives in `FastlightContacts` and `FastlightCalendar` behind
+`ContactSource` and `CalendarSource`, so it's tested with fakes;
+`FastlightPIM` holds what the three share (`StoreExtension`).
+
+- **Permissions.** The helpers are Fastlight's children, so TCC attributes
+  their requests to Fastlight, the responsible app: the prompts name
+  Fastlight, use its `NSContactsUsageDescription`,
+  `NSCalendarsFullAccessUsageDescription` and
+  `NSRemindersFullAccessUsageDescription` (macOS 14's full-access keys; the
+  older ones only matter for apps that run on 13), and the switches in
+  System Settings are Fastlight's. Under the hardened runtime (a real
+  signing identity in `scripts/bundle.sh`), TCC also wants
+  `com.apple.security.personal-information.addressbook` and `.calendars`
+  (which covers Reminders) on the responsible app, or it denies without a
+  prompt; `Resources/Fastlight.entitlements` gives them to the app and to
+  the two helpers. Ad-hoc builds have no hardened runtime and are signed
+  without entitlements.
+- **When it asks.** Never on its own. The helpers check the authorization
+  status (which never prompts) on every search. Without access, global
+  search returns nothing, and keyword mode returns one item: *Allow Access
+  to Contacts…* (a `run` action that calls `requestAccess` /
+  `requestFullAccessToEvents` / `requestFullAccessToReminders` and closes
+  the panel, so the alert is in front), or, when denied or write-only, a
+  link to `x-apple.systempreferences:com.apple.preference.security?Privacy_Contacts`
+  (`Privacy_Calendars`, `Privacy_Reminders`); restricted says so.
+- **Speed.** Right after the handshake, and only when access is already
+  on, the helper reads the store in the background: every card (name parts,
+  nickname, company, job title, emails, phones), events from the start of
+  today to 14 days ahead, incomplete reminders. Searches run over that copy
+  in memory. It's read again in the background once older than 60 s; keyword
+  mode waits up to 0.3 s for the fresher copy (2.5 s for the first), global
+  search at most 30 ms and otherwise answers empty for that keystroke.
+  Losing access drops the copy.
+- **Matching.** Words are folded (case, accents, width) and every query
+  word must start a word. Contacts: name, then nickname, then company, then
+  email; whole words beat prefixes, a given name beats a family name, the
+  exact full name wins; `@` (or a dot and no spaces) searches addresses, a
+  query of digits (spaces, `+`, `-`, parentheses allowed) searches numbers.
+  Global search only takes strong matches: names, nicknames, companies, the
+  start of an address (3+ characters) or 4+ digits. Events and reminders:
+  title matches first, then location, calendar, notes or list; global
+  search only takes title matches.
+- **Links.** Cards open with `addressbook://<identifier>` (Contacts'
+  identifier already ends in `:ABPerson`), events with
+  `ical://ekevent/<calendarItemIdentifier>?method=show&options=more` (a
+  repeating event adds the occurrence's start,
+  `ical://ekevent/20261016T090000Z/<id>?…`, UTC for timed events, the wall
+  clock for all-day ones), reminders with
+  `x-apple-reminderkit://REMCDReminder/<calendarItemIdentifier>`. None of
+  these schemes is documented. Mail is `mailto:`, calls `tel:` (FaceTime
+  places them), Messages `sms:`, FaceTime `facetime:` and `facetime-audio:`.
+- **Dates** are in English, like the rest of Fastlight, with the region's
+  conventions (24-hour clock, day-month order) and the user's time zone:
+  "Today, 10:00 – 10:30", "Now, until 09:15", "Tomorrow, all day",
+  "Thursday, 10:00 – 12:00", "Sun, 18 Oct, 19:00 – 20:00",
+  "Overdue · Yesterday".
+- **Screenshots.** `--sample [access-file]` makes a helper answer from
+  made-up people and events instead, with the access state read from that
+  file. `scripts/snapshot.sh` runs the built-ins that way, so it never
+  touches (or asks for) the real stores.
+
 ## Testing
 
 All in `Tests/` with Swift Testing, deterministic and offline:
@@ -517,6 +587,11 @@ All in `Tests/` with Swift Testing, deterministic and offline:
   input after a name, run commands and input files, through a fake runner.
 - System: strict matching (with negatives), the confirmation state
   machine, and every command, through a fake executor.
+- Contacts, Calendar and Reminders, against fake stores (never the real
+  ones): matching and ranking, global gating, detail rows, every access
+  state and that nothing asks or reads without access, URL construction,
+  date formatting and the 14-day window with a fixed clock, time zone and
+  locale, the background loader's staleness and time bounds.
 - The shipped manifests and examples load together without problems.
 
 The UI is checked with `scripts/snapshot.sh`, which renders keyword mode,

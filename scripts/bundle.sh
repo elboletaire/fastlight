@@ -39,7 +39,7 @@ if [ "$universal" = 1 ]; then
 fi
 swift build "${swift_flags[@]}" --product Fastlight
 # Built-in extensions' executables (Extensions/<name>/extension.json names them).
-helpers=(fastlight-emoji fastlight-calc fastlight-convert fastlight-system)
+helpers=(fastlight-emoji fastlight-calc fastlight-convert fastlight-system fastlight-contacts fastlight-calendar)
 for h in "${helpers[@]}"; do swift build "${swift_flags[@]}" --product "$h"; done
 bindir="$(swift build "${swift_flags[@]}" --show-bin-path)"
 bin="$bindir/Fastlight"
@@ -71,11 +71,21 @@ sign_flags=(--force --sign "$identity")
 if [ "$identity" != "-" ]; then
   sign_flags+=(--options runtime --timestamp)
 fi
+# Contacts, Calendars and Reminders: under the hardened runtime, TCC denies
+# them without asking unless the responsible app has these entitlements.
+# That's Fastlight, which starts the helpers that read them; those helpers
+# carry them too. Ad-hoc builds have no hardened runtime and don't need them.
+pim=()
+if [ "$identity" != "-" ]; then
+  pim=(--entitlements Resources/Fastlight.entitlements)
+fi
 codesign "${sign_flags[@]}" --identifier com.elboletaire.fastlight.fsearch "$app/Contents/Helpers/fsearch"
 for h in "${helpers[@]}"; do
-  codesign "${sign_flags[@]}" --identifier "com.elboletaire.fastlight.$h" "$app/Contents/Helpers/$h"
+  ent=()
+  case "$h" in fastlight-contacts|fastlight-calendar) ent=(${pim[@]+"${pim[@]}"}) ;; esac
+  codesign "${sign_flags[@]}" ${ent[@]+"${ent[@]}"} --identifier "com.elboletaire.fastlight.$h" "$app/Contents/Helpers/$h"
 done
-codesign "${sign_flags[@]}" "$app"
+codesign "${sign_flags[@]}" ${pim[@]+"${pim[@]}"} "$app"
 codesign --verify --deep --strict "$app"
 
 # Ad-hoc signatures change with every build, and Full Disk Access is tied to
