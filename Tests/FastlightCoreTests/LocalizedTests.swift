@@ -18,6 +18,7 @@ import FastlightL10n
         }
         inLanguage("es") {
             #expect(ExtensionError.crashed("x").message(for: "Web") == "Web se ha detenido inesperadamente (x).")
+            #expect(ExtensionError.stopped.message(for: "Web") == "Web se ha detenido antes de responder.")
         }
         // The extension's own words are left alone.
         inLanguage("ca") { #expect(ExtensionError.reported("Nope").message(for: "X") == "Nope") }
