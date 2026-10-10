@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.emoji",
+  "name": "Emoji",
+  "version": "1.0.0",
+  "description": "Find an emoji by name or keyword and paste it into the app you were using.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": "😀",
+  "keywords": [":", "emoji"],
+  "command": ["fastlight-emoji"],
+  "global": { "maxResults": 3, "minQueryLength": 3 }
+}
