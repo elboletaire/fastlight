@@ -67,8 +67,9 @@ extension SearchModel {
         }
         let typed = !query.trimmingCharacters(in: .whitespaces).isEmpty
         // New or changed extensions waiting for a yes, before anything else.
-        if !typed, let ext = extensions.awaitingConsent.first {
-            let others = extensions.awaitingConsent.count - 1
+        let waiting = typed ? [] : extensions.awaitingConsent
+        if let ext = waiting.first {
+            let others = waiting.count - 1
             let text = others > 0 ? "“\(ext.name)” and \(others) more extension\(others == 1 ? "" : "s") need your permission to run."
                 : "The “\(ext.name)” extension needs your permission to run."
             return .notice(Notice(symbol: "puzzlepiece.extension", text: text, action: .reviewConsent(ext.id)))

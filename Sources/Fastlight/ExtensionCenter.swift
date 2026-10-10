@@ -16,8 +16,6 @@ final class ExtensionCenter {
     let consent: ConsentStore
     let host: ExtensionHost
     private(set) var router = KeywordRouter([])
-    /// After every refresh that changed something.
-    var onChange: (() -> Void)?
 
     init(library: ExtensionLibrary = ExtensionCenter.defaultLibrary(),
          consent: ConsentStore = ConsentStore(),
@@ -60,7 +58,6 @@ final class ExtensionCenter {
         for issue in library.issues where changed {
             NSLog("Fastlight: extension %@", issue.description)
         }
-        if changed || force { onChange?() }
     }
 
     var extensions: [LoadedExtension] { library.extensions }
@@ -70,7 +67,6 @@ final class ExtensionCenter {
     func setEnabled(_ ext: LoadedExtension, _ on: Bool) {
         consent.setDisabled(ext.id, !on)
         refresh()
-        onChange?()
     }
 
     /// Enabled extensions the user still has to approve.
@@ -129,7 +125,6 @@ final class ExtensionCenter {
         case .alertFirstButtonReturn:
             consent.approve(ext)
             refresh()
-            onChange?()
             return true
         case .alertThirdButtonReturn:
             setEnabled(ext, false)

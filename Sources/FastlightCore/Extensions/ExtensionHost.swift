@@ -88,10 +88,18 @@ public final class ExtensionHost: @unchecked Sendable {
             if !ext.builtIn {
                 // What's on disk now must still be what was approved: the
                 // folder may have changed since the last rescan.
+                // Hashing can read up to 100 MB, so only redo it when the
+                // stamp (paths, sizes, mtimes, ctimes) moved since the last
+                // start that verified.
                 let dir = ext.directory
                 let approved = ext.fingerprint
+                let verified = VerifiedStamp()
                 config.verify = {
-                    (try? ExtensionLibrary.fingerprint(of: dir)) == approved ? nil : .needsConsent
+                    let stamp = ExtensionLibrary.stamp(of: dir)
+                    if verified.matches(stamp) { return nil }
+                    guard (try? ExtensionLibrary.fingerprint(of: dir)) == approved else { return .needsConsent }
+                    verified.set(stamp)
+                    return nil
                 }
             }
             let s = Slot(fingerprint: ext.fingerprint, process: ExtensionProcess(config: config))
@@ -202,6 +210,15 @@ public final class ExtensionHost: @unchecked Sendable {
     }
 }
 
+/// The folder stamp at the last start whose fingerprint matched.
+private final class VerifiedStamp: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stamp: String?
+
+    func matches(_ s: String) -> Bool { lock.withLock { stamp == s } }
+    func set(_ s: String) { lock.withLock { stamp = s } }
+}
+
 /// A continuation resumed once, by whichever comes first.
 private final class OneShot: @unchecked Sendable {
     private let lock = NSLock()
@@ -243,16 +260,21 @@ final class Gate: @unchecked Sendable {
     private var nextToken = 0
     /// Cancelled before their continuation was installed.
     private var cancelled = Set<Int>()
+    /// Whose continuation body already ran: a late cancellation of one of
+    /// these has nothing left to cancel and must not linger in `cancelled`.
+    private var installed = Set<Int>()
 
     func acquire() async -> Bool {
         let token = lock.withLock { () -> Int in
             nextToken += 1
             return nextToken
         }
+        defer { lock.withLock { _ = installed.remove(token) } }
         return await withTaskCancellationHandler {
             await withCheckedContinuation { c in
                 let (go, superseded) = lock.withLock { () -> (Bool?, CheckedContinuation<Bool, Never>?) in
                     if cancelled.remove(token) != nil { return (false, nil) }
+                    installed.insert(token)
                     if !busy {
                         busy = true
                         return (true, nil)
@@ -270,7 +292,7 @@ final class Gate: @unchecked Sendable {
                     waiting = nil
                     return w.continuation
                 }
-                cancelled.insert(token)
+                if !installed.contains(token) { cancelled.insert(token) }
                 return nil
             }
             c?.resume(returning: false)
