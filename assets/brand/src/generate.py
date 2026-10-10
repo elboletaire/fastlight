@@ -2,10 +2,11 @@
 """Generate the Fastlight brand SVG sources in assets/brand/.
 
 The SVGs are committed; you only need this when changing the design.
-Run through `scripts/render-brand.sh --svg` (it supplies fontTools via uv and
-downloads the Sora font used for the outlined wordmark).
+Run through `scripts/render-brand.sh --svg` (it supplies fontTools and
+uharfbuzz via uv and downloads Sora, used for the outlined wordmark, and
+Inter, used for body text in the DMG background).
 
-Usage: generate.py <path-to-Sora[wght].ttf> <out-dir>
+Usage: generate.py <path-to-Sora[wght].ttf> <out-dir> <path-to-Inter[opsz,wght].ttf>
 
 Design: "Comet" — a lens launching up and to the right, trailing three
 tapered comet tails, with a gold spark at its leading edge, on a graphite
@@ -377,8 +378,130 @@ def wordmark(font_path, on_dark=False):
                view=f"0 0 {adv} 1000", title="Fastlight")
 
 
+# ---------------------------------------------------------------- DMG window
+# The DMG window, in points (the background is rendered at 1x and 2x). These
+# numbers must match scripts/dmg-settings.py: icons are centred on DMG_APP and
+# DMG_APPS, and Finder draws their labels below them in black, whatever the
+# appearance, so everything under the icons stays light.
+DMG_W, DMG_H = 660, 400
+DMG_SLACK = 20  # extra plain canvas below, in case the title bar is shorter than expected
+DMG_APP, DMG_APPS = (170, 200), (490, 200)
+DMG_ICON = 128
+
+
+def shaped_paths(font_path, text, size, weight, tracking=0.0, opsz=None):
+    """Outline `text`, shaped with HarfBuzz (kerning), at `size` px; returns
+    (d, width) with the baseline at y=0, in px."""
+    import io
+
+    import uharfbuzz as hb
+    from fontTools.pens.svgPathPen import SVGPathPen
+    from fontTools.pens.transformPen import TransformPen
+    from fontTools.ttLib import TTFont
+    from fontTools.varLib.instancer import instantiateVariableFont
+
+    font = TTFont(font_path)
+    axes = {a.axisTag for a in font["fvar"].axes}
+    loc = {"wght": weight}
+    if "opsz" in axes:
+        loc["opsz"] = opsz or size
+    font = instantiateVariableFont(font, loc)
+    buf = io.BytesIO()
+    font.save(buf)
+    hbfont = hb.Font(hb.Face(hb.Blob(buf.getvalue())))
+    upm = font["head"].unitsPerEm
+    hb_buf = hb.Buffer()
+    hb_buf.add_str(text)
+    hb_buf.guess_segment_properties()
+    hb.shape(hbfont, hb_buf, {"kern": True, "liga": True})
+    order = font.getGlyphOrder()
+    gs = font.getGlyphSet()
+    k = size / upm
+    pen = SVGPathPen(gs, ntos=lambda v: f"{v:.2f}")
+    x = 0.0
+    for info, pos in zip(hb_buf.glyph_infos, hb_buf.glyph_positions):
+        gs[order[info.codepoint]].draw(
+            TransformPen(pen, (k, 0, 0, -k, x + pos.x_offset * k, -pos.y_offset * k)))
+        x += pos.x_advance * k + tracking
+    return pen.getCommands(), x - tracking
+
+
+def dmg_arrow(x1, x2, y):
+    """A comet tail: needle-thin on the left, swelling towards a rounded
+    chevron head on the right, orange -> pink -> violet."""
+    head = 10.0   # chevron half-height
+    w = 4.5       # tail width at the head, and chevron stroke
+    tail_end = x2 - 5
+    tail = (f"M{x1:g} {y - 0.4:g} L{tail_end:g} {y - w / 2:g} "
+            f"A{w / 2:g} {w / 2:g} 0 0 1 {tail_end:g} {y + w / 2:g} L{x1:g} {y + 0.4:g} Z")
+    chevron = f"M{x2 - head:g} {y - head:g} L{x2:g} {y:g} L{x2 - head:g} {y + head:g}"
+    return (f'<path d="{tail}" fill="url(#arrow)"/>'
+            f'<path d="{chevron}" fill="none" stroke="url(#arrowhead)" stroke-width="{w:g}" '
+            f'stroke-linecap="round" stroke-linejoin="round"/>')
+
+
+def dmg_hint(inter, cx, baseline):
+    """'Then open it and press [⌥] [Space] to search.', centred on cx."""
+    size, pad, gap, cap_h = 14, 7, 6, 22
+    parts = [("text", "Then open it and press"), ("key", "\u2325"), ("key", "Space"),
+             ("text", "to search.")]
+    shaped = []
+    for kind, text in parts:
+        d, w = shaped_paths(inter, text, size if kind == "text" else 13, 400 if kind == "text" else 500)
+        box = w + 2 * pad if kind == "key" else w
+        shaped.append((kind, d, w, max(box, cap_h)))
+    space = 0.3 * size
+    total = sum(b for _, _, _, b in shaped) + space * (len(shaped) - 1) - (gap - space)
+    x = cx - total / 2
+    out = []
+    for i, (kind, d, w, box) in enumerate(shaped):
+        if kind == "key":
+            top = baseline - 15.5
+            out.append(f'<rect x="{x:.2f}" y="{top + 1:.2f}" width="{box:.2f}" height="{cap_h}" rx="5" '
+                       f'fill="#E3E3E9"/>'
+                       f'<rect x="{x:.2f}" y="{top:.2f}" width="{box:.2f}" height="{cap_h}" rx="5" '
+                       f'fill="#FFFFFF" stroke="#DCDCE3" stroke-width="1"/>'
+                       f'<path fill="{GRAPHITE_900}" transform="translate({x + (box - w) / 2:.2f} {baseline - 0.5:.2f})" d="{d}"/>')
+        else:
+            out.append(f'<path fill="{GRAPHITE_500}" transform="translate({x:.2f} {baseline:.2f})" d="{d}"/>')
+        x += box
+        if i + 1 < len(shaped):
+            both_keys = kind == "key" and shaped[i + 1][0] == "key"
+            x += gap if both_keys else space
+    return "".join(out)
+
+
+def dmg_background(sora, inter):
+    """Paper background with a soft comet glow, a headline, a comet-tail arrow
+    from the app to Applications and a hint about the hotkey."""
+    W, H = DMG_W, DMG_H + DMG_SLACK
+    (ax, ay), (bx, by) = DMG_APP, DMG_APPS
+    mid = (ax + bx) / 2
+    # The app tile fills 824/1024 of its icon, the Applications folder about
+    # 0.92: leave the same space between the arrow and each visible edge.
+    x1 = ax + DMG_ICON * 824 / 2048 + 32
+    x2 = bx - DMG_ICON * 0.46 - 32
+    defs = (
+        lin("arrow", [(0, TRAIL_TAIL, 0), (0.45, ORANGE, 0.9), (1, PINK, None)],
+            x1, 0, x2, 0, user=True)
+        + lin("arrowhead", [(0, PINK, None), (1, VIOLET, None)], x2 - 10, 0, x2, 0, user=True)
+        + radial("glow", mid, ay, 300, [(0, PINK, 0.10), (0.45, VIOLET, 0.05), (1, VIOLET, 0)])
+        + radial("warm", ax, ay + 40, 220, [(0, ORANGE, 0.07), (1, ORANGE, 0)])
+    )
+    title, tw = shaped_paths(sora, "Drag Fastlight to Applications", 24, 600, tracking=-0.3)
+    body = (
+        f'<rect width="{W}" height="{H}" fill="#FAFAFB"/>'
+        f'<rect width="{W}" height="{H}" fill="url(#warm)"/>'
+        f'<rect width="{W}" height="{H}" fill="url(#glow)"/>'
+        f'<path fill="{GRAPHITE_900}" transform="translate({mid - tw / 2:.2f} 78)" d="{title}"/>'
+        + dmg_arrow(x1, x2, ay)
+        + dmg_hint(inter, mid, 350)
+    )
+    return svg(W, H, f"<defs>{defs}</defs>{body}", title="Fastlight installer")
+
+
 def main():
-    font, out = sys.argv[1], Path(sys.argv[2])
+    font, out, inter = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
     src = out / "src"
     src.mkdir(parents=True, exist_ok=True)
     files = {
@@ -396,6 +519,7 @@ def main():
         out / "wordmark-dark.svg": wordmark(font, on_dark=True),
         src / "menubar-18.svg": menubar(18),
         src / "menubar-36.svg": menubar(36),
+        src / "dmg-background.svg": dmg_background(font, inter),
     }
     for p, content in files.items():
         p.write_text(content)

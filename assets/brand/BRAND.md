@@ -145,6 +145,7 @@ text is 17–19 px Inter. Headings use line-height 1.1–1.2.
 | `png/apple-touch-icon-180.png` | Opaque, full-bleed graphite with glow (iOS applies its own mask) |
 | `png/favicon-{32,16}.png` | Raster favicon fallbacks |
 | `png/logo-lockup.png`, `png/logo-lockup-dark.png` | 160 px tall raster lockups |
+| `src/dmg-background.svg` → `assets/dmg/background.tiff` | DMG window background (660×400 pt, 1x + 2x), used by `scripts/dmg.sh` |
 
 ```html
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -187,9 +188,14 @@ text is 17–19 px Inter. Headings use line-height 1.1–1.2.
 ## Regenerating
 
 ```sh
-scripts/render-brand.sh          # SVG -> all PNGs, AppIcon.icns, menu bar icons (needs: brew install resvg)
-scripts/render-brand.sh --svg    # also regenerate SVG sources from src/generate.py (needs uv + network for Sora)
+scripts/render-brand.sh          # SVG -> all PNGs, AppIcon.icns, menu bar icons, DMG background (needs: brew install resvg)
+scripts/render-brand.sh --svg    # also regenerate SVG sources from src/generate.py (needs uv + network for Sora and Inter)
 ```
+
+The DMG background is light on purpose: over a background picture Finder
+draws icon labels in black in both light and dark appearance, so the area
+under the icons must stay light. Its layout must match
+`scripts/dmg-settings.py`.
 
 Earlier explorations (navy original, Daylight, Sunrise, background studies)
 are kept in `variants/`, together with their contact-sheet scripts.
