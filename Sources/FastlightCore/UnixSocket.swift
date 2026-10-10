@@ -10,7 +10,10 @@ final class UnixSocket {
     /// `timeout` bounds each read and write, so a hung peer can't block
     /// the caller forever; nil (or not positive) waits as long as it takes.
     init(path: String, timeout: TimeInterval? = nil) throws {
-        fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        // A local until it's connected: once self.fd is set, a throw runs
+        // deinit, which would close the number a second time, by then maybe
+        // another thread's file.
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw Self.posixError("socket") }
 
         var addr = sockaddr_un()
@@ -34,6 +37,7 @@ final class UnixSocket {
             close(fd)
             throw err
         }
+        self.fd = fd
         // Don't let a dead daemon kill us with SIGPIPE.
         var on: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
