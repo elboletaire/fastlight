@@ -21,11 +21,18 @@ public struct LabeledValue: Sendable, Equatable {
     /// so this library needs no Contacts framework (tests check they match).
     public static let mobileIdentifiers: Set<String> = ["_$!<Mobile>!$_", "iPhone"]
 
-    /// A mobile or iPhone number, by its label identifier: the shown label
-    /// is in the user's language. Without one, the English names.
+    /// What a custom label (or a fake's) reads for a mobile, folded.
+    static let mobileNames: Set<String> = ["mobile", "iphone", "cell", "cell phone", "mobil", "movil", "celular"]
+
+    /// A mobile or iPhone number. A built-in label's identifier decides
+    /// (the shown label is in the user's language); a custom label, or
+    /// none, goes by what it reads: "Mobile", "Mòbil", "Móvil", "Cell".
     public var isMobile: Bool {
-        if let identifier { return Self.mobileIdentifiers.contains(identifier) }
-        return ["mobile", "iphone", "cell"].contains(label.lowercased())
+        if let identifier {
+            if Self.mobileIdentifiers.contains(identifier) { return true }
+            if identifier.hasPrefix("_$!<"), identifier.hasSuffix(">!$_") { return false }
+        }
+        return Self.mobileNames.contains(Fold.text(identifier ?? label).trimmingCharacters(in: .whitespaces))
     }
 }
 

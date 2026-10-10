@@ -176,8 +176,15 @@ func targets(_ item: [String: Any]) -> [String] {
         #expect(c.messageHandle == "2")
         c.phones = [work, LabeledValue("iPhone", "3", identifier: CNLabelPhoneNumberiPhone)]
         #expect(c.messageHandle == "3")
-        // A custom label that happens to read "mobile" isn't the built-in one.
-        c.phones = [work, LabeledValue("mobile", "4", identifier: "mobile")]
+        // A custom label goes by what it reads, in any of the languages.
+        for custom in ["Mobile", "mòbil", "Móvil", "Cell", "iphone "] {
+            c.phones = [work, LabeledValue(custom, "4", identifier: custom)]
+            #expect(c.messageHandle == "4", "\(custom)")
+        }
+        c.phones = [work, LabeledValue("Casa de la mobile", "4", identifier: "Casa de la mobile")]
+        #expect(c.messageHandle == "1")
+        // A built-in label never does: "_$!<Other>!$_" shown as "mobile" isn't one.
+        c.phones = [work, LabeledValue("mobile", "4", identifier: CNLabelOther)]
         #expect(c.messageHandle == "1")
         // Spanish, and the English words no longer matter once there's an identifier.
         c.phones = [LabeledValue("móvil", "5", identifier: CNLabelPhoneNumberMobile), LabeledValue("cell", "6", identifier: "_$!<Other>!$_")]
