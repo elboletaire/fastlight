@@ -152,7 +152,16 @@ public struct SettingsScanner: Sendable {
     func localizedString(_ resources: URL, table: String = "Localizable", key: String, languages: [String]? = nil) -> String? {
         let langs = languages ?? self.languages
         if let loctable = Self.plist(resources.appendingPathComponent("\(table).loctable")) {
-            let tables = loctable.compactMapValues { $0 as? [String: Any] }
+            // Keys can name a device too ("en~mac", "en~appletv", whose
+            // System Settings is "Sprocket"): keep the Mac's, over the plain
+            // language, and drop the others.
+            var tables: [String: [String: Any]] = [:]
+            for (key, value) in loctable where !key.contains("~") {
+                if let t = value as? [String: Any] { tables[key] = t }
+            }
+            for (key, value) in loctable where key.hasSuffix("~mac") {
+                if let t = value as? [String: Any] { tables[String(key.dropLast(4)), default: [:]].merge(t) { $1 } }
+            }
             for lang in preferred(Array(tables.keys), languages: langs) {
                 if let n = tables[lang]?[key] as? String, !n.isEmpty { return n }
             }
@@ -231,7 +240,7 @@ public struct SettingsScanner: Sendable {
 /// The panes, ranked for a query.
 public struct SettingsIndex: Sendable {
     /// Bump when the cached format or what goes in it changes.
-    public static let version = 1
+    public static let version = 2
 
     public var panes: [SettingsPane]
 

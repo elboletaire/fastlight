@@ -106,6 +106,22 @@ import Testing
         #expect(tool.target == tool.id)
     }
 
+    @Test func namesFromALoctableAreTheMacs() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("settings-loctable-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        // As in macOS 27: English only per device, British English plain too.
+        try Fixture.write(["en~appletv": ["CFBundleDisplayName": "Sprocket"], "en~iphone": ["CFBundleDisplayName": "Settings"],
+                           "en~mac": ["CFBundleDisplayName": "System Settings"], "en_GB": ["CFBundleDisplayName": "System Settings"],
+                           "ca~appletv": ["CFBundleDisplayName": "Sprocket"], "ca": ["CFBundleDisplayName": "Configuració"],
+                           "ca~mac": ["CFBundleDisplayName": "Configuració del Sistema"]],
+                          to: root.appendingPathComponent("InfoPlist.loctable"))
+        for (languages, name) in [(["en"], "System Settings"), (["en-US"], "System Settings"), (["ca"], "Configuració del Sistema"),
+                                  (["ja"], "System Settings")] {
+            let scanner = SettingsScanner(extensionsRoot: root, settingsApp: root, prefPaneRoots: [], languages: languages, hasBattery: true)
+            #expect(scanner.localizedName(root) == name, "\(languages)")
+        }
+    }
+
     @Test func pagesOnlyWhenThePaneListsTheirAnchor() throws {
         let (scanner, _) = try Self.fixture()
         let ids = scanner.scan().map(\.id)
