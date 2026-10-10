@@ -216,13 +216,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// for that; anything else opens the file as Finder would.
     private static func open(_ f: FileItem) {
         let url = URL(fileURLWithPath: f.path)
-        if let line = f.line,
-           let app = NSWorkspace.shared.urlForApplication(toOpen: url),
-           let id = Bundle(url: app)?.bundleIdentifier,
-           let link = EditorLink.url(bundleID: id, path: f.path, line: line),
-           NSWorkspace.shared.open(link) {
-            return
-        }
+        // Only a content hit needs to know its editor.
+        let editor = f.line == nil ? nil : NSWorkspace.shared.urlForApplication(toOpen: url).flatMap { Bundle(url: $0)?.bundleIdentifier }
+        if let link = EditorLink.url(for: f, editor: editor), NSWorkspace.shared.open(link) { return }
         NSWorkspace.shared.open(url)
     }
 

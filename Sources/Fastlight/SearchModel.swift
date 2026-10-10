@@ -8,63 +8,6 @@ private struct SendableImage: @unchecked Sendable {
     let image: NSImage
 }
 
-/// One selectable row.
-enum ResultItem: Identifiable, Hashable {
-    case app(AppEntry)
-    case file(FileItem)
-    case ext(ExtensionResult)
-
-    var id: String {
-        switch self {
-        case .app(let a): "app:\(a.path)"
-        case .file(let f): f.line.map { "file:\(f.path):\($0)" } ?? "file:\(f.path)"
-        case .ext(let r): "ext:\(r.extensionID):\(r.item.id)"
-        }
-    }
-
-    /// The file behind the row, for Quick Look, Reveal and Copy Path.
-    var path: String? {
-        switch self {
-        case .app(let a): a.path
-        case .file(let f): f.path
-        case .ext(let r):
-            r.item.actions.lazy.compactMap { a -> String? in
-                switch a.kind {
-                case .reveal(let p): (p as NSString).expandingTildeInPath
-                case .open(let t) where t.hasPrefix("/") || t.hasPrefix("~/"): (t as NSString).expandingTildeInPath
-                default: nil
-                }
-            }.first
-        }
-    }
-}
-
-struct ResultSection: Identifiable, Hashable {
-    enum Kind: Hashable {
-        case topHit, apps, files
-        case ext(String)
-    }
-
-    var kind: Kind
-    var title: String
-    var items: [ResultItem]
-    /// Index of the first item in the flat, keyboard-navigable list.
-    var offset: Int
-
-    var id: Kind { kind }
-}
-
-/// What the file side can deliver right now. Apps never depend on it.
-enum FileSearchState: Equatable {
-    case unknown
-    case ready(fullDiskAccess: Bool)
-    case indexing
-    /// Our daemon started before Fastlight had Full Disk Access; it's being
-    /// restarted so it sees the protected folders.
-    case restarting
-    case unavailable(String)
-}
-
 /// Keyword mode: an extension owns the results. `trigger` is what was typed
 /// to get here (":" or "emoji "), to give back on ⌫.
 struct Scope: Equatable {
@@ -282,7 +225,7 @@ final class SearchModel: ObservableObject {
                 state = .ready(fullDiskAccess: s.fullDiskAccess)
                 if !s.fullDiskAccess { mismatch = (FullDiskAccess.granted(), client.daemonIsOwn) }
             } catch let e as FSearchError {
-                state = Self.state(for: e)
+                state = FileSearchState(e)
             } catch {
                 state = .unavailable(error.localizedDescription)
             }
@@ -333,15 +276,6 @@ final class SearchModel: ObservableObject {
                     self.refreshStatus()
                 }
             }
-        }
-    }
-
-    nonisolated static func state(for e: FSearchError) -> FileSearchState {
-        switch e {
-        case .daemon(let msg) where msg.lowercased().hasPrefix("indexing"): .indexing
-        case .notInstalled: .unavailable("fsearch isn't installed, so only apps are searched.")
-        case .timedOut: .unavailable("fsearch isn't answering, so only apps are searched.")
-        default: .unavailable("Can't reach fsearch, so only apps are searched.")
         }
     }
 
@@ -443,24 +377,18 @@ final class SearchModel: ObservableObject {
     }
 
     private func applyFileOutcome(_ outcome: ProviderOutcome) {
-        switch outcome {
-        case .results:
-            fileError = nil
+        switch FileSearchState.effect(of: outcome) {
+        case .answered(let error):
+            fileError = error
             // It answered, so it's no longer crawling or down; ask for details.
+            // That also drops a stale "down" state, or its notice would win.
             if case .ready = fileState {} else { refreshStatus() }
-        case .failed(let err as FSearchError) where err.isQueryError:
-            // It answered, so it's up: the query is at fault (a bad filter).
-            // Drop a stale "down" state too, or its notice would win.
-            fileError = err.localizedDescription
-            if case .ready = fileState {} else { refreshStatus() }
-        case .failed(let err as FSearchError):
-            fileState = Self.state(for: err)
+        case .state(let state):
+            fileState = state
             fileError = nil
-        case .failed(is CancellationError):
-            break
-        case .failed(let err):
-            fileError = err.localizedDescription
-        case .timedOut:
+        case .error(let error):
+            fileError = error
+        case .unchanged:
             break
         }
     }
@@ -490,46 +418,13 @@ final class SearchModel: ObservableObject {
         onLayoutChange?()
     }
 
-    /// Top Hit is the best app when it matches well (an acronym or better),
-    /// otherwise the best file. A loose app match never is: files arrive
-    /// after apps, and would push it out of the Top Hit a moment later.
-    /// Extension results get their own sections; only a built-in's answer
-    /// marked `topHit` (a calculation) goes first.
+    /// Lays out the sections (see `ResultLayout`), keeping the selection
+    /// on a late section of the same query.
     func publish(apps matches: [AppMatch], files: [FileItem], extensions found: [(LoadedExtension, [ExtensionResult])] = [],
                  keepSelection: Bool = false) {
-        var apps = matches.map(\.entry)
-        var files = files
-        var found = found
-        let top: ResultItem?
-        // A built-in's answer (a calculation) beats any name match.
-        if let i = found.firstIndex(where: { $0.0.builtIn && $0.1.first?.item.topHit == true }) {
-            top = .ext(found[i].1.removeFirst())
-        } else if let best = matches.first, best.kind >= .acronym {
-            top = .app(apps.removeFirst())
-        } else if let first = files.first, first.line == nil {
-            top = .file(files.removeFirst())
-        } else {
-            top = nil
-        }
-        var out: [ResultSection] = []
-        var offset = 0
-        func add(_ kind: ResultSection.Kind, _ title: String, _ items: [ResultItem]) {
-            guard !items.isEmpty else { return }
-            out.append(ResultSection(kind: kind, title: title, items: items, offset: offset))
-            offset += items.count
-        }
-        if let top { add(.topHit, "Top Hit", [top]) }
-        // maxApps in all, the Top Hit included.
-        let topIsApp = if case .app = top { true } else { false }
-        add(.apps, "Applications", apps.prefix(Self.maxApps - (topIsApp ? 1 : 0)).map(ResultItem.app))
-        for (ext, results) in found where !results.isEmpty { add(.ext(ext.id), ext.name, results.map(ResultItem.ext)) }
-        add(.files, "Files", files.map(ResultItem.file))
-        // A late section of the same query keeps the selection on the row
-        // the user moved to; untouched, it stays on the first row, whatever
-        // that now is.
-        let previous = keepSelection && selection > 0 ? selected?.id : nil
-        sections = out
-        selection = previous.flatMap { id in items.firstIndex { $0.id == id } } ?? 0
+        let old = items
+        sections = ResultLayout.sections(apps: matches, files: files, extensions: found, maxApps: Self.maxApps)
+        selection = ResultLayout.selection(selection, in: old, keep: keepSelection, after: items)
         onLayoutChange?()
     }
 }
