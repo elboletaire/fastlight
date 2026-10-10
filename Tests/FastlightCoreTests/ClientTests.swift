@@ -307,8 +307,17 @@ final class FakeDaemon: @unchecked Sendable {
 
         // Once the delay is over, it tries again.
         client.relaunchDelay = 0
-        #expect(throws: FSearchError.self) { try client.search("b") }
+        let error = #expect(throws: FSearchError.self) { try client.search("b") }
         #expect(launches.value > 1)
+        // What the last bind wait saw, as is: "Cannot reach the fsearch
+        // daemon:" once, not twice.
+        guard case .unreachable(let why) = error else {
+            Issue.record("expected unreachable, got \(String(describing: error))")
+            return
+        }
+        #expect(why.hasPrefix("connect:"))
+        let text = error?.localizedDescription ?? ""
+        #expect(text.components(separatedBy: "Cannot reach the fsearch daemon").count == 2, "\(text)")
     }
 
     @Test func aMissingBinaryKeepsSayingSo() throws {

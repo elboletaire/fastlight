@@ -143,6 +143,8 @@ public final class FSearchClient: @unchecked Sendable {
         try launch(dataDir)
         lastLaunch = Date()
         // A cold daemon loads its index first; give it a moment to bind.
+        // The last connect error is thrown as is: it already says it can't
+        // reach the daemon, and wrapping it again would say so twice.
         var lastError: Error = FSearchError.unreachable("timed out")
         let deadline = Date().addingTimeInterval(bindWait)
         repeat {
@@ -155,7 +157,7 @@ public final class FSearchClient: @unchecked Sendable {
                 Thread.sleep(forTimeInterval: 0.03)
             }
         } while Date() < deadline
-        throw FSearchError.unreachable(lastError.localizedDescription)
+        throw lastError
     }
 }
 
