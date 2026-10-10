@@ -371,6 +371,8 @@ extension Expr {
             guard b != 0 else { throw CalcError.divisionByZero }
             return a / b
         default:
+            // 0^-1 is 1/0.
+            guard a != 0 || b >= 0 else { throw CalcError.divisionByZero }
             let v = pow(a, b)
             if v.isNaN { throw CalcError.outOfDomain("^") }
             return v
