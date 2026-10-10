@@ -12,7 +12,7 @@
 [![Powered by fsearch](https://img.shields.io/badge/powered%20by-fsearch-7B5CFF?style=flat-square)](https://github.com/noahdunnagan/fsearch)
 [![License: MIT](https://img.shields.io/badge/license-MIT-FFC81A?style=flat-square)](LICENSE)
 
-[Features](#features) • [Install](#install) • [Usage](#usage) • [Extensions](#extensions) • [Build from source](#build-from-source) • [How it works](#how-it-works) • [Website](https://elboletaire.github.io/fastlight/)
+[Features](#features) • [Install](#install) • [Usage](#usage) • [Replace Spotlight](#replace-spotlight) • [Extensions](#extensions) • [Build from source](#build-from-source) • [How it works](#how-it-works) • [Website](https://elboletaire.github.io/fastlight/)
 
 <img src="site/og.png" alt="Fastlight: find anything on your Mac in a millisecond" width="800">
 
@@ -46,7 +46,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 > Releases are signed ad hoc until there is a Developer ID, so each update has a new signature and macOS drops the Full Disk Access grant. After updating, remove Fastlight from the Full Disk Access list and add it again.
 
 > [!TIP]
-> Want **⌘Space** instead of ⌥Space? Turn off Spotlight's shortcut in System Settings › Keyboard › Keyboard Shortcuts › Spotlight first, then change the hotkey in `Sources/Fastlight/AppDelegate.swift`.
+> Want another shortcut? Pick one in **Settings…** from the menu bar icon. For **⌘Space**, see [Replace Spotlight](#replace-spotlight).
 
 The first time it runs, fsearch indexes the whole disk (around 20 seconds) and Fastlight shows its progress. After that the index stays current on its own and survives restarts. Apps are searched from the start, even while files are still being indexed.
 
@@ -65,7 +65,7 @@ Then add Fastlight back to the Full Disk Access list. Its log is in `~/Library/A
 
 | Key | Does |
 |---|---|
-| ⌥Space | Show / hide |
+| ⌥Space (or your own, see Settings) | Show / hide |
 | ↑ ↓ | Move through results |
 | Tab, ⇧Tab (or ⌘↓, ⌘↑) | Next / previous section |
 | ↵ | Open (an extension result: its main action, like Paste) |
@@ -86,6 +86,17 @@ sym:applyFilter                  where a symbol is defined
 ```
 
 Plain queries leave out noise like app bundles, dot-folders, `node_modules` and `~/Library`. Any filter turns that off, so `in:~/Library` searches there as usual.
+
+## Replace Spotlight
+
+Fastlight starts on ⌥Space because ⌘Space belongs to Spotlight. To move it, open **Settings…** from the menu bar icon: **Use ⌘Space Instead of Spotlight** walks you through it. There are two ways, because macOS has no public API for another app to take over Spotlight's shortcut.
+
+- **Recommended:** click **Open Keyboard Settings…**, then **Keyboard Shortcuts… › Spotlight** and turn off **Show Spotlight search**. Fastlight notices while its Settings window is open and switches to ⌘Space by itself.
+- **Do It for Me (experimental):** after asking, Fastlight turns off that one shortcut in `com.apple.symbolichotkeys` and applies it right away. It keeps a copy of the previous setting, so **Restore Spotlight's Shortcut** puts it back exactly and returns Fastlight to ⌥Space. If a future macOS doesn't pick the change up, Settings says so and it takes effect after you log out and back in.
+
+Either way only the shortcut changes. Spotlight stays on, and so does its index, which Finder, Mail and other apps search with; ⌥⌘Space (Finder search) is left alone. If Fastlight is set to ⌘Space while Spotlight still has it, ⌘Space opens Spotlight, and Fastlight's Settings says so. To undo a manual change, pick another shortcut in Fastlight and turn **Show Spotlight search** back on.
+
+<img src="docs/images/settings/settings-light.png" alt="Fastlight Settings: the shortcut recorder and the ⌘Space flow" width="520">
 
 ## Extensions
 
