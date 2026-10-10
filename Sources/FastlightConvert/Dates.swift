@@ -72,7 +72,7 @@ public struct DateParser {
             return .count(days: days(from: today, to: d), unit: m[1] == "weeks" ? .weeks : .days, to: d)
         }
         // Shifts: "today + 90 days", "90 days from now", "90 days ago", "in 90 days".
-        let n = #"(\d{1,5})"#
+        let n = #"([0-9]{1,5})"#
         if let m = Regex.match(#"^(.+?)\s*([+-])\s*"# + n + #"\s*"# + Self.unitPattern + "$", q) {
             guard let base = day(m[1], .nearest) else { return nil }
             return shift(base, by: (m[2] == "-" ? -1 : 1) * (Int(m[3]) ?? 0), m[4])
@@ -110,8 +110,11 @@ public struct DateParser {
         case "yesterday": return calendar.date(byAdding: .day, value: -1, to: today)
         default: break
         }
-        if let m = Regex.match(#"^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$"#, s) {
-            return date(Int(m[1])!, Int(m[2])!, Int(m[3])!)
+        // [0-9], not \d: NSRegularExpression's \d also matches other
+        // scripts' digits, which Int() doesn't read.
+        if let m = Regex.match(#"^([0-9]{4})[-/.]([0-9]{1,2})[-/.]([0-9]{1,2})$"#, s),
+           let y = Int(m[1]), let mo = Int(m[2]), let d = Int(m[3]) {
+            return date(y, mo, d)
         }
         if let (month, d) = Self.holidays[s] { return recurring(month, d, dir) }
         if let wd = weekday(s) {
@@ -126,14 +129,15 @@ public struct DateParser {
             return calendar.date(byAdding: .day, value: delta, to: self.today)
         }
         // "dec 25", "december 25th 2026", "25 dec", "the 25th of december".
-        let ord = #"(\d{1,2})(?:st|nd|rd|th)?"#
-        let year = #"(?:\s+(\d{4}))?"#
+        let ord = #"([0-9]{1,2})(?:st|nd|rd|th)?"#
+        let year = #"(?:\s+([0-9]{4}))?"#
         let words = s.hasPrefix("the ") ? String(s.dropFirst(4)) : s
-        if let m = Regex.match(#"^([a-z.]+)\s+"# + ord + year + "$", words), let month = months[m[1]] {
-            return m[3].isEmpty ? recurring(month, Int(m[2])!, dir) : date(Int(m[3])!, month, Int(m[2])!)
+        if let m = Regex.match(#"^([a-z.]+)\s+"# + ord + year + "$", words), let month = months[m[1]], let d = Int(m[2]) {
+            return m[3].isEmpty ? recurring(month, d, dir) : Int(m[3]).flatMap { date($0, month, d) }
         }
-        if let m = Regex.match("^" + ord + #"\s+(?:of\s+)?([a-z.]+)"# + year + "$", words), let month = months[m[2]] {
-            return m[3].isEmpty ? recurring(month, Int(m[1])!, dir) : date(Int(m[3])!, month, Int(m[1])!)
+        if let m = Regex.match("^" + ord + #"\s+(?:of\s+)?([a-z.]+)"# + year + "$", words), let month = months[m[2]],
+           let d = Int(m[1]) {
+            return m[3].isEmpty ? recurring(month, d, dir) : Int(m[3]).flatMap { date($0, month, d) }
         }
         return nil
     }
@@ -207,8 +211,11 @@ public struct DateParser {
         case "y": .year
         default: .day
         }
-        // Jan 31 + 1 month is Feb 28 (or 29), as Calendar has it.
-        return calendar.date(byAdding: component, value: n, to: base).map { .shifted($0, from: base, by: n, unit: component) }
+        // Jan 31 + 1 month is Feb 28 (or 29), as Calendar has it. Before
+        // year 1 there's no year to show without an era: no answer.
+        guard let d = calendar.date(byAdding: component, value: n, to: base), calendar.component(.era, from: d) == 1
+        else { return nil }
+        return .shifted(d, from: base, by: n, unit: component)
     }
 
     func isoWeek(_ d: Date) -> Int {

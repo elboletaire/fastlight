@@ -124,7 +124,7 @@ public enum Places {
 
     /// "utc+2", "gmt-5", "utc+5:30", "utc +0530".
     static func offset(_ key: String) -> Place? {
-        let pattern = #"^(?:utc|gmt)\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?$"#
+        let pattern = #"^(?:utc|gmt)\s*([+-])\s*([0-9]{1,2})(?::?([0-9]{2}))?$"#
         guard let m = Regex.match(pattern, key), let h = Int(m[2]), h <= 14 else { return nil }
         let min = m[3].isEmpty ? 0 : Int(m[3]) ?? 0
         guard min < 60 else { return nil }
@@ -144,7 +144,7 @@ public enum ClockQuery: Sendable, Equatable {
 }
 
 public enum ClockParser {
-    static let timeOfDay = #"(?:(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)|(\d{1,2}):(\d{2})|(noon|midnight))"#
+    static let timeOfDay = #"(?:([0-9]{1,2})(?::([0-9]{2}))?\s*(am|pm|a\.m\.|p\.m\.)|([0-9]{1,2}):([0-9]{2})|(noon|midnight))"#
 
     /// Nil unless the whole query is one. `global` is stricter: a place on
     /// its own ("tokyo") is a search, except UTC and GMT.
