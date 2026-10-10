@@ -9,6 +9,9 @@ let package = Package(
         // The bundled emoji picker and calculator, extensions like any other.
         .executable(name: "fastlight-emoji", targets: ["fastlight-emoji"]),
         .executable(name: "fastlight-calc", targets: ["fastlight-calc"]),
+        // Contacts, and Calendar + Reminders (one helper, two extensions).
+        .executable(name: "fastlight-contacts", targets: ["fastlight-contacts"]),
+        .executable(name: "fastlight-calendar", targets: ["fastlight-calendar"]),
     ],
     targets: [
         // Search providers, the fsearch client and the extension host. No
@@ -24,5 +27,16 @@ let package = Package(
         .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc"]),
+        // Contacts, Calendar and Reminders: the logic in libraries behind a
+        // store protocol (tested with fakes), the framework calls in the
+        // executables. FastlightPIM is what they share: access states,
+        // permission items, the background loader.
+        .target(name: "FastlightPIM"),
+        .target(name: "FastlightContacts", dependencies: ["FastlightPIM"]),
+        .executableTarget(name: "fastlight-contacts", dependencies: ["FastlightContacts", "FastlightPIM"]),
+        .target(name: "FastlightCalendar", dependencies: ["FastlightPIM"]),
+        .executableTarget(name: "fastlight-calendar", dependencies: ["FastlightCalendar", "FastlightPIM"]),
+        .testTarget(name: "FastlightContactsTests", dependencies: ["FastlightContacts", "FastlightPIM"]),
+        .testTarget(name: "FastlightCalendarTests", dependencies: ["FastlightCalendar", "FastlightPIM"]),
     ]
 )

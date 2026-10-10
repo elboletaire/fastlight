@@ -1,0 +1,13 @@
+{
+  "id": "com.elboletaire.fastlight.reminders",
+  "name": "Reminders",
+  "version": "1.0.0",
+  "description": "What's due, overdue first, and any reminder that isn't done yet. Reads Reminders on this Mac once you allow it.",
+  "author": "Fastlight",
+  "homepage": "https://github.com/elboletaire/fastlight",
+  "source": "https://github.com/elboletaire/fastlight",
+  "icon": { "app": "com.apple.reminders" },
+  "keywords": ["remind", "reminder", "reminders"],
+  "command": ["fastlight-calendar", "reminders"],
+  "global": { "maxResults": 2, "minQueryLength": 3 }
+}
