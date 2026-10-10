@@ -127,6 +127,28 @@ func targets(_ item: [String: Any]) -> [String] {
         #expect(DateText(calendar: cal, now: nine).day(at(11, 0)) == "Sunday")
         #expect(DateText(calendar: cal, now: nine).time(at(9, 15)) == "15:00")
     }
+
+    /// The time zone is asked for on each request, so a change made while
+    /// the helper runs shows straight away.
+    @Test func followsTheTimeZoneOfTheMoment() {
+        final class Zone: @unchecked Sendable {
+            private let lock = NSLock()
+            private var _zone = madrid.timeZone
+            var zone: TimeZone {
+                get { lock.withLock { _zone } }
+                set { lock.withLock { _zone = newValue } }
+            }
+        }
+        let z = Zone()
+        let clock = Clock(now: { nine }, calendar: madrid, timeZone: { z.zone })
+        #expect(DateText(clock).time(at(9, 15)) == "15:00")
+        z.zone = TimeZone(identifier: "Europe/London")!
+        #expect(clock.calendar.timeZone.identifier == "Europe/London")
+        #expect(DateText(clock).time(at(9, 15)) == "14:00")
+        // A calendar given keeps its zone; the system's is read again.
+        #expect(Clock(calendar: madrid).calendar.timeZone == madrid.timeZone)
+        #expect(Clock().calendar.timeZone == TimeZone.current)
+    }
 }
 
 @Suite struct CalendarLinkTests {
