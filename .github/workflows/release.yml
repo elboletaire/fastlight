@@ -53,6 +53,13 @@ jobs:
       - name: Test
         run: make test
 
+      # scripts/dmg.sh runs dmgbuild (pinned there) through uv to lay out the
+      # DMG window; in CI it fails rather than ship a plain DMG.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.17'
+          enable-cache: false
+
       - name: Import signing certificate
         if: env.HAS_SIGNING == 'true'
         env:
