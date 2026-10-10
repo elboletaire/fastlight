@@ -370,8 +370,8 @@ parser and an evaluator, so answers take microseconds.
 ## The dictionary
 
 `Sources/fastlight-dict` (`id com.elboletaire.fastlight.dictionary`,
-keywords `define` and `dict`, global with one result for queries of 4+
-characters). The logic is the `FastlightDictionary` library.
+keywords `define` and `dict`, keyword mode only). The logic is the
+`FastlightDictionary` library.
 
 - Source: the public `DCSCopyTextDefinition` with no dictionary, which asks
   the dictionaries turned on in Dictionary › Settings in their order, like
@@ -397,15 +397,12 @@ characters). The logic is the `FastlightDictionary` library.
   `headword · part of speech · pronunciation` the subtitle. ↵ opens
   `dict://word` in Dictionary.app, ⌘↵ copies the sense. Keyword mode shows
   up to 8 senses, or says there's no entry.
-- Global mode: only one word of 4–40 letters (no digits, dots, colons or
-  spaces, so never filter syntax or file names), and only when the entry's
-  headword is that word (ignoring case and accents). DictionaryServices
-  matches loosely (`flies` → `fly`, and a Catalan dictionary answers `Paris`
-  with `parar`), which is right for `define` and noise under every query.
+- Not in normal search: a definition matches most common words
+  (`invoice`, `party`), and its row would sit above Files on each of them.
+  Normal search stays apps and files; `define ` is one word away.
 - Timing: the first lookup in a process loads the dictionaries, 30–60 ms;
-  after that a lookup takes 1–3 ms, a miss under 3 ms. So the extension
-  looks a word up right after its handshake, which Fastlight starts when the
-  panel opens, and global answers come well within the 80 ms.
+  after that a lookup takes 1–3 ms. Keyword searches have 3 s, so there's
+  no warm-up: it would cost the same on the first request.
 
 ## The web extension
 

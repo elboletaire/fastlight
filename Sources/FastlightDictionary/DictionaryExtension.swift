@@ -33,12 +33,6 @@ public final class DictionaryExtension {
     /// Senses shown in keyword mode; Dictionary.app has the rest.
     public static let maxSenses = 8
 
-    /// The first lookup loads the dictionaries (30–60 ms), too slow for
-    /// global search's 80 ms; later ones take 1–3 ms. Pay it up front.
-    public func warmUp() {
-        _ = source.definition(of: "warm")
-    }
-
     /// The reply to a request line; nil for notifications and junk.
     public func handle(_ line: String) -> String? {
         guard let data = line.data(using: .utf8),
@@ -49,19 +43,13 @@ public final class DictionaryExtension {
         }
         let query = o["query"] as? String ?? ""
         let limit = o["limit"] as? Int ?? Self.maxSenses
-        return encode(["id": id, "items": items(for: query, global: o["mode"] as? String == "global", limit: limit)])
+        return encode(["id": id, "items": items(for: query, limit: limit)])
     }
 
-    /// Global search: the first sense of a word the query is exactly, or
-    /// nothing. Keyword mode: a few senses, or why there are none.
-    public func items(for query: String, global: Bool, limit: Int = maxSenses) -> [[String: Any]] {
+    /// A few senses, or why there are none. Keyword mode only: normal
+    /// search stays apps and files.
+    public func items(for query: String, limit: Int = maxSenses) -> [[String: Any]] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        if global {
-            guard Self.isPlausibleWord(q), let entry = lookUp(q),
-                  entry.headword.compare(q, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
-            else { return [] }
-            return [item(entry, sense: 0)]
-        }
         if q.isEmpty {
             return [[
                 "id": "help",
@@ -87,13 +75,6 @@ public final class DictionaryExtension {
         // Some entries ("run", "set") run to tens of thousands of characters;
         // the first senses are all that's shown.
         return DefinitionText.parse(String(text.prefix(20_000)), query: q)
-    }
-
-    /// One word of letters only, at least 4 of them: "serendipity", not
-    /// "ext:pdf", "notes.md" or "a". Shorter words are mostly prefixes of
-    /// what's still being typed.
-    public static func isPlausibleWord(_ q: String) -> Bool {
-        (4...40).contains(q.count) && q.allSatisfy(\.isLetter)
     }
 
     func item(_ entry: DictionaryEntry, sense i: Int) -> [String: Any] {

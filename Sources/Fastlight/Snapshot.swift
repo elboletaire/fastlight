@@ -294,9 +294,6 @@ enum Snapshot {
             ]),
             Scene(name: "indexing", query: "", state: .indexing),
             Scene(name: "dictionary-keyword", query: "define serendipity"),
-            Scene(name: "dictionary-global", query: "serendipity", files: [
-                f("Documents/Notes/serendipity.md", size: 2_048, ago: 4 * day),
-            ]),
             Scene(name: "web-keyword", query: "web swift concurrency"),
             Scene(name: "web-global", query: "github.com/elboletaire/fastlight", files: [
                 f("src/fastlight", dir: true, ago: 3600),

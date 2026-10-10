@@ -271,28 +271,12 @@ struct FakeDictionary: DefinitionSource {
         #expect(actions.first?["target"] as? String == "dict://xyzzy")
     }
 
-    @Test func globalModeShowsOneSenseOfAnExactWord() throws {
-        let found = try items("serendipity", "global")
-        #expect(found.count == 1)
-        #expect(found.first?["topHit"] == nil) // never the Top Hit
-        #expect(try items("House", "global").count == 1)
-    }
-
-    @Test func globalModeSkipsOtherWordsAndNonWords() throws {
-        // "flies" finds "fly", "Paris" a Catalan verb: right for `define`,
-        // noise under every query.
-        for q in ["flies", "Paris", "ice cream", "hous", "run", "notes.md", "ext:pdf", "1920", "xyzzy", ""] {
-            #expect(try items(q, "global").isEmpty, "\(q)")
-        }
+    @Test func looseMatchesAreShownUnderTheirHeadword() throws {
+        // DictionaryServices matches loosely: "flies" finds "fly".
+        let found = try items("flies", "keyword")
+        #expect(found.first?["subtitle"] as? String == "fly · verb · flʌɪ")
         #expect(try items("ice cream", "keyword").count == 1)
-    }
-
-    @Test func plausibleWords() {
-        for q in ["serendipity", "house", "Éphémère", "Straße", "кошка"] { #expect(DictionaryExtension.isPlausibleWord(q), "\(q)") }
-        for q in ["", "run", "ice cream", "notes.md", "in:~/src", "grep:TODO", "file2", "can't", "x-ray",
-                  String(repeating: "a", count: 41)] {
-            #expect(!DictionaryExtension.isPlausibleWord(q), "\(q)")
-        }
+        #expect(try items("House", "keyword").count == 3)
     }
 
     @Test func ignoresNotificationsAndRefusesOtherRequests() throws {

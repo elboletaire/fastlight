@@ -8,6 +8,5 @@
   "source": "https://github.com/elboletaire/fastlight",
   "icon": { "app": "com.apple.Dictionary" },
   "keywords": ["define", "dict"],
-  "command": ["fastlight-dict"],
-  "global": { "maxResults": 1, "minQueryLength": 4 }
+  "command": ["fastlight-dict"]
 }

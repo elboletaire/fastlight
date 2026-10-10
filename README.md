@@ -29,7 +29,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 - **Power-user filters.** `ext:`, `in:`, `size:`, `mtime:`, `kind:` and more, straight from the search field.
 - **Emoji picker.** Type `:` and a name, keyword or Slack shortcode (`:joy`, `:tada:`) and ↵ pastes it where you were typing.
 - **Calculator.** Type `1920*1080`, `2^10` or `15% of 80` and the answer is the Top Hit; ↵ copies it.
-- **Dictionary.** Type `define serendipity` for definitions from the dictionaries built into macOS, offline; a single word in normal search shows its first sense. ↵ opens it in Dictionary.app.
+- **Dictionary.** Type `define serendipity` for definitions from the dictionaries built into macOS, offline. Only after `define `/`dict `, so normal search stays apps and files. ↵ opens it in Dictionary.app.
 - **Web.** Type `github.com` or `localhost:3000` and opening it is the Top Hit. Type `web ` and anything to search Google (or DuckDuckGo, Wikipedia…; the default is [configurable](docs/extensions/README.md)) in your browser.
 - **Extensions in any language.** A folder with a manifest and a script or binary that speaks JSON lines. See [Extensions](#extensions).
 - **Feels native.** A floating panel that looks and behaves like Spotlight, with Liquid Glass on macOS 26 and later, Quick Look, and Reveal in Finder.

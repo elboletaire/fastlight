@@ -31,9 +31,9 @@ Fastlight ships with four, built the same way:
   in Dictionary.app, ⌘↵ copies the definition. It uses the dictionaries
   turned on in Dictionary › Settings, in their order, like Look Up: the first
   one that has the word answers, so a bilingual dictionary gives
-  translations. Typing one word of 4+ letters in normal search also shows its
-  first sense, when there is an entry for exactly that word (`flies` finds
-  `fly` only after `define `).
+  translations. Definitions only show after `define ` or `dict `, never in
+  normal search, which stays apps and files: most words have an entry, and
+  a definition under every query would push your files down.
 - **Web.** Type a web address in normal search (`github.com`,
   `example.org/path`, `localhost:3000`, `https://…`) and opening it is the
   Top Hit. Type `web ` and anything to search the web: ↵ searches with the
