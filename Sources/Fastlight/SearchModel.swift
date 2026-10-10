@@ -210,12 +210,12 @@ final class SearchModel: ObservableObject {
     }
 
     /// ⌫ on an empty field: drop the pill and give back the keyword, minus
-    /// the character just deleted.
-    func leaveScope() {
+    /// the character just deleted. ⎋ leaves with an empty field instead.
+    func leaveScope(restoringKeyword: Bool = true) {
         guard let s = scope else { return }
         scope = nil
         clear()
-        let back = String(s.trigger.dropLast())
+        let back = restoringKeyword ? String(s.trigger.dropLast()) : ""
         // Setting a different query searches by itself.
         if query == back { search() } else { query = back }
     }
@@ -337,9 +337,13 @@ final class SearchModel: ObservableObject {
         guard extensions.isEnabled(ext), extensions.consent.need(ext) == nil else {
             fanout.cancel()
             isSearching = false
+            setLoading(false)
             sections = []
-            scopeNotice = Notice(symbol: "hand.raised", text: "\(ext.name) needs your permission before it can run.",
-                                 action: .reviewConsent(ext.id))
+            // Review can't turn a disabled extension back on: say so instead.
+            scopeNotice = extensions.isEnabled(ext)
+                ? Notice(symbol: "hand.raised", text: "\(ext.name) needs your permission before it can run.",
+                         action: .reviewConsent(ext.id))
+                : Notice(symbol: "nosign", text: "\(ext.name) is disabled. Turn it on from the Extensions menu.")
             onLayoutChange?()
             return
         }

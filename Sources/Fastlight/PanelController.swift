@@ -176,8 +176,7 @@ final class PanelController: NSObject, NSWindowDelegate {
             if !model.query.isEmpty {
                 model.query = ""
             } else if model.scope != nil {
-                model.leaveScope()
-                model.query = ""
+                model.leaveScope(restoringKeyword: false)
             } else {
                 hide()
             }
@@ -193,7 +192,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     private func open() {
         // ↵ on "needs your permission" means "review it".
-        if model.scope != nil, model.sections.isEmpty, case .notice(let n) = model.card,
+        if model.sections.isEmpty, case .notice(let n) = model.card,
            case .reviewConsent(let id) = n.action, let ext = extensions.library.extension(id: id) {
             review(ext)
             return

@@ -66,10 +66,15 @@ public enum Calculator {
     /// Whether normal search should show an answer: it must compute
     /// something (not just "2026" or "pi"), have one, and not be a date.
     public static func looksLikeMath(_ input: String, decimal: Character = ".") -> Bool {
+        mathAnswer(input, decimal: decimal) != nil
+    }
+
+    /// The calculation when `looksLikeMath`, so callers parse only once.
+    public static func mathAnswer(_ input: String, decimal: Character = ".") -> Calculation? {
         let q = input.trimmingCharacters(in: .whitespaces)
-        guard q.count >= 2, !isDate(q) else { return false }
-        guard let c = try? calculate(q, decimal: decimal) else { return false }
-        return c.expression.computes
+        guard q.count >= 2, !isDate(q) else { return nil }
+        guard let c = try? calculate(q, decimal: decimal), c.expression.computes else { return nil }
+        return c
     }
 
     /// 2026-10-10, 10/10/2026, 10.10.26: dates, not subtractions.
@@ -108,8 +113,7 @@ public final class CalculatorExtension {
     /// something: the answer, why there's none, or what to type.
     public func items(for query: String, global: Bool) -> [[String: Any]] {
         if global {
-            guard Calculator.looksLikeMath(query, decimal: decimal),
-                  let c = try? Calculator.calculate(query, decimal: decimal) else { return [] }
+            guard let c = Calculator.mathAnswer(query, decimal: decimal) else { return [] }
             // The answer is what someone typing math is after.
             var item = answer(c)
             item["topHit"] = true

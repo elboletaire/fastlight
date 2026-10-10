@@ -492,9 +492,12 @@ public final class ExtensionProcess: @unchecked Sendable {
         _ = try? log?.seekToEnd()
     }
 
+    /// Thread-safe, and costly enough to build once.
+    nonisolated(unsafe) private static let logDate = ISO8601DateFormatter()
+
     private func writeLog(_ s: String) {
         guard let log else { return }
-        let stamp = ISO8601DateFormatter().string(from: Date())
+        let stamp = Self.logDate.string(from: Date())
         try? log.write(contentsOf: Data("[fastlight \(stamp)] \(s)\n".utf8))
     }
 }
