@@ -285,7 +285,7 @@ private struct CardView: View {
         // Through the link: Safari's /Applications entry is a symlink, whose
         // icon would carry an alias arrow.
         case .app(let a): .image(model.icon(for: (a.path as NSString).resolvingSymlinksInPath))
-        case .file(let f): .image(model.icon(for: f.path, isDirectory: f.isDirectory))
+        case .file(let f): .image(model.fileIcon(for: f.path, isDirectory: f.isDirectory))
         case .ext(let r):
             switch r.item.icon {
             case .emoji(let e): .glyph(e)

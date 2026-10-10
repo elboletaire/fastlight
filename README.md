@@ -25,7 +25,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 - **Apps and files, kept apart.** A Top Hit, then Applications with their real icons, then Files, each in its own section.
 - **Fast, all the time.** Name search over millions of files in about a millisecond, so results update on every keystroke with no debounce.
 - **Forgiving matching.** `vsc` finds Visual Studio Code, `sys set` finds System Settings, `mian.rs` still finds `main.rs`. Apps you open often move up.
-- **Search inside files.** `grep:`, `regex:` and `sym:` search file contents through fsearch's index and show the matching line.
+- **Search inside files.** `grep:`, `regex:` and `sym:` search file contents through fsearch's index and show the matching line. ↵ opens it at that line in VS Code, Cursor, VSCodium, Zed, BBEdit or TextMate, when one of them is the file's default app.
 - **Power-user filters.** `ext:`, `in:`, `size:`, `mtime:`, `kind:` and more, straight from the search field.
 - **Emoji picker.** Type `:` and a name, keyword or Slack shortcode (`:joy`, `:tada:`) and ↵ pastes it where you were typing.
 - **Calculator.** Type `1920*1080`, `2^10` or `15% of 80` and the answer is the Top Hit; ↵ copies it.

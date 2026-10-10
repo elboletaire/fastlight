@@ -2,6 +2,12 @@ import AppKit
 import FastlightCore
 import UniformTypeIdentifiers
 
+/// Carries an icon from the loading queue to the main actor; it isn't
+/// touched in between.
+private struct SendableImage: @unchecked Sendable {
+    let image: NSImage
+}
+
 /// One selectable row.
 enum ResultItem: Identifiable, Hashable {
     case app(AppEntry)
@@ -106,6 +112,9 @@ final class SearchModel: ObservableObject {
                                                  maxItems: Self.maxFiles)
     private let fanout = SearchFanout()
     private var icons: [String: NSImage] = [:]
+    private var iconLoads = Set<String>()
+    private var iconRedrawPending = false
+    private let iconQueue = DispatchQueue(label: "fastlight.icons", qos: .userInitiated)
     private var polling = false
     private var loadingTimer: Task<Void, Never>?
     /// The fan-out generation last shown, to tell a late section of the same
@@ -163,17 +172,54 @@ final class SearchModel: ObservableObject {
 
     func icon(for path: String, isDirectory: Bool = false) -> NSImage {
         if let i = icons[path] { return i }
-        let i: NSImage
-        if FileManager.default.fileExists(atPath: path) {
-            i = NSWorkspace.shared.icon(forFile: path)
-        } else {
-            // Gone since indexing (or a snapshot sample): the type's icon.
-            let ext = (path as NSString).pathExtension
-            let type = isDirectory ? .folder : UTType(filenameExtension: ext) ?? .data
-            i = NSWorkspace.shared.icon(for: type)
-        }
+        let i = Self.loadIcon(path, isDirectory: isDirectory)
         icons[path] = i
         return i
+    }
+
+    /// Like `icon(for:)`, but a file's own icon is read in the background,
+    /// with its type's icon until then: a file may live on a slow or network
+    /// volume, and up to maxFiles rows are drawn on every keystroke.
+    func fileIcon(for path: String, isDirectory: Bool) -> NSImage {
+        if let i = icons[path] { return i }
+        // Snapshots render once, synchronously: they need the final icon.
+        if offline { return icon(for: path, isDirectory: isDirectory) }
+        if iconLoads.insert(path).inserted {
+            iconQueue.async {
+                let i = SendableImage(image: Self.loadIcon(path, isDirectory: isDirectory))
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self.iconLoaded(path, i.image) }
+                }
+            }
+        }
+        return Self.typeIcon(path, isDirectory: isDirectory)
+    }
+
+    /// Icons that land together redraw the list once.
+    private func iconLoaded(_ path: String, _ image: NSImage) {
+        iconLoads.remove(path)
+        icons[path] = image
+        guard !iconRedrawPending else { return }
+        iconRedrawPending = true
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                self.iconRedrawPending = false
+                self.objectWillChange.send()
+            }
+        }
+    }
+
+    /// NSWorkspace's icon lookups are safe off the main thread.
+    nonisolated private static func loadIcon(_ path: String, isDirectory: Bool) -> NSImage {
+        if FileManager.default.fileExists(atPath: path) { return NSWorkspace.shared.icon(forFile: path) }
+        // Gone since indexing (or a snapshot sample): the type's icon.
+        return typeIcon(path, isDirectory: isDirectory)
+    }
+
+    nonisolated private static func typeIcon(_ path: String, isDirectory: Bool) -> NSImage {
+        let ext = (path as NSString).pathExtension
+        let type = isDirectory ? .folder : UTType(filenameExtension: ext) ?? .data
+        return NSWorkspace.shared.icon(for: type)
     }
 
     /// An image file (an extension's own artwork) or else its Finder icon.
@@ -294,6 +340,7 @@ final class SearchModel: ObservableObject {
         switch e {
         case .daemon(let msg) where msg.lowercased().hasPrefix("indexing"): .indexing
         case .notInstalled: .unavailable("fsearch isn't installed, so only apps are searched.")
+        case .timedOut: .unavailable("fsearch isn't answering, so only apps are searched.")
         default: .unavailable("Can't reach fsearch, so only apps are searched.")
         }
     }
@@ -318,7 +365,7 @@ final class SearchModel: ObservableObject {
             clear()
             return
         }
-        var providers: [any ResultProvider] = [AppProvider(index: apps, limit: Self.maxApps + 1)]
+        var providers: [any ResultProvider] = [AppProvider(index: apps, limit: Self.maxApps)]
         if let filesOverride {
             providers.append(filesOverride)
         } else if !offline {
@@ -401,6 +448,9 @@ final class SearchModel: ObservableObject {
             fileError = nil
             // It answered, so it's no longer crawling or down; ask for details.
             if case .ready = fileState {} else { refreshStatus() }
+        case .failed(let err as FSearchError) where err.isQueryError:
+            // It answered, so it's up: the query is at fault (a bad filter).
+            fileError = err.localizedDescription
         case .failed(let err as FSearchError):
             fileState = Self.state(for: err)
             fileError = nil
@@ -439,7 +489,8 @@ final class SearchModel: ObservableObject {
     }
 
     /// Top Hit is the best app when it matches well (an acronym or better),
-    /// otherwise the best file, otherwise whatever app matched. Extension
+    /// otherwise the best file. A loose app match never is: files arrive
+    /// after apps, and would push it out of the Top Hit a moment later. Extension
     /// results get their own sections; only a built-in's answer marked
     /// `topHit` (a calculation) goes first.
     func publish(apps matches: [AppMatch], files: [FileItem], extensions found: [(LoadedExtension, [ExtensionResult])] = [],
@@ -455,8 +506,6 @@ final class SearchModel: ObservableObject {
             top = .app(apps.removeFirst())
         } else if let first = files.first, first.line == nil {
             top = .file(files.removeFirst())
-        } else if !apps.isEmpty {
-            top = .app(apps.removeFirst())
         } else {
             top = nil
         }
@@ -468,11 +517,15 @@ final class SearchModel: ObservableObject {
             offset += items.count
         }
         if let top { add(.topHit, "Top Hit", [top]) }
-        add(.apps, "Applications", apps.prefix(Self.maxApps - 1).map(ResultItem.app))
+        // maxApps in all, the Top Hit included.
+        let topIsApp = if case .app = top { true } else { false }
+        add(.apps, "Applications", apps.prefix(Self.maxApps - (topIsApp ? 1 : 0)).map(ResultItem.app))
         for (ext, results) in found where !results.isEmpty { add(.ext(ext.id), ext.name, results.map(ResultItem.ext)) }
         add(.files, "Files", files.map(ResultItem.file))
-        // A late section of the same query keeps the selection on its row.
-        let previous = keepSelection ? selected?.id : nil
+        // A late section of the same query keeps the selection on the row
+        // the user moved to; untouched, it stays on the first row, whatever
+        // that now is.
+        let previous = keepSelection && selection > 0 ? selected?.id : nil
         sections = out
         selection = previous.flatMap { id in items.firstIndex { $0.id == id } } ?? 0
         onLayoutChange?()
