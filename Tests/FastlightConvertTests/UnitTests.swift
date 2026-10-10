@@ -184,3 +184,14 @@ extension UnitQuery: Equatable {
         #expect(Text.number("km") == nil)
     }
 }
+
+@Suite struct ReciprocalTests {
+    @Test func zeroIsNotDividedBy() {
+        let c = ReciprocalConverter(100)
+        #expect(c.baseUnitValue(fromValue: 0).isNaN)
+        #expect(c.value(fromBaseUnitValue: 0).isNaN)
+        #expect(c.baseUnitValue(fromValue: 4) == 25)
+        #expect(UnitParser.parse("0 mpg") == nil)
+        #expect(UnitParser.parse("how many mpg in 0 l/100km") == nil)
+    }
+}

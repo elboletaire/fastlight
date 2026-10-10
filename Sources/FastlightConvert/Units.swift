@@ -263,8 +263,10 @@ final class ReciprocalConverter: UnitConverter, @unchecked Sendable {
         super.init()
     }
 
-    override func baseUnitValue(fromValue value: Double) -> Double { k / value }
-    override func value(fromBaseUnitValue baseUnitValue: Double) -> Double { k / baseUnitValue }
+    // 0 mpg has no L/100km (and 0 L/100km no mpg): NaN, not a division
+    // by zero. The parser refuses such amounts before they get here.
+    override func baseUnitValue(fromValue value: Double) -> Double { value == 0 ? .nan : k / value }
+    override func value(fromBaseUnitValue baseUnitValue: Double) -> Double { baseUnitValue == 0 ? .nan : k / baseUnitValue }
 }
 
 /// "10 km", "3 ft 4 in": an amount in one kind of unit.
@@ -305,10 +307,10 @@ public enum UnitParser {
             rest.removeFirst(used + 1)
             if rest.first == "a" || rest.first == "an" || rest.first == "one" { rest[0] = "1" }
             guard let (amount, n) = amount(rest, decimal: decimal), n == rest.count,
-                  amount.quantity == target.1.quantity else { return nil }
+                  amount.quantity == target.1.quantity, possible(amount) else { return nil }
             return UnitQuery(amount: amount, target: target.1, clear: true)
         }
-        guard let (amount, used) = amount(words, decimal: decimal) else { return nil }
+        guard let (amount, used) = amount(words, decimal: decimal), possible(amount) else { return nil }
         var i = used
         if i == words.count {
             let alias = words[used - 1]
@@ -321,6 +323,13 @@ public enum UnitParser {
         guard i < words.count, let (target, n) = unit(at: i, in: words), i + n == words.count,
               target.1.quantity == amount.quantity else { return nil }
         return UnitQuery(amount: amount, target: target.1, clear: true)
+    }
+
+    /// Fuel economy is a reciprocal, so it must be positive: "0 mpg" has
+    /// no L/100km.
+    static func possible(_ a: Amount) -> Bool {
+        if a.quantity == .fuel { return a.value > 0 }
+        return true
     }
 
     /// Number-unit pairs from the start; at least one.
