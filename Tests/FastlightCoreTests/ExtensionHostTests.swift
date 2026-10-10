@@ -32,6 +32,24 @@ import Testing
         #expect(!a.builtIn)
     }
 
+    /// The shipped manifests and examples load together, without conflicts.
+    @Test func bundledAndExampleExtensionsLoadCleanly() throws {
+        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let helpers = try FakeExtension.tempDir()
+        for tool in ["fastlight-emoji", "fastlight-calc"] {
+            FileManager.default.createFile(atPath: helpers.appendingPathComponent(tool).path, contents: Data("#!/bin/sh\n".utf8),
+                                           attributes: [.posixPermissions: 0o755])
+        }
+        let lib = ExtensionLibrary(builtInRoot: repo.appendingPathComponent("Extensions"),
+                                   userRoot: repo.appendingPathComponent("examples/extensions"),
+                                   helperDirs: [helpers], appVersion: "0.1.0")
+        lib.refresh()
+        #expect(lib.issues.map(\.description) == [])
+        #expect(lib.extensions.map(\.id) == ["com.elboletaire.fastlight.calculator", "com.elboletaire.fastlight.emoji",
+                                             "com.example.bc", "com.example.quicklinks"])
+        #expect(lib.extensions.prefix(2).allSatisfy { $0.builtIn })
+    }
+
     @Test func rejectsExecutablesOutsideTheFolder() throws {
         let root = try FakeExtension.tempDir()
         let dir = try FakeExtension.folder(in: root, manifest: #"{"id":"com.test.x","name":"X","version":"1.0.0","keywords":["x"],"command":["link"]}"#)
