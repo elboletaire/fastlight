@@ -5,45 +5,59 @@ An extension adds results to Fastlight. It is a folder with an
 Swift…) that reads requests on stdin and writes replies on stdout, one JSON
 object per line.
 
-- **Keyword mode:** type the extension's keyword (`=`, `go `) and it owns the
+- **Keyword mode:** type the extension's keyword (`bc `, `go `) and it owns the
   result list. Backspace past the keyword to go back to normal search.
 - **Global mode (opt-in):** a few results in the extension's own section,
   next to Applications and Files, when it answers within 80 ms.
 
-Fastlight ships with one: the emoji picker. Type `:` and a name or keyword
-(`:joy`, `:thumbs`, `:tada:`), or `emoji ` and the same. ↵ pastes into the
-app you were using, ⌘↵ copies. Queries of 3+ letters also show the top 3
-emoji in normal search. `:tone` picks a skin tone.
+Fastlight ships with two, built the same way:
+
+- **Emoji.** Type `:` and a name or keyword (`:joy`, `:thumbs`, `:tada:`), or
+  `emoji ` and the same. ↵ pastes into the app you were using, ⌘↵ copies.
+  Queries of 3+ letters also show the top 3 emoji in normal search. `:tone`
+  picks a skin tone.
+- **Calculator.** Type math in normal search (`1920*1080`, `2^10`,
+  `(3+4)/2`, `sqrt(2)`, `15% of 80`) and the answer is the Top Hit; or type
+  `=` first to always get an answer or the reason there's none. ↵ copies the
+  answer (without thousands separators, so it pastes cleanly), ⌘↵ pastes it.
+  It knows `+ − × ÷` (also `*`, `/`, `x` between numbers), `^` or `**`,
+  parentheses, `%` (`80 + 10%` is 88), `!`, `pi`, `e`, `tau` and `sqrt`,
+  `cbrt`, `abs`, `round`, `floor`, `ceil`, `ln`, `log`, `log2`, `exp`,
+  `sin`/`cos`/`tan` and their inverses (radians), `deg` and `rad`. Decimals
+  take `.`, and `,` too where that's the decimal separator. Division by zero
+  has no result.
 
 <img src="images/emoji-keyword-light.jpg" width="640" alt="Keyword mode: the Emoji pill in the search bar, results for “joy”, and an action bar naming Paste Emoji and Copy Emoji">
 
 How it works inside is in [design.md](design.md).
 
-## Quickstart: a calculator in 30 lines of sh
+## Quickstart: bc in 30 lines of sh
+
+This wraps the `bc` command (the built-in calculator doesn't need it; it's a
+small, real example).
 
 1. Make a folder in `~/Library/Application Support/Fastlight/Extensions/`
    (menu bar icon › Extensions › Open Extensions Folder):
 
    ```sh
-   cp -R examples/extensions/calculator ~/Library/Application\ Support/Fastlight/Extensions/
+   cp -R examples/extensions/bc ~/Library/Application\ Support/Fastlight/Extensions/
    ```
 
 2. `extension.json` says what it is and how to run it:
 
    ```json
    {
-     "id": "com.example.calculator",
-     "name": "Calculator",
+     "id": "com.example.bc",
+     "name": "bc",
      "version": "1.0.0",
-     "icon": "plus.forwardslash.minus",
-     "keywords": ["="],
-     "command": ["/bin/sh", "calc.sh"],
-     "global": { "maxResults": 1, "minQueryLength": 3 }
+     "icon": "terminal",
+     "keywords": ["bc"],
+     "command": ["/bin/sh", "bc.sh"]
    }
    ```
 
 3. The program prints a handshake, then answers each request line
-   ([full script](../../examples/extensions/calculator/calc.sh)):
+   ([full script](../../examples/extensions/bc/bc.sh)):
 
    ```sh
    echo '{"type":"ready","protocol":1}'
@@ -57,7 +71,7 @@ How it works inside is in [design.md](design.md).
    done
    ```
 
-4. Open Fastlight and type `=2*21`. The first time, Fastlight asks whether
+4. Open Fastlight and type `bc 2*21`. The first time, Fastlight asks whether
    to allow it, showing what it will run. Then the result shows up; ↵ copies.
 
 There is also a Python example, [quicklinks](../../examples/extensions/quicklinks)
@@ -75,10 +89,10 @@ extension's stderr goes to `~/Library/Logs/Fastlight/Extensions/<id>.log`
 
 | Key | Required | Rules |
 |---|---|---|
-| `id` | yes | Lowercase reverse-DNS, like `com.example.calculator`. Unique. |
+| `id` | yes | Lowercase reverse-DNS, like `com.example.bc`. Unique. |
 | `name` | yes | Up to 40 characters. Shown on the pill, the section and the menu. |
 | `version` | yes | Semantic version, like `1.0.0` or `1.1.0-beta.1`. |
-| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`=2+2`). Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
+| `keywords` | yes | 1–5 keywords. One ending in a letter or digit needs a space after it (`go gh`); one ending in a symbol doesn't (`:joy`). A keyword a built-in already uses (`:`, `emoji`, `=`) stays the built-in's. Can't start with `'` `^` `!` `.` `/` `~`, or be a search filter like `ext:`. |
 | `command` | yes | Executable and arguments. Relative paths are inside the folder (and must be executable: `chmod +x`); absolute ones are for interpreters (`/bin/sh`, `/usr/bin/osascript`). Runs with the folder as working directory. |
 | `description` | | Up to 200 characters; shown when asking for approval. |
 | `author` | | Up to 100 characters. |
@@ -166,6 +180,7 @@ see anyway). Use it for recents or ranking.
 | `accessory` | Right-aligned text. |
 | `icon` | See below. Defaults to your extension's icon. |
 | `actions` | ↵ runs the first, ⌘↵ the second. |
+| `topHit` | `true` asks to be the Top Hit in normal search. Only built-in extensions get it (the calculator's answer); it's ignored for others, so no extension can take ↵ away from apps and files. |
 
 ### Actions
 

@@ -204,8 +204,10 @@ enum Snapshot {
                 f("Documents/party-invite.pages", size: 1_204_224, ago: 20 * day),
             ]),
             Scene(name: "extension-consent", query: "", pending: true),
-            Scene(name: "extension-calculator", query: "=21*2+0.5"),
-            Scene(name: "calculator-global", query: "1920*1080"),
+            Scene(name: "calculator-keyword", query: "=(1+sqrt(5))/2"),
+            Scene(name: "calculator-global", query: "15% of 80", files: [
+                f("Documents/Budget/15 percent rule.pdf", size: 98_000, ago: 60 * day),
+            ]),
             Scene(name: "indexing", query: "", state: .indexing),
         ]
     }
