@@ -10,7 +10,7 @@ object per line.
 - **Global mode (opt-in):** a few results in the extension's own section,
   next to Applications and Files, when it answers within 80 ms.
 
-Fastlight ships with two, built the same way:
+Fastlight ships with these, built the same way:
 
 - **Emoji.** Type `:` and a name or keyword (`:joy`, `:thumbs`, `:tada:`), or
   `emoji ` and the same. ↵ pastes into the app you were using, ⌘↵ copies.
@@ -26,6 +26,34 @@ Fastlight ships with two, built the same way:
   `sin`/`cos`/`tan` and their inverses (radians), `deg` and `rad`. Decimals
   take `.`, and `,` too where that's the decimal separator. Division by zero
   has no result.
+- **Contacts.** Type `contact ` (or `contacts `) and a name, nickname,
+  company, email address or phone number (`contact elena`, `contact acme`,
+  `contact elena@`, `contact 612 345`). ↵ opens the card in Contacts, ⌘↵
+  copies the email address (or number). When one person is in view, their
+  addresses and numbers follow as rows of their own: ↵ emails or calls
+  (through FaceTime and your iPhone), ⌘↵ copies, plus Message and FaceTime
+  rows (⌘↵ on FaceTime is audio only). Names of 3+ letters also show up to 3
+  people in normal search.
+- **Calendar.** `cal ` (or `calendar `, `event `, `events `, `agenda `) on
+  its own is the agenda: what's left of today, all-day events first, then
+  the next two weeks. With words (`cal review`), the events whose title,
+  place, calendar or notes match, soonest first. ↵ shows the event in
+  Calendar, ⌘↵ copies what, when and where. Normal search shows up to 2
+  upcoming events whose title matches 3+ letters.
+- **Reminders.** `remind ` (or `reminder `, `reminders `) on its own lists
+  what isn't done: by due date, so overdue first, then undated ones, newest
+  first, with priority as `!!!`/`!!`/`!`. With words, it searches titles,
+  notes and lists. ↵ shows the reminder in Reminders, ⌘↵ copies it. Normal
+  search shows up to 2 whose title matches.
+
+Contacts, Calendar and Reminders only read, never write, and only from this
+Mac's own stores (which include the accounts synced to it, like iCloud):
+nothing leaves the Mac. macOS asks before Fastlight can read any of them,
+once each, and Fastlight only lets it ask when you pick **Allow Access to
+Contacts…** (or Calendars…, Reminders…), which is what the keyword shows
+until then. Typing in normal search never asks; those sections just stay
+empty without access. If you said no, the keyword shows a shortcut to
+System Settings › Privacy & Security, where Fastlight's switch is.
 
 <img src="images/emoji-keyword-light.jpg" width="640" alt="Keyword mode: the Emoji pill in the search bar, results for “joy”, and an action bar naming Paste Emoji and Copy Emoji">
 
