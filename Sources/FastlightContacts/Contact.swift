@@ -3,12 +3,29 @@ import Foundation
 
 /// A phone number or email address with its label ("mobile", "work").
 public struct LabeledValue: Sendable, Equatable {
+    /// As people read it, in their language ("mòbil").
     public var label: String
     public var value: String
+    /// The store's label before localization: "_$!<Mobile>!$_" for one of
+    /// macOS's built-in labels, the text itself for a custom one. Nil when
+    /// unknown (fakes).
+    public var identifier: String?
 
-    public init(_ label: String, _ value: String) {
+    public init(_ label: String, _ value: String, identifier: String? = nil) {
         self.label = label
         self.value = value
+        self.identifier = identifier
+    }
+
+    /// CNLabelPhoneNumberMobile and CNLabelPhoneNumberiPhone, spelled out
+    /// so this library needs no Contacts framework (tests check they match).
+    public static let mobileIdentifiers: Set<String> = ["_$!<Mobile>!$_", "iPhone"]
+
+    /// A mobile or iPhone number, by its label identifier: the shown label
+    /// is in the user's language. Without one, the English names.
+    public var isMobile: Bool {
+        if let identifier { return Self.mobileIdentifiers.contains(identifier) }
+        return ["mobile", "iphone", "cell"].contains(label.lowercased())
     }
 }
 
@@ -57,7 +74,7 @@ public struct Contact: Sendable, Equatable {
     /// The handle for Messages and FaceTime: a mobile number, else any
     /// number, else an email address.
     public var messageHandle: String? {
-        let mobile = phones.first { ["mobile", "iphone", "cell"].contains($0.label.lowercased()) }
+        let mobile = phones.first(where: \.isMobile)
         return (mobile ?? phones.first)?.value ?? emails.first?.value
     }
 }
