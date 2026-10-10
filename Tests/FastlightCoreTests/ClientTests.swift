@@ -73,6 +73,10 @@ final class FakeDaemon: @unchecked Sendable {
             while true {
                 let conn = accept(fd, nil, nil)
                 if conn < 0 { return }
+                // A client that gave up (timed out) must not SIGPIPE the
+                // test process when its late reply is written.
+                var on: Int32 = 1
+                setsockopt(conn, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
                 let input = FileHandle(fileDescriptor: conn, closeOnDealloc: true)
                 var buf = Data()
                 while true {
@@ -83,7 +87,7 @@ final class FakeDaemon: @unchecked Sendable {
                         let line = buf[buf.startIndex..<nl]
                         buf.removeSubrange(buf.startIndex...nl)
                         let req = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] ?? [:]
-                        input.write(Data((reply(req) + "\n").utf8))
+                        guard (try? input.write(contentsOf: Data((reply(req) + "\n").utf8))) != nil else { break }
                     }
                 }
             }
@@ -102,10 +106,10 @@ final class FakeDaemon: @unchecked Sendable {
     @Test func hungDaemonTimesOutWithoutRetrying() throws {
         let dir = try FakeDaemon.tempDir()
         let calls = Counter()
-        // Never answers: the reply closure blocks its connection forever.
+        // Answers long after the client's timeout.
         let daemon = try FakeDaemon(dir: dir) { _ in
             calls.bump()
-            Thread.sleep(forTimeInterval: 60)
+            Thread.sleep(forTimeInterval: 1)
             return "{}"
         }
         defer { daemon.stop() }
@@ -133,6 +137,16 @@ final class FakeDaemon: @unchecked Sendable {
         client.relaunchDelay = 0
         #expect(throws: FSearchError.self) { try client.search("b") }
         #expect(launches.value > 1)
+    }
+
+    @Test func aMissingBinaryKeepsSayingSo() throws {
+        let dir = try FakeDaemon.tempDir()
+        let client = FSearchClient(dataDir: dir)
+        client.launch = { _ in throw FSearchError.notInstalled }
+        // A launch that never ran mustn't arm the backoff, whose error would
+        // then hide this one.
+        #expect(throws: FSearchError.notInstalled) { try client.search("a") }
+        #expect(throws: FSearchError.notInstalled) { try client.status() }
     }
 
     @Test func rotatesALargeLog() throws {

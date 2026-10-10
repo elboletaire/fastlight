@@ -35,11 +35,11 @@ public struct ResultFilter: Sendable {
     /// The filter keys a query uses, e.g. ["ext", "in"] for `foo ext:pdf in:~`.
     public static func filterKeys(in query: String) -> Set<String> {
         var keys = Set<String>()
+        // As fsearch's parser does: the key is what precedes the first ":",
+        // case and all, so "!in:x" is a negated word and "EXT:pdf" a word.
         for token in query.split(whereSeparator: \.isWhitespace) {
-            var t = Substring(token)
-            if t.hasPrefix("!") { t = t.dropFirst() }
-            guard let colon = t.firstIndex(of: ":") else { continue }
-            let key = t[..<colon].lowercased()
+            guard let colon = token.firstIndex(of: ":") else { continue }
+            let key = String(token[..<colon])
             if filterKeys.contains(key) { keys.insert(key) }
         }
         return keys

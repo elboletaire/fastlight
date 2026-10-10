@@ -146,13 +146,17 @@ public final class DaemonSupervisor: @unchecked Sendable {
 
     /// Called before connecting: stops a daemon that isn't ours, so the
     /// client starts the bundled one. If it won't stop, we use it anyway.
-    public func ensureOwnDaemon() {
-        guard case .replace(let pid) = currentDecision() else { return }
+    /// True when one was stopped.
+    @discardableResult
+    public func ensureOwnDaemon() -> Bool {
+        guard case .replace(let pid) = currentDecision() else { return false }
         let exe = ProcessDetails.of(pid)?.executable ?? "?"
         log("replacing fsearch daemon \(pid) (\(exe)) with the bundled one")
         if !Self.stop(pid: pid, dataDir: dataDir, timeout: stopTimeout) {
             log("fsearch daemon \(pid) did not stop; using it as is")
+            return false
         }
+        return true
     }
 
     public var daemonIsOwn: Bool { currentDecision() == .use(.own) }

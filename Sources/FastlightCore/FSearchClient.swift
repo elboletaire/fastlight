@@ -128,7 +128,8 @@ public final class FSearchClient: @unchecked Sendable {
 
     private func connected() throws -> UnixSocket {
         if let socket { return socket }
-        supervisor?.ensureOwnDaemon()
+        // A daemon stopped just now is ours to start, whatever the backoff says.
+        if supervisor?.ensureOwnDaemon() == true { lastLaunch = nil }
         if let s = try? UnixSocket(path: socketPath, timeout: timeout) {
             socket = s
             return s
@@ -138,8 +139,9 @@ public final class FSearchClient: @unchecked Sendable {
         if let last = lastLaunch, Date().timeIntervalSince(last) < relaunchDelay {
             throw FSearchError.unreachable("the daemon isn't listening yet")
         }
-        lastLaunch = Date()
+        // Armed only once it ran: a missing binary must keep saying so.
         try launch(dataDir)
+        lastLaunch = Date()
         // A cold daemon loads its index first; give it a moment to bind.
         var lastError: Error = FSearchError.unreachable("timed out")
         let deadline = Date().addingTimeInterval(bindWait)
