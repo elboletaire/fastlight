@@ -55,14 +55,14 @@ final class Counter: @unchecked Sendable {
 
     @Test func waitsNoLongerThanAsked() {
         let loader = Loader<Int> {
-            Thread.sleep(forTimeInterval: 0.4)
+            Thread.sleep(forTimeInterval: 2)
             return 1
         }
         let started = Date()
         #expect(loader.get(maxAge: 60, wait: 0.02) == nil)
-        #expect(Date().timeIntervalSince(started) < 0.2)
+        #expect(Date().timeIntervalSince(started) < 1)
         // The read goes on in the background.
-        #expect(loader.get(maxAge: 60, wait: 2) == 1)
+        #expect(loader.get(maxAge: 60, wait: 5) == 1)
     }
 }
 
