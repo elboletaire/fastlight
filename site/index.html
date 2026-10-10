@@ -18,7 +18,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fastlight: a fast, free launcher for macOS</title>
-<meta name="description" content="Fastlight is a free, open-source Spotlight-style launcher for macOS. Press ⌥Space and find apps and any file on your disk in about a millisecond, powered by fsearch.">
+<meta name="description" content="Fastlight is a free, open-source Spotlight-style launcher for macOS. Press ⌥Space and find apps and any file on your disk in microseconds, powered by fsearch.">
 <link rel="canonical" href="https://elboletaire.github.io/fastlight/">
 <meta name="theme-color" content="#15161B" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#15161B" media="(prefers-color-scheme: dark)">
@@ -29,15 +29,15 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://elboletaire.github.io/fastlight/">
 <meta property="og:title" content="Fastlight: a fast, free launcher for macOS">
-<meta property="og:description" content="Press ⌥Space, type, and find apps and any file on your disk in about a millisecond. Free and open source, powered by fsearch.">
+<meta property="og:description" content="Press ⌥Space, type, and find apps and any file on your disk in microseconds. Free and open source, powered by fsearch.">
 <meta property="og:image" content="https://elboletaire.github.io/fastlight/og.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The Fastlight panel showing Terminal as the top hit for the query “term”, next to the Fastlight logo and the line “Find anything on your Mac in a millisecond.”">
+<meta property="og:image:alt" content="The Fastlight panel showing Terminal as the top hit for the query “term”, next to the Fastlight logo and the line “Find anything on your Mac in microseconds.”">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Fastlight: a fast, free launcher for macOS">
-<meta name="twitter:description" content="Press ⌥Space, type, and find apps and any file on your disk in about a millisecond. Free and open source, powered by fsearch.">
+<meta name="twitter:description" content="Press ⌥Space, type, and find apps and any file on your disk in microseconds. Free and open source, powered by fsearch.">
 <meta name="twitter:image" content="https://elboletaire.github.io/fastlight/og.png">
 <meta name="twitter:image:alt" content="The Fastlight panel showing Terminal as the top hit for the query “term”, next to the Fastlight logo.">
 
@@ -59,7 +59,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Fastlight",
-  "description": "A free, open-source Spotlight-style launcher for macOS. Finds applications and files across the whole disk in about a millisecond, powered by fsearch.",
+  "description": "A free, open-source Spotlight-style launcher for macOS. Finds applications and files across the whole disk in microseconds, powered by fsearch.",
   "url": "https://elboletaire.github.io/fastlight/",
   "image": "https://elboletaire.github.io/fastlight/og.png",
   "screenshot": "https://elboletaire.github.io/fastlight/assets/hero-apps-1536.webp",
@@ -106,7 +106,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
     <div class="hero-copy">
       <h1 id="hero-title">Find anything on your&nbsp;Mac before you finish&nbsp;typing.</h1>
       <div class="hero-side">
-        <p class="lede">Fastlight is a free, open-source launcher for macOS. Press <kbd>⌥Space</kbd>, type a few letters, and it finds your apps and every file on the disk in about a millisecond.</p>
+        <p class="lede">Fastlight is a free, open-source launcher for macOS. Press <kbd>⌥Space</kbd>, type a few letters, and it finds your apps and every file on the disk in microseconds.</p>
         <div class="cta-row">
           <a class="btn btn-comet" href="https://github.com/elboletaire/fastlight/releases/latest">
             <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -149,18 +149,18 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
 <div class="page">
   <section id="fast" class="section wrap" aria-labelledby="fast-title">
     <div class="split split-head">
-      <h2 id="fast-title">Millions of files. About a&nbsp;millisecond.</h2>
+      <h2 id="fast-title">Millions of files. Microseconds.</h2>
       <p class="intro">Fastlight ships <a href="https://github.com/noahdunnagan/fsearch">fsearch</a>, a whole-disk index that crawls once, then follows every change through FSEvents. Typing never waits on the disk.</p>
     </div>
 
     <div class="bench">
       <table>
-        <caption>fsearch’s own benchmark: M4 Max, 7.7 million files and folders on disk.</caption>
+        <caption>fsearch’s own benchmark: M4 Max, 8.3 million files on disk.</caption>
         <tbody>
-          <tr><th scope="row">Find a file by name, whole disk</th><td><span class="num">1.3</span> ms</td></tr>
-          <tr><th scope="row">Search inside files</th><td><span class="num">9</span> ms</td></tr>
+          <tr><th scope="row">Find a file by name, whole disk</th><td><span class="num">0.13</span> ms</td></tr>
+          <tr><th scope="row">Search inside files</th><td><span class="num">2.3</span> ms</td></tr>
           <tr><th scope="row">A new, renamed or deleted file shows up</th><td><span class="num">~0.1</span> s</td></tr>
-          <tr><th scope="row">First crawl of the disk, once</th><td><span class="num">~20</span> s</td></tr>
+          <tr><th scope="row">First run, until fully searchable</th><td><span class="num">49</span> s</td></tr>
         </tbody>
       </table>
       <p class="bench-note">Median (p50) times. Your Mac and your disk will differ.</p>
@@ -380,7 +380,7 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
         </details>
         <details>
           <summary>How is it different from Spotlight?</summary>
-          <p>Spotlight relies on metadata importers and decides what is worth indexing; Fastlight indexes every file name it can reach and answers fuzzy, typo-tolerant queries in about a millisecond. It keeps apps and files in separate sections and adds a query language with filters such as <code>in:</code>, <code>mtime:</code> and <code>grep:</code>. It doesn’t replace Spotlight, so you can keep both.</p>
+          <p>Spotlight relies on metadata importers and decides what is worth indexing; Fastlight indexes every file name it can reach and answers fuzzy, typo-tolerant queries in microseconds. It keeps apps and files in separate sections and adds a query language with filters such as <code>in:</code>, <code>mtime:</code> and <code>grep:</code>. It doesn’t replace Spotlight, so you can keep both.</p>
         </details>
         <details>
           <summary>Can I extend it?</summary>
