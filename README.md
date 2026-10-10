@@ -33,16 +33,30 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 ## Install
 
 1. Download `Fastlight-<version>.dmg` from the [latest release](https://github.com/elboletaire/fastlight/releases/latest), open it and drag **Fastlight** onto **Applications**.
-2. Open Fastlight. It lives in the menu bar; press **⌥Space** to search.
-3. Give Fastlight **Full Disk Access** in System Settings › Privacy & Security, so it can see Desktop, Documents and other protected folders. Fastlight shows a shortcut to that setting until you do.
+2. Give `/Applications/Fastlight.app` **Full Disk Access** in System Settings › Privacy & Security, so it can see Desktop, Documents and other protected folders. Doing it before the first launch saves a restart of the search daemon, but granting it later works too: Fastlight notices and restarts the daemon by itself. Until then the panel shows a shortcut to that setting.
+3. Open Fastlight. It lives in the menu bar; press **⌥Space** to search.
 
 > [!NOTE]
 > Builds that aren't notarized are blocked the first time you open them. Go to System Settings › Privacy & Security and click **Open Anyway**.
+
+> [!NOTE]
+> Releases are signed ad hoc until there is a Developer ID, so each update has a new signature and macOS drops the Full Disk Access grant. After updating, remove Fastlight from the Full Disk Access list and add it again.
 
 > [!TIP]
 > Want **⌘Space** instead of ⌥Space? Turn off Spotlight's shortcut in System Settings › Keyboard › Keyboard Shortcuts › Spotlight first, then change the hotkey in `Sources/Fastlight/AppDelegate.swift`.
 
 The first time it runs, fsearch indexes the whole disk (around 20 seconds) and Fastlight shows its progress. After that the index stays current on its own and survives restarts. Apps are searched from the start, even while files are still being indexed.
+
+### Troubleshooting
+
+If files from Desktop or Documents still don't show up with Full Disk Access granted, reset the grant, stop the daemon, and open Fastlight again:
+
+```sh
+tccutil reset SystemPolicyAllFiles com.elboletaire.fastlight
+pkill -f 'fsearch serve'
+```
+
+Then add Fastlight back to the Full Disk Access list. Its log is in `~/Library/Application Support/FSearch/daemon.log`.
 
 ## Usage
 
@@ -106,8 +120,11 @@ Fastlight is a menu-bar app in Swift. It registers a global hotkey and shows a f
 | `scripts/` | Build, bundle, DMG, test and snapshot scripts, driven by the `Makefile`. |
 | `assets/brand` | Logo, icons and the [brand guide](assets/brand/BRAND.md). |
 
-> [!NOTE]
-> Fastlight starts the fsearch daemon as its own child process, so the Full Disk Access you give Fastlight covers it. The daemon keeps running after Fastlight quits and is reused next time. If it started before you granted access, run `pkill -f 'fsearch serve'` and reopen Fastlight so it rescans. If you already run a standalone fsearch daemon, Fastlight uses that one instead.
+Fastlight starts the fsearch daemon as its own child process, so the Full Disk Access you give Fastlight covers it. fsearch decides whether it has that access when it starts, so Fastlight keeps an eye on both sides:
+
+- **Only its own daemon.** Before connecting, Fastlight reads the daemon's pid from `socket.lock` and its executable from the system. A daemon started by another binary (a development build, an older Fastlight elsewhere on disk, a standalone `fsearch`) runs under someone else's permissions, so Fastlight stops it and starts the bundled one. So does a daemon older than the bundled binary, left over from before an update. The exception is fsearch's own login agent (`fsearch install --login`): launchd would restart it straight away, so Fastlight uses it as is, and Full Disk Access has to be granted to `~/.local/bin/fsearch` instead.
+- **Access granted later.** When Fastlight has Full Disk Access but its daemon reports none, it restarts the daemon, which then scans the folders it skipped. It checks at launch and each time the panel opens, and gives up after a few tries rather than loop.
+- **Quitting.** The daemon keeps running after Fastlight quits, so the next launch answers at once and changes keep being tracked. That's safe now that a daemon that isn't Fastlight's, or is outdated, gets replaced.
 
 ## Website
 
