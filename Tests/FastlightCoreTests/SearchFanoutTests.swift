@@ -2,29 +2,43 @@ import Foundation
 import Testing
 @testable import FastlightCore
 
+/// Set once a provider got to its answer, so a test can tell "cut off by
+/// the budget" from "it answered" without timing anything: a loaded CI
+/// runner once stalled a whole run past wall-clock bounds.
+final class Finished: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    var value: Bool { lock.withLock { done } }
+    func set() { lock.withLock { done = true } }
+}
+
 /// Answers after `delay` with one file named after the query.
 struct FakeProvider: ResultProvider {
     var id: String
     var delay: Duration = .zero
     var budget: Duration?
     var fails = false
+    var finished: Finished?
 
     func results(for query: ProviderQuery) async throws -> [ResultEntry] {
         if delay > .zero { try await Task.sleep(for: delay) }
+        finished?.set()
         if fails { throw ExtensionError.timeout }
         return [.file(FileItem(path: "/\(id)/\(query.text)", isDirectory: false))]
     }
 }
 
-/// Sleeps five seconds without ever checking for cancellation.
+/// Takes ten seconds without ever checking for cancellation.
 struct Stubborn: ResultProvider {
     var id: String
     var budget: Duration?
+    var finished: Finished?
 
     func results(for query: ProviderQuery) async throws -> [ResultEntry] {
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
             DispatchQueue.global().asyncAfter(deadline: .now() + 10) { c.resume() }
         }
+        finished?.set()
         return []
     }
 }
@@ -40,7 +54,8 @@ struct Stubborn: ResultProvider {
         let r = Recorder()
         fanout.onUpdate = { r.updates.append($0) }
         fanout.search(ProviderQuery(text: text), providers: providers, firstPaint: firstPaint)
-        let end = Date().addingTimeInterval(5)
+        // Under the slow providers' 10 s, so "it didn't wait for them" still holds.
+        let end = Date().addingTimeInterval(9)
         while !done(r), Date() < end { try? await Task.sleep(for: .milliseconds(10)) }
         return r
     }
@@ -69,12 +84,12 @@ struct Stubborn: ResultProvider {
     }
 
     @Test func dropsProvidersOverBudget() async {
-        // Far slower than any CI machine is: done well before it means it
-        // wasn't waited for (1.5 s against a 3 s provider was too tight).
-        let late = FakeProvider(id: "ext", delay: .seconds(10), budget: .milliseconds(80))
-        let started = Date()
+        // Done while the provider hadn't answered: it wasn't waited for.
+        let finished = Finished()
+        let late = FakeProvider(id: "ext", delay: .seconds(10), budget: .milliseconds(80), finished: finished)
         let r = await run(SearchFanout(), "q", [FakeProvider(id: "apps"), late]) { $0.updates.last?.isFinal == true }
-        #expect(Date().timeIntervalSince(started) < 4)
+        #expect(r.updates.last?.isFinal == true)
+        #expect(!finished.value)
         guard case .timedOut = r.updates.last?.outcomes["ext"] else {
             Issue.record("expected a timeout")
             return
@@ -117,11 +132,13 @@ struct Stubborn: ResultProvider {
     }
 
     @Test func budgetHoldsEvenWhenTheProviderIgnoresCancellation() async {
-        let stubborn = Stubborn(id: "ext", budget: .milliseconds(80))
-        let started = Date()
+        let finished = Finished()
+        let stubborn = Stubborn(id: "ext", budget: .milliseconds(80), finished: finished)
         let r = await run(SearchFanout(), "q", [stubborn]) { $0.updates.last?.isFinal == true }
-        // Without the race it takes 10 s; 2.5 s was once missed by 35 ms on CI.
-        #expect(Date().timeIntervalSince(started) < 4)
+        // Final while the provider was still going: the budget won the race.
+        // (Wall-clock bounds kept failing on loaded CI runners.)
+        #expect(r.updates.last?.isFinal == true)
+        #expect(!finished.value)
         guard case .timedOut = r.updates.last?.outcomes["ext"] else {
             Issue.record("expected a timeout")
             return
