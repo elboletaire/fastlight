@@ -21,7 +21,6 @@ import Testing
         let picked = try json(OutgoingMessage.picked(item: "x", action: "paste").encoded(id: nil))
         #expect(picked["id"] == nil)
         #expect(picked["type"] as? String == "picked")
-        #expect(!OutgoingMessage.picked(item: "x", action: "paste").expectsReply)
     }
 
     @Test func classifiesIncomingLines() {

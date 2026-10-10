@@ -198,10 +198,6 @@ public enum OutgoingMessage: Sendable, Equatable {
     /// A notification: no id, no reply.
     case picked(item: String, action: String)
 
-    public var expectsReply: Bool {
-        if case .picked = self { false } else { true }
-    }
-
     /// The JSON line, without the newline.
     public func encoded(id: Int?) -> Data {
         var o: [String: JSONValue] = [:]

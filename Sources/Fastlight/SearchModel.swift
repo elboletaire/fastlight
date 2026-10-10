@@ -77,10 +77,6 @@ final class SearchModel: ObservableObject {
 
     var items: [ResultItem] { sections.flatMap(\.items) }
     var selected: ResultItem? { items.indices.contains(selection) ? items[selection] : nil }
-    var selectedExtension: LoadedExtension? {
-        if case .ext(let r) = selected { return extensions.library.extension(id: r.extensionID) }
-        return nil
-    }
 
     func reset() {
         scope = nil
