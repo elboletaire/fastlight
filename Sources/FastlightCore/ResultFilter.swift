@@ -19,13 +19,26 @@ public struct ResultFilter: Sendable {
         explicit = !keys.isEmpty
         // Someone typing ".zshrc" wants dotfiles.
         wantsHidden = QuerySyntax.words(query).contains { $0.hasPrefix(".") || $0.hasPrefix("'.") }
+        // fsearch crawls the disk and reports real paths, so a home reached
+        // through a symlink (moved to another volume, say) is matched by
+        // where it really is; the path as given is kept too.
+        let homes = Self.realPath(home).map { $0 == home ? [home] : [$0, home] } ?? [home]
         // ~/Library is app data (mail attachments, caches, game saves), not
         // documents; iCloud Drive and cloud storage folders are the exception.
-        keptPrefixes = ["\(home)/Library/Mobile Documents/", "\(home)/Library/CloudStorage/"]
-        noisyPrefixes = [
-            "\(home)/Library/", "\(home)/go/pkg/", "/Library/", "/opt/homebrew/Cellar/", "/opt/homebrew/Library/",
+        keptPrefixes = homes.flatMap { ["\($0)/Library/Mobile Documents/", "\($0)/Library/CloudStorage/"] }
+        noisyPrefixes = homes.flatMap { ["\($0)/Library/", "\($0)/go/pkg/"] } + [
+            "/Library/", "/opt/homebrew/Cellar/", "/opt/homebrew/Library/",
             "/System/", "/private/", "/usr/", "/bin/", "/sbin/", "/dev/", "/cores/",
         ]
+    }
+
+    /// realpath(3): unlike `URL.resolvingSymlinksInPath`, it never drops a
+    /// leading /private, which is how the path really reads. nil when the
+    /// path doesn't exist.
+    static func realPath(_ path: String) -> String? {
+        guard let p = realpath(path, nil) else { return nil }
+        defer { free(p) }
+        return String(cString: p)
     }
 
     /// The filter keys a query uses, e.g. ["ext", "in"] for `foo ext:pdf in:~`.
