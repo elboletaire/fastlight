@@ -36,7 +36,7 @@ import Testing
     @Test func bundledAndExampleExtensionsLoadCleanly() throws {
         let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let helpers = try FakeExtension.tempDir()
-        for tool in ["fastlight-emoji", "fastlight-calc"] {
+        for tool in ["fastlight-emoji", "fastlight-calc", "fastlight-system"] {
             FileManager.default.createFile(atPath: helpers.appendingPathComponent(tool).path, contents: Data("#!/bin/sh\n".utf8),
                                            attributes: [.posixPermissions: 0o755])
         }
@@ -46,8 +46,10 @@ import Testing
         lib.refresh()
         #expect(lib.issues.map(\.description) == [])
         #expect(lib.extensions.map(\.id) == ["com.elboletaire.fastlight.calculator", "com.elboletaire.fastlight.emoji",
+                                             "com.elboletaire.fastlight.settings", "com.elboletaire.fastlight.shortcuts",
+                                             "com.elboletaire.fastlight.system",
                                              "com.example.bc", "com.example.quicklinks"])
-        #expect(lib.extensions.prefix(2).allSatisfy { $0.builtIn })
+        #expect(lib.extensions.prefix(5).allSatisfy { $0.builtIn })
     }
 
     @Test func rejectsExecutablesOutsideTheFolder() throws {
