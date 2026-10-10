@@ -147,6 +147,8 @@ opens it), or edit
 `engine` is the id of the default: `google`, `duckduckgo`, `bing`, `ecosia`,
 `wikipedia`, `youtube`, or one of yours. `engines` adds engines (or replaces a
 built-in with the same id); `%s` is where the query goes, percent-encoded.
+The rest must already be a valid URL: write a literal `%` as `%25`, a space
+as `%20`.
 Both keys are optional, changes apply on the next search, and problems show
 up as a row in `web ` results while the rest still works.
 

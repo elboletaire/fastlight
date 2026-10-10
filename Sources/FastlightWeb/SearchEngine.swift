@@ -12,9 +12,16 @@ public struct SearchEngine: Equatable, Sendable {
         self.template = template
     }
 
-    /// The results page for `query`.
+    /// The results page for `query`. Nil if the template isn't a valid URL
+    /// as it is: Foundation would otherwise percent-encode the whole string
+    /// again, query included ("%20" becoming "%2520"), over one stray "%".
     public func url(for query: String) -> URL? {
-        URL(string: template.replacingOccurrences(of: "%s", with: Self.encode(query)))
+        Self.strictURL(template.replacingOccurrences(of: "%s", with: Self.encode(query)))
+    }
+
+    /// `s` as a URL with nothing re-encoded, or nil.
+    static func strictURL(_ s: String) -> URL? {
+        URL(string: s, encodingInvalidCharacters: false)
     }
 
     /// Percent-encodes everything but letters, digits and `-._~`, so the
@@ -130,7 +137,7 @@ public struct WebSettings: Equatable, Sendable {
         guard let name = o["name"] as? String, !name.isEmpty, name.count <= 40
         else { return .failure(Problem(message: L("name: must be 1–40 characters"))) }
         guard let url = o["url"] as? String, url.contains("%s"),
-              let u = URL(string: url.replacingOccurrences(of: "%s", with: "x")),
+              let u = SearchEngine.strictURL(url.replacingOccurrences(of: "%s", with: "x")),
               ["http", "https"].contains(u.scheme?.lowercased() ?? ""), u.host != nil
         else { return .failure(Problem(message: L("url: must be an http(s) URL with %s for the query"))) }
         return .success(SearchEngine(id: id, name: name, template: url))
