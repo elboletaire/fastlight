@@ -72,6 +72,24 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(try value("1.5*2", decimal: ",") == 3)
     }
 
+    /// The same reading as conversions: where "," is the decimal
+    /// separator, "." before groups of three digits groups thousands.
+    @Test func dotsGroupWhereCommaIsDecimal() throws {
+        #expect(try value("1.000*2", decimal: ",") == 2000)
+        #expect(try value("1.000,5+1", decimal: ",") == 1001.5)
+        #expect(try value("12.345.678/2", decimal: ",") == 6_172_839)
+        #expect(try value("0.125*8", decimal: ",") == 1)
+        #expect(try value("1234.5*2", decimal: ",") == 2469)
+        #expect(failure("1.00,5", decimal: ",") == .unexpected("."))
+        #expect(try value("1.000*2") == 2)
+        #expect(failure("1.000,5+1") == .unexpected(","))
+        #expect(NumberSyntax.normalized("1.000", decimal: ",") == "1000")
+        #expect(NumberSyntax.normalized(".5", decimal: ",") == "0.5")
+        #expect(NumberSyntax.normalized(",5", decimal: ",") == "0.5")
+        #expect(NumberSyntax.normalized("1,000.25", decimal: ".") == "1000.25")
+        #expect(NumberSyntax.normalized("١٢", decimal: ".") == nil)
+    }
+
     @Test func percentages() throws {
         #expect(try value("10%") == 0.1)
         #expect(try value("15% of 80") == 12)

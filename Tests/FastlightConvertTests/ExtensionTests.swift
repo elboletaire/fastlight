@@ -67,6 +67,12 @@ import Testing
         #expect(yearless[1] == "from Friday, January 1, 2027 to Friday, December 31, 2027")
     }
 
+    @Test func thousandsWithDotsWhereCommaIsDecimal() throws {
+        #expect(show(try reply(ext("es_ES"), "1.000 m in km").first)[0] == "1 km")
+        #expect(show(try reply(ext("es_ES"), "1.000,5 m in cm").first)[0] == "100.050 cm")
+        #expect(try reply(ext(), "1.000,5 m in cm").isEmpty)
+    }
+
     @Test func spotlightExamples() throws {
         let e = ext()
         let cases: [(String, [String])] = [

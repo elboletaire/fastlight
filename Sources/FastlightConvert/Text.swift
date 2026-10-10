@@ -1,3 +1,4 @@
+import FastlightCalc
 import Foundation
 
 /// Query normalization shared by units, clocks and dates.
@@ -63,8 +64,9 @@ enum Text {
         return out
     }
 
-    /// "10", "-3.5", "1,000", "1/2"; "1,5" where "," is the decimal
-    /// separator. Nil for anything else.
+    /// "10", "-3.5", "1,000", "1/2"; "1,5", "1.000" and "1.000,5" where ","
+    /// is the decimal separator (as in the calculator: NumberSyntax). Nil
+    /// for anything else.
     static func number(_ w: String, decimal: Character = ".") -> Double? {
         guard let first = w.first, first.isNumber || "+-.".contains(first) else { return nil }
         if w.contains("/") {
@@ -73,22 +75,14 @@ enum Text {
                   let b = number(String(parts[1]), decimal: decimal), b != 0 else { return nil }
             return a / b
         }
-        var s = w
-        if decimal == "," {
-            // "1,5" and "1.5" are both one and a half; "1.000,5" groups.
-            if s.contains(",") {
-                guard s.filter({ $0 == "," }).count == 1 else { return nil }
-                s = s.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
-            }
-        } else if s.contains(",") {
-            // Grouping must look like grouping: 1–3 digits, then threes.
-            let intPart = s.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)[0]
-            let groups = intPart.trimmingCharacters(in: CharacterSet(charactersIn: "+-")).split(separator: ",", omittingEmptySubsequences: false)
-            guard (1...3).contains(groups[0].count), groups.dropFirst().allSatisfy({ $0.count == 3 }) else { return nil }
-            s = s.replacingOccurrences(of: ",", with: "")
+        var s = Substring(w)
+        var sign = 1.0
+        if s.first == "-" || s.first == "+" {
+            if s.first == "-" { sign = -1 }
+            s = s.dropFirst()
         }
-        guard s.filter({ $0 == "." }).count <= 1, s.dropFirst().allSatisfy({ $0.isASCII && ($0.isNumber || $0 == ".") }),
-              let v = Double(s), v.isFinite else { return nil }
-        return v
+        guard let plain = NumberSyntax.normalized(String(s), decimal: decimal), let v = Double(plain), v.isFinite
+        else { return nil }
+        return sign * v
     }
 }

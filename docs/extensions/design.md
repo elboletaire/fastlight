@@ -370,8 +370,12 @@ parser and an evaluator, so answers take microseconds.
   (`80 + 10%` = 88), and `15% of 80` = 12. Functions take one argument,
   with or without parentheses (`sqrt 2`). Trig is in radians; `deg`/`rad`
   convert.
-- Numbers: `.` is always a decimal point; `,` is one where the locale says
-  so, and elsewhere only valid as thousands grouping (`1,000,000`).
+- Numbers (`NumberSyntax`, shared with conversions): where the locale's
+  decimal separator is `.`, `,` is only valid as thousands grouping
+  (`1,000,000`), and never after the point (`1.000,5` is no number). Where
+  it is `,`, `.` groups thousands when it can (`1.000`, `1.000,5`,
+  `12.345.678`: 1–3 digits not starting with 0, then threes) and is a
+  decimal point otherwise (`1.5`, `0.125`, `1234.5`).
   `x` multiplies only between numbers (`3x4`).
 - No result, never a crash, for syntax errors, unknown names, division by
   zero (no "∞": it is almost always a typo), out-of-domain input

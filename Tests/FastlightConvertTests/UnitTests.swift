@@ -183,6 +183,27 @@ extension UnitQuery: Equatable {
         #expect(Text.number("1.2.3") == nil)
         #expect(Text.number("km") == nil)
     }
+
+    /// Where "," is the decimal separator, "1.000" is a thousand, as
+    /// "1.000,5" already was a thousand and a half; it used to read as 1,
+    /// three orders of magnitude off. Where "." is, "1.000,5" is nothing,
+    /// not 1.0005.
+    @Test func dotsGroupWhereCommaIsDecimal() throws {
+        #expect(Text.number("1.000", decimal: ",") == 1000)
+        #expect(Text.number("12.345.678", decimal: ",") == 12_345_678)
+        #expect(Text.number("1.000,5", decimal: ",") == 1000.5)
+        #expect(Text.number("-1.000", decimal: ",") == -1000)
+        #expect(Text.number("1.5", decimal: ",") == 1.5)
+        #expect(Text.number("0.125", decimal: ",") == 0.125)
+        #expect(Text.number("1234.5", decimal: ",") == 1234.5)
+        #expect(Text.number("1.00,5", decimal: ",") == nil)
+        #expect(Text.number("1,000.5") == 1000.5)
+        #expect(Text.number("1.000") == 1)
+        #expect(Text.number("1.000,5") == nil)
+        #expect(Text.number("1.5,3") == nil)
+        #expect(try converted("1.000 m in km", decimal: ",") == 1)
+        #expect(UnitParser.parse("1.000,5 m in cm") == nil)
+    }
 }
 
 @Suite struct ReciprocalTests {

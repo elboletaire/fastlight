@@ -24,8 +24,11 @@ Fastlight ships with these, built the same way:
   parentheses, `%` (`80 + 10%` is 88), `!`, `pi`, `e`, `tau` and `sqrt`,
   `cbrt`, `abs`, `round`, `floor`, `ceil`, `ln`, `log`, `log2`, `exp`,
   `sin`/`cos`/`tan` and their inverses (radians), `deg` and `rad`. Decimals
-  take `.`, and `,` too where that's the decimal separator. Division by zero
-  has no result.
+  take `.`, and `,` too where that's the decimal separator; there, `.`
+  before groups of three digits groups thousands, as people write them
+  (`1.000` is a thousand, `1.000,5` a thousand and a half), while `1.5` and
+  `0.125` are still decimals. Conversions read numbers the same way.
+  Division by zero has no result.
 - **Conversions.** Type a conversion in normal search and the answer is the
   Top Hit, or type `convert ` first for a few conversions at once, world
   clocks and the week number. ↵ copies the answer (numbers without
