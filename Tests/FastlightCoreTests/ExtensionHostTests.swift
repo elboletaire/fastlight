@@ -143,6 +143,9 @@ import Testing
         let consent = ConsentStore(defaults: UserDefaults(suiteName: "fastlight.test.\(UUID().uuidString)")!)
         let host = ExtensionHost(appVersion: "0.2.0", consent: consent,
                                  dataRoot: root.appendingPathComponent("data"), logRoot: root.appendingPathComponent("logs"))
+        // Above the fake's slowest answer (3 s), so only the tests decide
+        // when to stop waiting.
+        host.timeouts.keyword = 10
         return (host, try #require(lib.extensions.first), root)
     }
 
