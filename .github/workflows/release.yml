@@ -29,9 +29,20 @@ jobs:
       HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.CODESIGN_IDENTITY != '' }}
       HAS_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_APP_PASSWORD != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           submodules: recursive
+
+      # The DMG is named after the bundle version, so a tag that doesn't
+      # match it would publish, say, Fastlight-0.2.0.dmg as v0.3.0.
+      - name: Check version
+        if: github.ref_type == 'tag'
+        run: |
+          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
+          if [ "${GITHUB_REF_NAME}" != "v$version" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} doesn't match Info.plist version $version"
+            exit 1
+          fi
 
       - name: Rust
         run: |
@@ -100,7 +111,7 @@ jobs:
           fi
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Fastlight-dmg
           path: build/Fastlight-*.dmg
