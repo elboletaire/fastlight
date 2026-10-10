@@ -208,6 +208,7 @@ Any action can have a `"title"`, shown in the action bar.
 Extensions run with Fastlight's permissions, which can include Full Disk
 Access. Fastlight runs nothing from the extensions folder until the user
 approves it, and asks again whenever any file in the extension's folder
-changes (a SHA-256 over all of them). Any extension can be turned off in the
+changes (a SHA-256 over all of them, `.git` included, checked again right
+before each start). Any extension can be turned off in the
 Extensions menu. Only install extensions you trust, as you would any
 command-line tool.

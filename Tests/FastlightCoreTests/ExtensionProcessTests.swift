@@ -57,6 +57,22 @@ import Testing
         #expect(p.pid != first)
     }
 
+    @Test func keepsTheLastReplyOfAnExitingProcess() async throws {
+        // Answers, then exits at once: the exit may be noticed before the
+        // reply is read, which must not turn it into a crash.
+        let script = #"""
+        echo '{"type":"ready","protocol":1}'
+        read -r line
+        echo '{"id":1,"items":[{"id":"a","title":"bye"}]}'
+        exit 0
+        """#
+        for _ in 0..<5 {
+            let (p, _) = try FakeExtension.process(script)
+            defer { p.stop(graceful: false) }
+            #expect(try await p.search("x") == ["bye"])
+        }
+    }
+
     @Test func givesUpOnACrashLoop() async throws {
         let (p, _) = try FakeExtension.process { $0.crashLimit = 3 }
         defer { p.stop(graceful: false) }

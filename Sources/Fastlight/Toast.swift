@@ -9,6 +9,8 @@ final class Toast {
     static let shared = Toast()
     private var window: NSPanel?
     private var hideWork: DispatchWorkItem?
+    /// Bumped per toast, so an older one's fade-out can't hide a newer one.
+    private var shown = 0
 
     func show(_ text: String, symbol: String = "checkmark.circle.fill", duration: TimeInterval = 1.6) {
         let host = NSHostingView(rootView: ToastView(text: text, symbol: symbol))
@@ -26,12 +28,17 @@ final class Toast {
         panel.alphaValue = 1
         panel.orderFrontRegardless()
         hideWork?.cancel()
-        let work = DispatchWorkItem { [weak panel] in
+        shown += 1
+        let mine = shown
+        let work = DispatchWorkItem { [weak self, weak panel] in
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.25
                 panel?.animator().alphaValue = 0
             }, completionHandler: {
-                MainActor.assumeIsolated { panel?.orderOut(nil) }
+                MainActor.assumeIsolated {
+                    guard self?.shown == mine else { return }
+                    panel?.orderOut(nil)
+                }
             })
         }
         hideWork = work

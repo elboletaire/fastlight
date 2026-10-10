@@ -54,6 +54,9 @@ public final class ExtensionProcess: @unchecked Sendable {
         public var maxTimeoutsInARow = 3
         public var crashLimit = 3
         public var crashWindow: TimeInterval = 60
+        /// Runs before every start; an error refuses it. The host checks
+        /// that the files on disk are still the ones the user approved.
+        public var verify: (@Sendable () -> ExtensionError?)?
 
         public init(executable: URL, arguments: [String] = [], directory: URL,
                     environment: [String: String] = [:], logURL: URL? = nil) {
@@ -87,8 +90,11 @@ public final class ExtensionProcess: @unchecked Sendable {
 
     public let config: Config
     private let lock = NSLock()
-    /// Writes and timers; writes may block on a full pipe, never the caller.
+    /// Timers and completions.
     private let queue = DispatchQueue(label: "fastlight.extension")
+    /// Writes to the child, which block while its stdin pipe is full: kept
+    /// apart so a child that stops reading can't hold up timeouts.
+    private let writer = DispatchQueue(label: "fastlight.extension.write")
     private var _state: State = .stopped
     private var process: Process?
     private var stdin: FileHandle?
@@ -108,6 +114,11 @@ public final class ExtensionProcess: @unchecked Sendable {
     /// exited on its own.
     private var killReason: String?
     private var countsAsCrash = false
+    /// The child exited / its stdout reached EOF. Replies it wrote just
+    /// before exiting arrive after the exit, so the exit is only handled
+    /// once both happened (or shortly after, if a grandchild keeps stdout).
+    private var exitStatus: (Int32, Process.TerminationReason)?
+    private var sawEOF = false
 
     public init(config: Config) {
         self.config = config
@@ -197,9 +208,16 @@ public final class ExtensionProcess: @unchecked Sendable {
         let gen = generation
         killReason = nil
         countsAsCrash = false
+        exitStatus = nil
+        sawEOF = false
         buffer = Data()
         garbage = 0
         openLog()
+        if let refusal = config.verify?() {
+            writeLog("not starting: \(refusal.localizedDescription)")
+            failAll(refusal)
+            return
+        }
 
         let p = Process()
         p.executableURL = config.executable
@@ -218,6 +236,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             let data = h.availableData
             if data.isEmpty {
                 h.readabilityHandler = nil
+                self?.reachedEOF(generation: gen)
                 return
             }
             self?.received(data, generation: gen)
@@ -262,7 +281,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             queue.asyncAfter(deadline: .now() + q.timeout, execute: timer)
         }
         let line = q.line
-        queue.async {
+        writer.async {
             // Fails when the child is gone; its exit handler cleans up.
             try? stdin.write(contentsOf: line)
         }
@@ -281,7 +300,7 @@ public final class ExtensionProcess: @unchecked Sendable {
         countsAsCrash = crash
         let handle = stdin
         stdin = nil
-        queue.async { try? handle?.close() }
+        writer.async { try? handle?.close() }
         let pid = p.processIdentifier
         if graceful {
             // EOF first: a well-behaved extension exits on its own.
@@ -402,6 +421,8 @@ public final class ExtensionProcess: @unchecked Sendable {
             if timeoutsInARow >= config.maxTimeoutsInARow {
                 timeoutsInARow = 0
                 kill(reason: "it stopped answering", crash: true, graceful: false)
+            } else {
+                bumpIdle()
             }
         }
         completion?(.failure(.timeout))
@@ -409,24 +430,49 @@ public final class ExtensionProcess: @unchecked Sendable {
 
     private func exited(generation gen: Int, status: Int32, reason: Process.TerminationReason) {
         lock.withLock {
-            guard gen == generation else { return }
-            let how = reason == .uncaughtSignal ? "signal \(status)" : "exit status \(status)"
-            writeLog("exited (\(how))")
-            readyTimer?.cancel()
-            readyTimer = nil
-            if killReason == nil {
-                // Exited on its own. A clean exit while idle is fine; anything
-                // else is a crash.
-                let crash = status != 0 || reason == .uncaughtSignal || !pending.isEmpty
-                failAll(.crashed(how))
-                if crash { recordCrash() }
+            guard gen == generation, exitStatus == nil else { return }
+            exitStatus = (status, reason)
+            if sawEOF || killReason != nil {
+                finishExit()
+            } else {
+                queue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    guard let self else { return }
+                    self.lock.withLock {
+                        if self.generation == gen, self.process != nil { self.finishExit() }
+                    }
+                }
             }
-            process = nil
-            stdin = nil
-            if case .failed = _state {} else { _state = .stopped }
-            try? log?.close()
-            log = nil
         }
+    }
+
+    private func reachedEOF(generation gen: Int) {
+        lock.withLock {
+            guard gen == generation else { return }
+            sawEOF = true
+            if exitStatus != nil, process != nil { finishExit() }
+        }
+    }
+
+    /// The child is gone and its output read: fail what's left, count the
+    /// crash, get ready for the next start. Call with the lock held.
+    private func finishExit() {
+        guard let (status, reason) = exitStatus else { return }
+        let how = reason == .uncaughtSignal ? "signal \(status)" : "exit status \(status)"
+        writeLog("exited (\(how))")
+        readyTimer?.cancel()
+        readyTimer = nil
+        if killReason == nil {
+            // Exited on its own. A clean exit while idle is fine; anything
+            // else is a crash.
+            let crash = status != 0 || reason == .uncaughtSignal || !pending.isEmpty
+            failAll(.crashed(how))
+            if crash { recordCrash() }
+        }
+        process = nil
+        stdin = nil
+        if case .failed = _state {} else { _state = .stopped }
+        try? log?.close()
+        log = nil
     }
 
     // MARK: Log
