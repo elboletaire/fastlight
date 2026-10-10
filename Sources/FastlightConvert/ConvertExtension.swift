@@ -86,11 +86,14 @@ public final class ConvertExtension {
     /// Global search: one answer, the Top Hit, only when the query clearly
     /// is a conversion; otherwise nothing. Keyword mode always says
     /// something: answers, why there are none, or what to type.
+    /// No conversion is longer, and parsing 800 KB took over a second.
+    public static let maxQueryLength = 1000
+
     public func items(for query: String, global: Bool) -> [[String: Any]] {
         let now = clock()
         let q = query.trimmingCharacters(in: .whitespaces)
         if q.isEmpty { return global ? [] : defaults(now) }
-        let found = answers(q, global: global, now: now)
+        let found = q.utf8.count <= Self.maxQueryLength ? answers(q, global: global, now: now) : []
         if global {
             guard var first = found.first else { return [] }
             // The answer is what someone typing "10 km in mi" is after.

@@ -48,7 +48,12 @@ public final class DictionaryExtension {
 
     /// A few senses, or why there are none. Keyword mode only: normal
     /// search stays apps and files.
+    /// No word is longer; and "No definition for …" repeats the query, so
+    /// a huge one would make a reply over the protocol's 1 MiB line limit.
+    public static let maxQueryLength = 256
+
     public func items(for query: String, limit: Int = maxSenses) -> [[String: Any]] {
+        guard query.utf8.count <= Self.maxQueryLength else { return [] }
         let q = query.trimmingCharacters(in: .whitespaces)
         if q.isEmpty {
             return [[

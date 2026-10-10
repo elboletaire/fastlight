@@ -234,6 +234,16 @@ struct FakeDictionary: DefinitionSource {
         return r["items"] as? [[String: Any]] ?? []
     }
 
+    /// "No definition for …" repeated a huge query, past the 1 MiB line
+    /// limit, and the host killed the helper for it.
+    @Test func hugeQueriesGetNoRows() throws {
+        let huge = String(repeating: "x", count: 800_000)
+        #expect(ext.items(for: huge).isEmpty)
+        let line = try #require(ext.handle(#"{"id":1,"type":"search","query":"\#(huge)","mode":"keyword","limit":8}"#))
+        #expect(line.utf8.count < 100)
+        #expect(ext.items(for: String(repeating: "x", count: 200)).first?["id"] as? String == "none")
+    }
+
     @Test func keywordModeShowsSensesWithWhatTheyAreOf() throws {
         let found = try items("house", "keyword")
         #expect(found.count == 3)

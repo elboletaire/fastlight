@@ -97,7 +97,12 @@ public final class EmojiExtension {
         }
     }
 
+    /// Longer queries are no emoji's name, and searching one costs time
+    /// proportional to its length (800 KB took 20 s): no results.
+    public static let maxQueryLength = 256
+
     public func search(_ query: String, global: Bool, limit: Int) -> [[String: Any]] {
+        guard query.utf8.count <= Self.maxQueryLength else { return [] }
         let q = query.trimmingCharacters(in: .whitespaces)
         if q.isEmpty {
             guard !global else { return [] }
