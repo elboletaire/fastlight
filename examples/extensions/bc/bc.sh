@@ -1,6 +1,7 @@
 #!/bin/sh
-# A Fastlight extension in plain POSIX sh, using only what every Mac has.
-# "=2*(3+4)" evaluates in keyword mode; "2*(3+4)" in the normal search too.
+# A Fastlight extension in plain POSIX sh, using only what every Mac has:
+# "bc 2*(3+4)" asks bc. (Fastlight's own calculator is built in, on "=" and
+# in normal search; this is an example to copy from.)
 # Protocol: docs/extensions/README.md.
 
 # Handshake: the first line says which protocol version we speak.
@@ -33,7 +34,7 @@ while IFS= read -r line; do
     '' | *[!0-9.-]*) printf '{"id":%s,"items":[]}\n' "$id"; continue ;;
   esac
 
-  printf '{"id":%s,"items":[{"id":"result","title":"%s","subtitle":"%s","icon":"plus.forwardslash.minus",' "$id" "$result" "$expr"
+  printf '{"id":%s,"items":[{"id":"result","title":"%s","subtitle":"%s","icon":"terminal",' "$id" "$result" "$expr"
   printf '"actions":[{"type":"copy","text":"%s","title":"Copy Result"},' "$result"
   printf '{"type":"paste","text":"%s","title":"Paste Result"}]}]}\n' "$result"
 done
