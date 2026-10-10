@@ -107,6 +107,24 @@ import Testing
         #expect(path.url(for: "a/b")?.absoluteString == "https://example.com/search/a%2Fb/results")
     }
 
+    /// A stray "%" made Foundation re-encode the whole URL, query
+    /// included: "c%2B%2B" became "c%252B%252B".
+    @Test func strayPercentIsNotReencoded() {
+        let bad = SearchEngine(id: "x", name: "X", template: "https://x.example/?q=%s&d=100%")
+        #expect(bad.url(for: "c++ & c#") == nil)
+        let fine = SearchEngine(id: "x", name: "X", template: "https://x.example/?q=%s&lang=%20en")
+        #expect(fine.url(for: "c++")?.absoluteString == "https://x.example/?q=c%2B%2B&lang=%20en")
+        let s = WebSettings.parse(Data(#"""
+        {"engines": [{"id": "pct", "name": "P", "url": "https://p.example/?q=%s&d=100%"},
+                     {"id": "space", "name": "S", "url": "https://s.example/?q=%s&a=b c"}]}
+        """#.utf8), builtIns: SearchEngine.builtIns(language: "en"))
+        #expect(s.engines.count == 6)
+        #expect(s.problems == [
+            "engines[0]: url: must be an http(s) URL with %s for the query",
+            "engines[1]: url: must be an http(s) URL with %s for the query",
+        ])
+    }
+
     @Test func builtInsStartWithGoogle() {
         let engines = SearchEngine.builtIns(language: "ca")
         #expect(engines.first?.id == "google")
