@@ -237,20 +237,28 @@ FORM: Product-led landing page, brand pinned by assets/brand/BRAND.md.
           <div><dt><code>'exact</code></dt><dd>Match the word as typed, no fuzziness</dd></div>
           <div><dt><code>^prefix</code></dt><dd>Name starts with</dd></div>
           <div><dt><code>suffix$</code></dt><dd>Name ends with</dd></div>
-          <div><dt><code>!exclude</code></dt><dd>Leave out matches</dd></div>
+          <div><dt><code>!word</code></dt><dd>Leave out names that contain it</dd></div>
+          <div><dt><code>"two words"</code></dt><dd>Quotes keep spaces in one word or value: <code>in:"~/My Notes"</code></dd></div>
         </dl>
         <h3>Filters</h3>
         <dl class="ref-list">
-          <div><dt><code>ext:</code></dt><dd>Extension: <code>ext:pdf</code></dd></div>
-          <div><dt><code>type:</code></dt><dd><code>image</code>, <code>video</code>, <code>audio</code>, <code>doc</code> or <code>code</code></dd></div>
-          <div><dt><code>kind:</code></dt><dd><code>file</code> or <code>dir</code></dd></div>
+          <div><dt><code>ext:</code></dt><dd>Extension; commas for several: <code>ext:jpg,png</code></dd></div>
+          <div><dt><code>type:</code></dt><dd><code>image</code>, <code>video</code>, <code>audio</code>, <code>doc</code>, <code>code</code>, <code>archive</code>, <code>font</code> or <code>app</code></dd></div>
+          <div><dt><code>kind:</code></dt><dd><code>file</code>, <code>dir</code> or <code>link</code></dd></div>
           <div><dt><code>in:</code></dt><dd>Under a folder: <code>in:~/src</code></dd></div>
-          <div><dt><code>size:</code></dt><dd><code>size:&gt;5mb</code></dd></div>
-          <div><dt><code>mtime:</code></dt><dd>Modified: <code>mtime:&lt;7d</code></dd></div>
+          <div><dt><code>size:</code></dt><dd><code>size:&gt;5mb</code>, <code>size:1m..10m</code></dd></div>
+          <div><dt><code>mtime:</code></dt><dd>Modified: <code>mtime:&lt;7d</code> within a week, <code>mtime:&gt;1y</code> over a year ago. Also <code>modified:</code></dd></div>
+          <div><dt><code>re:</code></dt><dd>Regex over the name: <code>re:^IMG_\d+</code></dd></div>
           <div><dt><code>path:</code></dt><dd>Regex over the full path</dd></div>
-          <div><dt><code>grep:</code></dt><dd>Text inside files, smart-case</dd></div>
+          <div><dt><code>grep:</code></dt><dd>Text inside files, smart-case. Also <code>content:</code></dd></div>
           <div><dt><code>regex:</code></dt><dd>Regex inside files</dd></div>
-          <div><dt><code>sym:</code></dt><dd>Where a symbol is defined</dd></div>
+          <div><dt><code>sym:</code></dt><dd>Where a symbol is defined. Also <code>symbol:</code></dd></div>
+        </dl>
+        <h3>Values</h3>
+        <dl class="ref-list">
+          <div><dt><code>&gt; &lt; ..</code></dt><dd>More than, less than, between (<code>&gt;=</code> and <code>&lt;=</code> too)</dd></div>
+          <div><dt><code>size</code></dt><dd><code>b</code>, <code>kb</code>, <code>mb</code>, <code>gb</code>, <code>tb</code> (or <code>k</code>, <code>m</code>, <code>g</code>, <code>t</code>)</dd></div>
+          <div><dt><code>mtime</code></dt><dd><code>s</code>, <code>min</code>, <code>h</code>, <code>d</code>, <code>w</code>, <code>mo</code>, <code>y</code>; days if left out</dd></div>
         </dl>
       </div>
     </div>
