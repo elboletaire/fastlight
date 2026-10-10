@@ -1,4 +1,5 @@
 import FastlightPIM
+import FastlightL10n
 import Foundation
 
 /// One occurrence of an event (a repeating event has one per date).
@@ -85,18 +86,20 @@ public struct Clock: Sendable {
         self.calendar = calendar
     }
 
-    /// The user's calendar and time zone, with dates in English (Fastlight
-    /// is in English, so "Today" shouldn't sit next to "dimarts") but the
-    /// rest of the region's ways: 24-hour clock, day-month order.
-    public static func system(_ base: Calendar = .current, locale: Locale = .current) -> Calendar {
+    /// The user's calendar and time zone, with dates in Fastlight's
+    /// language (so "Today" doesn't sit next to "dimarts", nor "Avui" next
+    /// to "Tuesday") but the rest of the region's ways: 24-hour clock,
+    /// day-month order.
+    public static func system(_ base: Calendar = .current, locale: Locale = .current,
+                              language: String = Localizer.current.language) -> Calendar {
         var cal = base
-        cal.locale = english(locale)
+        cal.locale = speaking(language, locale)
         return cal
     }
 
-    static func english(_ locale: Locale) -> Locale {
+    static func speaking(_ language: String, _ locale: Locale) -> Locale {
         var c = Locale.Components(locale: locale)
-        c.languageComponents = Locale.Language.Components(languageCode: .english, script: nil,
+        c.languageComponents = Locale.Language.Components(languageCode: Locale.LanguageCode(language), script: nil,
                                                           region: locale.language.region ?? c.region.map { Locale.Region($0.identifier) })
         return Locale(components: c)
     }

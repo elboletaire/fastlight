@@ -58,8 +58,10 @@ public final class EventsExtension: StoreExtension<[CalendarEvent]>, @unchecked 
         if q.isEmpty {
             if global { return [] }
             guard !upcoming.isEmpty else {
-                return [["id": "none", "title": "No Upcoming Events",
-                         "subtitle": "Nothing on your calendars in the next \(Self.days) days", "icon": domain.symbol]]
+                return [["id": "none", "title": L("No Upcoming Events"),
+                         "subtitle": Lp("Nothing on your calendars in the next %d day", "Nothing on your calendars in the next %d days",
+                                        count: Self.days, Self.days),
+                         "icon": domain.symbol]]
             }
             return upcoming.prefix(limit).map { item($0, text) }
         }
@@ -77,7 +79,7 @@ public final class EventsExtension: StoreExtension<[CalendarEvent]>, @unchecked 
 
     /// ↵ shows it in Calendar, ⌘↵ copies what, when and where.
     func item(_ e: CalendarEvent, _ text: DateText) -> [String: Any] {
-        let title = e.title.isEmpty ? "New Event" : e.title
+        let title = e.title.isEmpty ? L("New Event") : e.title
         let subtitle = [text.when(e), e.location.replacingOccurrences(of: "\n", with: ", ")].filter { !$0.isEmpty }
         let details = [title, text.fullWhen(e), e.location].filter { !$0.isEmpty }.joined(separator: "\n")
         var item: [String: Any] = [
@@ -87,8 +89,8 @@ public final class EventsExtension: StoreExtension<[CalendarEvent]>, @unchecked 
             "subtitle": subtitle.joined(separator: " · "),
             "icon": ["app": "com.apple.iCal"],
             "actions": [
-                ["type": "open", "target": CalendarLinks.event(e, timeZone: clock.calendar.timeZone), "title": "Show in Calendar"],
-                ["type": "copy", "text": details, "title": "Copy Event Details"],
+                ["type": "open", "target": CalendarLinks.event(e, timeZone: clock.calendar.timeZone), "title": L("Show in Calendar")],
+                ["type": "copy", "text": details, "title": L("Copy Event Details")],
             ],
         ]
         if !e.calendar.isEmpty { item["accessory"] = e.calendar }
@@ -130,7 +132,7 @@ public final class RemindersExtension: StoreExtension<[Reminder]>, @unchecked Se
         if q.isEmpty {
             if global { return [] }
             guard !ordered.isEmpty else {
-                return [["id": "none", "title": "No Reminders", "subtitle": "Everything's done", "icon": domain.symbol]]
+                return [["id": "none", "title": L("No Reminders"), "subtitle": L("Everything's done"), "icon": domain.symbol]]
             }
             return ordered.prefix(limit).map { item($0, text) }
         }
@@ -148,15 +150,15 @@ public final class RemindersExtension: StoreExtension<[Reminder]>, @unchecked Se
 
     /// ↵ shows it in Reminders, ⌘↵ copies its title.
     func item(_ r: Reminder, _ text: DateText) -> [String: Any] {
-        let title = r.title.isEmpty ? "New Reminder" : r.title
+        let title = r.title.isEmpty ? L("New Reminder") : r.title
         let subtitle = [text.due(r) ?? "", r.list].filter { !$0.isEmpty }
         var item: [String: Any] = [
             "id": "reminder:\(r.id)",
             "title": title,
             "icon": ["app": "com.apple.reminders"],
             "actions": [
-                ["type": "open", "target": CalendarLinks.reminder(r), "title": "Show in Reminders"],
-                ["type": "copy", "text": title, "title": "Copy Reminder"],
+                ["type": "open", "target": CalendarLinks.reminder(r), "title": L("Show in Reminders")],
+                ["type": "copy", "text": title, "title": L("Copy Reminder")],
             ],
         ]
         if !subtitle.isEmpty { item["subtitle"] = subtitle.joined(separator: " · ") }

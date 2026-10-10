@@ -51,7 +51,7 @@ public struct Contact: Sendable, Equatable {
         for s in [name, organization, emails.first?.value ?? "", phones.first?.value ?? ""] where !s.isEmpty {
             return s
         }
-        return "No Name"
+        return L("No Name")
     }
 
     /// The handle for Messages and FaceTime: a mobile number, else any

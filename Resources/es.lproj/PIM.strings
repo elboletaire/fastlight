@@ -1,0 +1,27 @@
+/* Contacts, Calendar and Reminders: asking for access. Keys are the English text. */
+"Contacts" = "Contactos";
+"Calendars" = "Calendarios";
+"Reminders" = "Recordatorios";
+"Open System Settings" = "Abrir Ajustes del Sistema";
+"Allow Access to Contacts…" = "Permitir acceso a los contactos…";
+"Allow Access to Calendars…" = "Permitir acceso a los calendarios…";
+"Allow Access to Reminders…" = "Permitir acceso a los recordatorios…";
+"macOS asks once. Fastlight only reads Contacts, on this Mac." = "macOS lo pregunta una sola vez. Fastlight solo lee los contactos, en este Mac.";
+"macOS asks once. Fastlight only reads Calendars, on this Mac." = "macOS lo pregunta una sola vez. Fastlight solo lee los calendarios, en este Mac.";
+"macOS asks once. Fastlight only reads Reminders, on this Mac." = "macOS lo pregunta una sola vez. Fastlight solo lee los recordatorios, en este Mac.";
+"Allow Access…" = "Permitir acceso…";
+"Fastlight Can't Read Contacts" = "Fastlight no puede leer los contactos";
+"Fastlight Can't Read Calendars" = "Fastlight no puede leer los calendarios";
+"Fastlight Can't Read Reminders" = "Fastlight no puede leer los recordatorios";
+"Access to Contacts Is Off" = "El acceso a los contactos está desactivado";
+"Access to Calendars Is Off" = "El acceso a los calendarios está desactivado";
+"Access to Reminders Is Off" = "El acceso a los recordatorios está desactivado";
+"Turn on Fastlight in System Settings › Privacy & Security › %@" = "Activa Fastlight en Ajustes del Sistema › Privacidad y seguridad › %@";
+"Access to Contacts Is Restricted" = "El acceso a los contactos está restringido";
+"Access to Calendars Is Restricted" = "El acceso a los calendarios está restringido";
+"Access to Reminders Is Restricted" = "El acceso a los recordatorios está restringido";
+"A profile or Screen Time on this Mac doesn't allow it" = "Un perfil o Tiempo de uso no lo permite en este Mac";
+"Couldn't Read Contacts" = "No se han podido leer los contactos";
+"Couldn't Read Calendars" = "No se han podido leer los calendarios";
+"Couldn't Read Reminders" = "No se han podido leer los recordatorios";
+"Try again in a moment" = "Vuelve a intentarlo en un momento";

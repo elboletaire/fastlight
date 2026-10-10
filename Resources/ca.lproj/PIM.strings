@@ -1,0 +1,27 @@
+/* Contacts, Calendar and Reminders: asking for access. Keys are the English text. */
+"Contacts" = "Contactes";
+"Calendars" = "Calendaris";
+"Reminders" = "Recordatoris";
+"Open System Settings" = "Obre la Configuració del Sistema";
+"Allow Access to Contacts…" = "Permet l’accés als contactes…";
+"Allow Access to Calendars…" = "Permet l’accés als calendaris…";
+"Allow Access to Reminders…" = "Permet l’accés als recordatoris…";
+"macOS asks once. Fastlight only reads Contacts, on this Mac." = "El macOS ho pregunta una sola vegada. Fastlight només llegeix els contactes, en aquest Mac.";
+"macOS asks once. Fastlight only reads Calendars, on this Mac." = "El macOS ho pregunta una sola vegada. Fastlight només llegeix els calendaris, en aquest Mac.";
+"macOS asks once. Fastlight only reads Reminders, on this Mac." = "El macOS ho pregunta una sola vegada. Fastlight només llegeix els recordatoris, en aquest Mac.";
+"Allow Access…" = "Permet l’accés…";
+"Fastlight Can't Read Contacts" = "Fastlight no pot llegir els contactes";
+"Fastlight Can't Read Calendars" = "Fastlight no pot llegir els calendaris";
+"Fastlight Can't Read Reminders" = "Fastlight no pot llegir els recordatoris";
+"Access to Contacts Is Off" = "L’accés als contactes està desactivat";
+"Access to Calendars Is Off" = "L’accés als calendaris està desactivat";
+"Access to Reminders Is Off" = "L’accés als recordatoris està desactivat";
+"Turn on Fastlight in System Settings › Privacy & Security › %@" = "Activa Fastlight a Configuració del Sistema › Privacitat i seguretat › %@";
+"Access to Contacts Is Restricted" = "L’accés als contactes està restringit";
+"Access to Calendars Is Restricted" = "L’accés als calendaris està restringit";
+"Access to Reminders Is Restricted" = "L’accés als recordatoris està restringit";
+"A profile or Screen Time on this Mac doesn't allow it" = "Un perfil o Temps d’ús no ho permet en aquest Mac";
+"Couldn't Read Contacts" = "No s’han pogut llegir els contactes";
+"Couldn't Read Calendars" = "No s’han pogut llegir els calendaris";
+"Couldn't Read Reminders" = "No s’han pogut llegir els recordatoris";
+"Try again in a moment" = "Torna-ho a provar d’aquí a un moment";

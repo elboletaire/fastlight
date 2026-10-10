@@ -1,0 +1,27 @@
+/* Contacts, Calendar and Reminders: asking for access. Keys are the English text. */
+"Contacts" = "Contacts";
+"Calendars" = "Calendars";
+"Reminders" = "Reminders";
+"Open System Settings" = "Open System Settings";
+"Allow Access to Contacts…" = "Allow Access to Contacts…";
+"Allow Access to Calendars…" = "Allow Access to Calendars…";
+"Allow Access to Reminders…" = "Allow Access to Reminders…";
+"macOS asks once. Fastlight only reads Contacts, on this Mac." = "macOS asks once. Fastlight only reads Contacts, on this Mac.";
+"macOS asks once. Fastlight only reads Calendars, on this Mac." = "macOS asks once. Fastlight only reads Calendars, on this Mac.";
+"macOS asks once. Fastlight only reads Reminders, on this Mac." = "macOS asks once. Fastlight only reads Reminders, on this Mac.";
+"Allow Access…" = "Allow Access…";
+"Fastlight Can't Read Contacts" = "Fastlight Can't Read Contacts";
+"Fastlight Can't Read Calendars" = "Fastlight Can't Read Calendars";
+"Fastlight Can't Read Reminders" = "Fastlight Can't Read Reminders";
+"Access to Contacts Is Off" = "Access to Contacts Is Off";
+"Access to Calendars Is Off" = "Access to Calendars Is Off";
+"Access to Reminders Is Off" = "Access to Reminders Is Off";
+"Turn on Fastlight in System Settings › Privacy & Security › %@" = "Turn on Fastlight in System Settings › Privacy & Security › %@";
+"Access to Contacts Is Restricted" = "Access to Contacts Is Restricted";
+"Access to Calendars Is Restricted" = "Access to Calendars Is Restricted";
+"Access to Reminders Is Restricted" = "Access to Reminders Is Restricted";
+"A profile or Screen Time on this Mac doesn't allow it" = "A profile or Screen Time on this Mac doesn't allow it";
+"Couldn't Read Contacts" = "Couldn't Read Contacts";
+"Couldn't Read Calendars" = "Couldn't Read Calendars";
+"Couldn't Read Reminders" = "Couldn't Read Reminders";
+"Try again in a moment" = "Try again in a moment";
