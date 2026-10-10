@@ -41,6 +41,7 @@
 "Can't lock the screen on this version of macOS" = "Can't lock the screen on this version of macOS";
 "%@ needs confirming" = "%@ needs confirming";
 "Not confirmed in time, so the Mac didn't %@. Try again." = "Not confirmed in time, so the Mac didn't %@. Try again.";
+"Confirmed too quickly, so the Mac didn't %@. Try again." = "Confirmed too quickly, so the Mac didn't %@. Try again.";
 "Couldn't %@: %@" = "Couldn't %@: %@";
 "Can't list your shortcuts" = "Can't list your shortcuts";
 "The shortcuts command didn't answer" = "The shortcuts command didn't answer";

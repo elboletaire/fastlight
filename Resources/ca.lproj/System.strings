@@ -41,6 +41,7 @@
 "Can't lock the screen on this version of macOS" = "No es pot bloquejar la pantalla en aquesta versió del macOS";
 "%@ needs confirming" = "Cal confirmar: %@";
 "Not confirmed in time, so the Mac didn't %@. Try again." = "No s’ha confirmat a temps. Torna-ho a provar per %@.";
+"Confirmed too quickly, so the Mac didn't %@. Try again." = "S’ha confirmat massa de pressa. Torna-ho a provar per %@.";
 "Couldn't %@: %@" = "No s’ha pogut %@: %@";
 "Can't list your shortcuts" = "No es poden llistar les dreceres";
 "The shortcuts command didn't answer" = "L’ordre shortcuts no ha respost";

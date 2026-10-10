@@ -166,10 +166,17 @@ public struct SystemAction: Sendable, Equatable {
 /// Picking "Restart" arms it, and the list is searched again: the item
 /// has become "Confirm Restart?", first in the list (the Top Hit in
 /// normal search). Only picking that within `window` seconds restarts.
-/// Anything else, a different action armed, or the time running out,
-/// leaves the Mac alone.
+/// Anything else, a different action armed, the time running out, or a
+/// second ↵ too quick to be deliberate (a held key repeating), leaves the
+/// Mac alone.
 public struct Confirmation: Sendable {
     public static let window: TimeInterval = 5
+    /// Faster than this after arming isn't a second press.
+    public static let minimum: TimeInterval = 0.4
+
+    public enum Outcome: Equatable, Sendable {
+        case confirmed, tooSoon, notArmed
+    }
 
     private var armed: (id: SystemAction.ID, at: Date)?
 
@@ -186,9 +193,10 @@ public struct Confirmation: Sendable {
     }
 
     /// Whether `id` may run now. Either way, the arming is used up.
-    public mutating func confirm(_ id: SystemAction.ID, now: Date) -> Bool {
+    public mutating func confirm(_ id: SystemAction.ID, now: Date) -> Outcome {
         defer { armed = nil }
-        return isArmed(id, now: now)
+        guard isArmed(id, now: now), let a = armed else { return .notArmed }
+        return now.timeIntervalSince(a.at) < Self.minimum ? .tooSoon : .confirmed
     }
 
     public mutating func disarm() {
@@ -342,8 +350,11 @@ public final class SystemActionsExtension: LineHandler, @unchecked Sendable {
             return
         case "confirm":
             guard action.confirm else { throw RunError("unknown action") }
-            let ok = lock.withLock { confirmation.confirm(id, now: t) }
-            guard ok else {
+            switch lock.withLock({ confirmation.confirm(id, now: t) }) {
+            case .confirmed: break
+            case .tooSoon:
+                throw RunError(L("Confirmed too quickly, so the Mac didn't %@. Try again.", L(action.verb)))
+            case .notArmed:
                 throw RunError(L("Not confirmed in time, so the Mac didn't %@. Try again.", L(action.verb)))
             }
         default:
