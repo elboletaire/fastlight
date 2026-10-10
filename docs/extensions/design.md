@@ -294,7 +294,10 @@ Access. So:
   Finder's `.DS_Store`, hidden files and `.git/` included, since code can run
   from anywhere in there). It covers the manifest (and with it id and
   version), the executable and any script it loads from its folder. A
-  symlinked folder is hashed through the link. Folders over 100 MB or 5,000
+  symlinked folder is hashed through the link. Symlinks inside the folder
+  aren't followed (their target path is hashed), so one that leads out of
+  the folder, dangling or not, is refused: the code behind it could change
+  without a new fingerprint. Folders over 100 MB or 5,000
   files are refused.
 - `ConsentStore` remembers approved `id → fingerprint` pairs. Nothing is
   spawned unless the current fingerprint is approved: `ExtensionHost` checks

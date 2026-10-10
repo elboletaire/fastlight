@@ -239,9 +239,22 @@ public final class ExtensionLibrary {
     /// SHA-256 over each file's relative path and contents (a symlink's
     /// target instead of contents), in path order, every field prefixed
     /// with its length so no two folders can produce the same input.
+    ///
+    /// Symlinks aren't followed: one leading out of the folder would run
+    /// code the hash doesn't cover, so it's refused. Links within the
+    /// folder are fine, as what they point to is hashed on its own.
     public static func fingerprint(of dir: URL) throws -> String {
         let list = files(in: dir)
         if list.count > maxFiles { throw ValidationError("", "has more than \(maxFiles) files") }
+        let root = realPath(dir.path) ?? dir.standardizedFileURL.path
+        for f in list where f.values.isSymbolicLink == true {
+            guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: f.url.path) else {
+                throw ValidationError("", "can't read the symlink \(f.rel)")
+            }
+            if !isInside(target, linkAt: f.url, root: root) {
+                throw ValidationError("", "\(f.rel) links outside the extension folder (to \(target))")
+            }
+        }
         var total: UInt64 = 0
         var hash = SHA256()
         func field(_ kind: UInt8, _ data: Data) {
@@ -265,6 +278,28 @@ public final class ExtensionLibrary {
             }
         }
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+extension ExtensionLibrary {
+    /// Whether a symlink's target, relative to the link's folder, stays
+    /// under `root` (a resolved path). An existing target is resolved all
+    /// the way; a dangling one is judged by its path.
+    static func isInside(_ target: String, linkAt link: URL, root: String) -> Bool {
+        let parent = link.deletingLastPathComponent().path
+        let base = realPath(parent) ?? parent
+        let full = target.hasPrefix("/") ? target : base + "/" + target
+        let path = realPath(full) ?? URL(fileURLWithPath: full).standardizedFileURL.path
+        return path == root || path.hasPrefix(root + "/")
+    }
+
+    /// realpath(3): every link resolved, nil when the path doesn't exist.
+    /// (URL's resolvingSymlinksInPath drops a leading /private, which makes
+    /// its paths incomparable with ones it couldn't resolve.)
+    static func realPath(_ path: String) -> String? {
+        guard let p = realpath(path, nil) else { return nil }
+        defer { free(p) }
+        return String(cString: p)
     }
 }
 
