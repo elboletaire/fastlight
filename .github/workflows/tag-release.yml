@@ -22,6 +22,8 @@ concurrency:
 
 jobs:
   tag:
+    # A manual run from another branch would tag code that isn't on main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
