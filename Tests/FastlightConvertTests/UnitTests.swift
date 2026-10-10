@@ -216,3 +216,15 @@ extension UnitQuery: Equatable {
         #expect(UnitParser.parse("how many mpg in 0 l/100km") == nil)
     }
 }
+
+@Suite struct AbsoluteZeroTests {
+    @Test func nothingIsColderThanAbsoluteZero() throws {
+        for q in ["-300 c in k", "-274 c", "-460 f in c", "-1 k in c", "-0.01 k"] {
+            #expect(UnitParser.parse(q) == nil, "\(q)")
+        }
+        #expect(abs(try converted("-273.15 c in k")) < 1e-9)
+        #expect(abs(try converted("-459.67 f in k")) < 1e-9)
+        #expect(try converted("0 k in c") == -273.15)
+        #expect(close(try converted("-40 c in f"), -40))
+    }
+}
