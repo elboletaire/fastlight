@@ -7,6 +7,8 @@ public enum SystemCommand: Equatable, Sendable {
     /// The login framework's lock, the same as the Lock Screen menu item
     /// (no permission needed, unlike pressing ⌃⌘Q for the user).
     case lockScreen
+    /// A volume, ejected as Finder would (see `LiveExecutor`).
+    case eject(Volume)
 }
 
 /// Carries out commands. Behind a protocol so tests never lock, sleep or
@@ -17,9 +19,12 @@ public protocol SystemExecutor: Sendable {
 
 public struct LiveExecutor: SystemExecutor {
     public var runner: any CommandRunner
+    /// The mount points there are now.
+    public var mounted: @Sendable () -> Set<String>
 
-    public init(runner: any CommandRunner = ProcessRunner()) {
+    public init(runner: any CommandRunner = ProcessRunner(), mounted: @escaping @Sendable () -> Set<String> = Volume.mountPoints) {
         self.runner = runner
+        self.mounted = mounted
     }
 
     public func execute(_ command: SystemCommand) throws {
@@ -30,6 +35,13 @@ public struct LiveExecutor: SystemExecutor {
             try runner.launch(argv, grace: 1.5)
         case .lockScreen:
             try ScreenLock.lock()
+        case .eject(let v):
+            // `diskutil eject` takes the whole disk, every volume on it: one
+            // already gone went with an earlier one, and is done. A network
+            // volume is no disk, just a mount. Waited for, so the next
+            // volume's check sees what this one took.
+            guard mounted().contains(v.path) else { return }
+            _ = try runner.output(["/usr/sbin/diskutil", v.network ? "unmount" : "eject", v.path], timeout: 60)
         }
     }
 }
@@ -58,10 +70,17 @@ public enum ScreenLock {
 public struct Volume: Equatable, Sendable {
     public var name: String
     public var path: String
+    /// A server's share: unmounted, there's no disk to eject.
+    public var network: Bool
 
-    public init(name: String, path: String) {
+    public init(name: String, path: String, network: Bool = false) {
         self.name = name
         self.path = path
+        self.network = network
+    }
+
+    public static func mountPoints() -> Set<String> {
+        Set((FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: []) ?? []).map(\.path))
     }
 
     /// External drives, disk images and network volumes: what Finder's
@@ -75,7 +94,8 @@ public struct Volume: Equatable, Sendable {
                   url.path.hasPrefix("/Volumes/") else { return nil }
             let ejectable = v.volumeIsEjectable == true || v.volumeIsRemovable == true
                 || v.volumeIsInternal == false || v.volumeIsLocal == false
-            return ejectable ? Volume(name: v.volumeLocalizedName ?? url.lastPathComponent, path: url.path) : nil
+            return ejectable ? Volume(name: v.volumeLocalizedName ?? url.lastPathComponent, path: url.path,
+                                      network: v.volumeIsLocal == false) : nil
         }
     }
 }
@@ -149,7 +169,7 @@ public struct SystemAction: Sendable, Equatable {
         // Automation: System Events.
         case .toggleDarkMode:
             return [script("tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode")]
-        case .ejectAll: return volumes.map { .process(["/usr/sbin/diskutil", "eject", $0.path]) }
+        case .ejectAll: return volumes.map { .eject($0) }
         // Automation: Finder. Finder empties every volume's Trash, as its menu does.
         case .emptyTrash: return [script("tell application \"Finder\" to empty trash")]
         // Automation: loginwindow. The "really" events skip loginwindow's own

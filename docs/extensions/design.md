@@ -485,7 +485,7 @@ for 3+ characters).
 | Sleep, Sleep Displays | `pmset sleepnow`, `pmset displaysleepnow` | | none |
 | Start Screen Saver | `open -b com.apple.ScreenSaver.Engine` | | none |
 | Toggle Dark Mode | `osascript`: System Events' appearance preferences | | Automation (System Events) |
-| Eject All Disks | `diskutil eject` per external, removable, image or network volume | | none |
+| Eject All Disks | `diskutil eject` per external, removable or image volume (the whole disk: its other volumes, gone by their turn, are skipped), `diskutil unmount` per network volume | | none |
 | Empty Trash | `osascript`: Finder's `empty trash` | yes | Automation (Finder) |
 | Log Out, Restart, Shut Down | `osascript`: loginwindow's `aevtrlgo`, `aevtrrst`, `aevtrsdn` | yes | Automation (loginwindow) |
 
