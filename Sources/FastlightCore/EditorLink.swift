@@ -23,6 +23,14 @@ public enum EditorLink {
         "com.macromates.TextMate": .openQuery("txmt"),
     ]
 
+    /// The link a file row opens with: at its line when it's a content hit
+    /// and `editor`, the bundle id of the file's default app, takes one.
+    /// nil means a plain open.
+    public static func url(for file: FileItem, editor: String?) -> URL? {
+        guard let line = file.line, let editor else { return nil }
+        return url(bundleID: editor, path: file.path, line: line)
+    }
+
     /// nil when the editor isn't one we know a link for.
     public static func url(bundleID: String, path: String, line: Int) -> URL? {
         guard let style = editors[bundleID], path.hasPrefix("/"), line > 0 else { return nil }
