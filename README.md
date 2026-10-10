@@ -43,7 +43,13 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 
 ## Install
 
-1. Download `Fastlight-<version>.dmg` from the [latest release](https://github.com/elboletaire/fastlight/releases/latest), open it and drag **Fastlight** onto **Applications**.
+1. Install it with [Homebrew](https://brew.sh):
+
+   ```sh
+   brew install --cask elboletaire/tap/fastlight
+   ```
+
+   Or download `Fastlight-<version>.dmg` from the [latest release](https://github.com/elboletaire/fastlight/releases/latest), open it and drag **Fastlight** onto **Applications**.
 2. Give `/Applications/Fastlight.app` **Full Disk Access** in System Settings › Privacy & Security, so it can see Desktop, Documents and other protected folders. Doing it before the first launch saves a restart of the search daemon, but granting it later works too: Fastlight notices and restarts the daemon by itself. Until then the panel shows a shortcut to that setting.
 3. Open Fastlight. It lives in the menu bar; press **⌥Space** to search.
 
@@ -52,6 +58,9 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 
 > [!NOTE]
 > Releases are signed ad hoc until there is a Developer ID, so each update has a new signature and macOS drops the Full Disk Access grant. After updating, remove Fastlight from the Full Disk Access list and add it again.
+
+> [!TIP]
+> With Homebrew, `brew upgrade --cask fastlight` updates it (quitting and reopening it), and `brew uninstall --cask fastlight` removes it and stops its search daemon. `brew uninstall --zap --cask fastlight` also deletes its settings, extensions and logs, and fsearch's index unless a standalone fsearch is installed.
 
 > [!TIP]
 > Want another shortcut? Pick one in **Settings…** from the menu bar icon. For **⌘Space**, see [Replace Spotlight](#replace-spotlight).
@@ -165,7 +174,7 @@ make            # build/Fastlight.app, with fsearch embedded
 
 `UNIVERSAL=1 make dmg` builds for both Apple Silicon and Intel, and `CODESIGN_IDENTITY="Developer ID Application: …"` signs with a real identity and the hardened runtime. The [release workflow](.github/workflows/release.yml) does both on `v*` tags, and notarizes when the secrets listed at its top are set. Run by hand from a branch, it only builds: the DMG is left as the run's artifact and no release is touched.
 
-Releasing is merging a version bump: when `CFBundleShortVersionString` in `Resources/Info.plist` changes on `main` to a version with no tag yet, [`tag-release.yml`](.github/workflows/tag-release.yml) tags it and runs the release workflow. Tags aren't pushed by hand.
+Releasing is merging a version bump: when `CFBundleShortVersionString` in `Resources/Info.plist` changes on `main` to a version with no tag yet, [`tag-release.yml`](.github/workflows/tag-release.yml) tags it and runs the release workflow. Tags aren't pushed by hand. Once the release is published, the workflow points the Homebrew cask in [elboletaire/homebrew-tap](https://github.com/elboletaire/homebrew-tap) at the new DMG; see [packaging/homebrew](packaging/homebrew/README.md).
 
 The bundled fsearch keeps itself current: every Monday, [`fsearch.yml`](.github/workflows/fsearch.yml) checks fsearch's `main`. If it has moved on, it opens a PR (branch `deps/fsearch`) that updates the submodule, bumps the patch version and lists the upstream changes. CI runs on it, and merging it releases the new version. Until then it keeps that PR current when upstream moves on again (or `main`'s version changes), but never rewrites the branch once someone else has pushed to it: it comments on the PR instead. `scripts/bump-fsearch.sh` does the same locally. The workflow can also be run from the Actions tab at any time.
 
