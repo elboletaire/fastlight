@@ -270,6 +270,28 @@ import Testing
         #expect(SettingsExtension(scanner: other, cacheFile: cache).items(for: "bluetooth", global: true, limit: 3).isEmpty)
     }
 
+    @Test func rescansOnlyWhenTheCacheIsMissingOrADayOld() throws {
+        let (scanner, root) = try SettingsScannerTests.fixture()
+        let cache = root.appendingPathComponent("Data/settings.json")
+        let first = SettingsExtension(scanner: scanner, cacheFile: cache)
+        first.start()
+        first.index.settle()
+
+        // A fresh cache: starting again doesn't scan (which costs ~0.6 s of CPU).
+        let fresh = SettingsExtension(scanner: scanner, cacheFile: cache, now: { Date().addingTimeInterval(3600) })
+        fresh.start()
+        #expect(!fresh.index.isRefreshing)
+        #expect(fresh.items(for: "bluetooth", global: true, limit: 3).count == 1)
+
+        // A day later it does, and dates the cache again.
+        let old = SettingsExtension(scanner: scanner, cacheFile: cache, now: { Date().addingTimeInterval(2 * 86_400) })
+        old.start()
+        old.index.settle()
+        let again = SettingsExtension(scanner: scanner, cacheFile: cache, now: { Date().addingTimeInterval(2 * 86_400 + 60) })
+        again.start()
+        #expect(!again.index.isRefreshing)
+    }
+
     @Test func keywordModeWaitsForTheFirstScan() throws {
         let (scanner, _) = try SettingsScannerTests.fixture()
         let e = SettingsExtension(scanner: scanner, cacheFile: nil)

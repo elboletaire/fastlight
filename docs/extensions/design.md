@@ -438,9 +438,11 @@ the exact commands with fakes and never run them.
   `.prefPane` bundles in `/Library/PreferencePanes` and
   `~/Library/PreferencePanes` are included and opened by path.
 - Scanning reads a few hundred small plists (about half a second, cold),
-  so the index is cached in `FASTLIGHT_DATA_DIR/settings.json`, keyed by
-  macOS version, languages and battery, and rebuilt in the background
-  after every handshake. Until there's an index, normal search has
+  so the index is cached in
+  `FASTLIGHT_DATA_DIR/settings.json`, keyed by macOS version, languages
+  and battery, and rebuilt in the background after the handshake only when
+  it's missing or a day old (for third-party panes), since a scan costs
+  about 0.6 s of CPU. Until there's an index, normal search has
   nothing and keyword mode waits for it (up to 2 s).
 
 **Shortcuts** (keywords `sc`, `shortcut`, `shortcuts`; global, 3 results
