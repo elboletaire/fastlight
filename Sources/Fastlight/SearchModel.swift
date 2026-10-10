@@ -322,8 +322,7 @@ final class SearchModel: ObservableObject {
             sections = []
             // Review can't turn a disabled extension back on: say so instead.
             scopeNotice = extensions.isEnabled(ext)
-                ? Notice(symbol: "hand.raised", text: L("%@ needs your permission before it can run.", ext.name),
-                         action: .reviewConsent(ext.id))
+                ? consentNotice(for: ext)
                 : Notice(symbol: "nosign", text: L("%@ is disabled. Turn it on from the Extensions menu.", ext.name))
             onLayoutChange?()
             return
@@ -341,6 +340,11 @@ final class SearchModel: ObservableObject {
             guard !Task.isCancelled, let self, self.fanout.generation == gen else { return }
             self.setLoading(true)
         }
+    }
+
+    private func consentNotice(for ext: LoadedExtension) -> Notice {
+        Notice(symbol: "hand.raised", text: L("%@ needs your permission before it can run.", ext.name),
+               action: .reviewConsent(ext.id))
     }
 
     private func setLoading(_ on: Bool) {
@@ -408,6 +412,16 @@ final class SearchModel: ObservableObject {
         case .failed(let e):
             if e is CancellationError || (e as? ExtensionError) == .superseded { return }
             sections = []
+            if (e as? ExtensionError) == .needsConsent {
+                // Its files changed since the last rescan, so the host
+                // refused to start it. Rescan, so Review asks about what's
+                // on disk now (a new fingerprint), not what was approved.
+                extensions.refresh()
+                if let current = extensions.library.extension(id: scope.ext.id) {
+                    scopeNotice = consentNotice(for: current)
+                    break
+                }
+            }
             let text = (e as? ExtensionError)?.message(for: scope.ext.name)
                 ?? (e as? LocalizedError)?.errorDescription ?? e.localizedDescription
             scopeNotice = Notice(symbol: "exclamationmark.triangle", text: text)
