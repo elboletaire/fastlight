@@ -73,7 +73,7 @@ struct Lexer {
                 i += 1
                 continue
             }
-            if c.isASCII && c.isNumber || (c == "." || (c == "," && decimal == ",")) && i + 1 < chars.count && chars[i + 1].isNumber {
+            if c.isASCII && c.isNumber || (c == "." || (c == "," && decimal == ",")) && i + 1 < chars.count && chars[i + 1].isASCII && chars[i + 1].isNumber {
                 let (value, next) = try number(chars, from: i)
                 out.append(.number(value))
                 i = next
@@ -92,11 +92,12 @@ struct Lexer {
                 // "3x4", "3 x 4": x multiplies between numbers.
                 if word == "x", Self.endsOperand(out.last), Self.startsOperand(chars, after: j) {
                     out.append(.op("*"))
-                } else if word.hasPrefix("x"), word.dropFirst().allSatisfy(\.isNumber), !word.dropFirst().isEmpty,
-                          Self.endsOperand(out.last) {
-                    // "3x4" lexes as 3 then "x4".
+                } else if word.hasPrefix("x"), word.count > 1, word.dropFirst().allSatisfy({ $0.isASCII && $0.isNumber }),
+                          let n = Double(word.dropFirst()), Self.endsOperand(out.last) {
+                    // "3x4" lexes as 3 then "x4". ASCII digits only: "x²" and
+                    // "x٣" are names, so they have no result.
                     out.append(.op("*"))
-                    out.append(.number(Double(word.dropFirst())!))
+                    out.append(.number(n))
                 } else {
                     out.append(.name(word))
                 }
