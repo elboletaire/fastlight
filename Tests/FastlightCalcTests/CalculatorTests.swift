@@ -121,10 +121,14 @@ func failure(_ s: String, decimal: Character = ".") -> CalcError? {
         #expect(try value("TAU / 2") == .pi)
     }
 
-    @Test func errorsNeverCrash() {
+    @Test func errorsNeverCrash() throws {
         #expect(failure("") == .empty)
         #expect(failure("   ") == .empty)
         #expect(failure("1/0") == .divisionByZero)
+        #expect(failure("0^-1") == .divisionByZero) // was "too large"
+        #expect(failure("0^-0.5") == .divisionByZero)
+        #expect(try value("0^0") == 1)
+        #expect(try value("0^2") == 0)
         #expect(failure("(1+2") == .missingParenthesis)
         #expect(failure("1+") == .unexpected(""))
         #expect(failure("1+*2") == .unexpected("*"))
