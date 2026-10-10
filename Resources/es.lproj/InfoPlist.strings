@@ -1,4 +1,5 @@
 /* Permission prompts. The keywords stay in English: Fastlight reads them as typed. */
+"NSAppleEventsUsageDescription" = "Fastlight pide a System Events, al Finder o a la ventana de inicio de sesión que cambien el modo oscuro, vacíen la papelera, cierren la sesión, reinicien o apaguen el Mac, solo cuando eliges esa acción.";
 "NSCalendarsFullAccessUsageDescription" = "Fastlight muestra tus próximos eventos cuando escribes “cal” o buscas uno. Se leen en este Mac y nunca salen de él.";
 "NSContactsUsageDescription" = "Fastlight encuentra personas de tus contactos cuando escribes “contact” o buscas un nombre. Tus contactos se leen en este Mac y nunca salen de él.";
 "NSRemindersFullAccessUsageDescription" = "Fastlight muestra tus recordatorios cuando escribes “remind” o buscas uno. Se leen en este Mac y nunca salen de él.";

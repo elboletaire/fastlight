@@ -493,6 +493,16 @@ The loginwindow events skip its own confirmation dialog (Fastlight has
 asked already), but apps still get to save or cancel, as with the Apple
 menu. Nothing needs Accessibility.
 
+The Apple events are sent by `osascript`, started by `fastlight-system`,
+started by Fastlight: TCC asks on behalf of the responsible app, so the
+Automation prompt names Fastlight and shows its
+`NSAppleEventsUsageDescription`. Under the hardened runtime (a real
+signing identity), it denies them with -1743 and no prompt unless that app
+has `com.apple.security.automation.apple-events`; `Fastlight.entitlements`
+has it, and `fastlight-system.entitlements` gives it to the helper too,
+which costs nothing and covers it being checked on the process that
+starts `osascript`.
+
 - Normal search is strict: the query must be plain words (no `.`, `/`,
   `~`) that are a name or alias (`reboot`, `power off`) or, from 4
   letters on, the start of one. `sleep`, `lock`, `rest` offer actions;
@@ -533,8 +543,8 @@ calls lives in `FastlightContacts` and `FastlightCalendar` behind
   signing identity in `scripts/bundle.sh`), TCC also wants
   `com.apple.security.personal-information.addressbook` and `.calendars`
   (which covers Reminders) on the responsible app, or it denies without a
-  prompt; `Resources/Fastlight.entitlements` gives them to the app and to
-  the two helpers. Ad-hoc builds have no hardened runtime and are signed
+  prompt; `Resources/Fastlight.entitlements` gives them to the app, and
+  `Resources/fastlight-pim.entitlements` to the two helpers. Ad-hoc builds have no hardened runtime and are signed
   without entitlements.
 - **When it asks.** Never on its own. The helpers check the authorization
   status (which never prompts) on every search. Without access, global
