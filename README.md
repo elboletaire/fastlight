@@ -149,7 +149,7 @@ You need the Swift 6 toolchain (the Command Line Tools are enough, no Xcode) and
 
 ```sh
 brew install rustup && "$(brew --prefix rustup)/bin/rustup" default stable
-git clone --recursive git@github.com:elboletaire/fastlight.git && cd fastlight
+git clone --recursive https://github.com/elboletaire/fastlight.git && cd fastlight
 make            # build/Fastlight.app, with fsearch embedded
 ```
 
