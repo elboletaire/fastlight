@@ -1,3 +1,4 @@
+import Contacts
 import FastlightPIM
 import Foundation
 import Testing
@@ -164,6 +165,27 @@ func targets(_ item: [String: Any]) -> [String] {
         #expect(c.messageHandle == "a@x.example")
         c.emails = []
         #expect(c.messageHandle == nil)
+    }
+
+    /// The store hands over labels as identifiers; what's shown is in the
+    /// user's language, so only the identifier says which is the mobile.
+    @Test func mobileIsFoundByItsLabelIdentifier() {
+        let work = LabeledValue("feina", "1", identifier: CNLabelWork)
+        let mobile = LabeledValue("mòbil", "2", identifier: CNLabelPhoneNumberMobile)
+        var c = Contact(id: "a", name: "A", phones: [work, mobile])
+        #expect(c.messageHandle == "2")
+        c.phones = [work, LabeledValue("iPhone", "3", identifier: CNLabelPhoneNumberiPhone)]
+        #expect(c.messageHandle == "3")
+        // A custom label that happens to read "mobile" isn't the built-in one.
+        c.phones = [work, LabeledValue("mobile", "4", identifier: "mobile")]
+        #expect(c.messageHandle == "1")
+        // Spanish, and the English words no longer matter once there's an identifier.
+        c.phones = [LabeledValue("móvil", "5", identifier: CNLabelPhoneNumberMobile), LabeledValue("cell", "6", identifier: "_$!<Other>!$_")]
+        #expect(c.messageHandle == "5")
+    }
+
+    @Test func mobileIdentifiersAreContacts() {
+        #expect(LabeledValue.mobileIdentifiers == [CNLabelPhoneNumberMobile, CNLabelPhoneNumberiPhone])
     }
 }
 

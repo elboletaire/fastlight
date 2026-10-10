@@ -57,8 +57,8 @@ struct SystemContacts: ContactSource {
                 organization: c.organizationName,
                 jobTitle: c.jobTitle,
                 isOrganization: c.contactType == .organization,
-                emails: c.emailAddresses.map { LabeledValue(Self.label($0.label), $0.value as String) },
-                phones: c.phoneNumbers.map { LabeledValue(Self.label($0.label), $0.value.stringValue) }))
+                emails: c.emailAddresses.map { LabeledValue(Self.label($0.label), $0.value as String, identifier: $0.label) },
+                phones: c.phoneNumbers.map { LabeledValue(Self.label($0.label), $0.value.stringValue, identifier: $0.label) }))
         }
         return out
     }
