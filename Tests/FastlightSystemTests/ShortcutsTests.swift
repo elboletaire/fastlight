@@ -180,6 +180,65 @@ import Testing
         #expect(try #require(e.handle(#"{"id":2,"type":"run","name":"delete","data":{}}"#)).contains("unknown action"))
     }
 
+    @Test func sweepsInputFilesLeftOverADayAgo() throws {
+        let clock = Clock()
+        let (e, _, dir) = try ext(clock: clock)
+        let fm = FileManager.default
+        func file(_ name: String, age: TimeInterval) throws -> URL {
+            let f = dir.appendingPathComponent(name)
+            try Data("x".utf8).write(to: f)
+            try fm.setAttributes([.modificationDate: clock.now.addingTimeInterval(-age)], ofItemAtPath: f.path)
+            return f
+        }
+        let old = try file("fastlight-shortcut-input-OLD.txt", age: 2 * 86_400)
+        let recent = try file("fastlight-shortcut-input-NEW.txt", age: 3_600)
+        let other = try file("someone-elses.txt", age: 2 * 86_400)
+        e.start()
+        e.list.settle()
+        #expect(!fm.fileExists(atPath: old.path))
+        #expect(fm.fileExists(atPath: recent.path))
+        #expect(fm.fileExists(atPath: other.path))
+        // Once per process, not on every search.
+        let later = try file("fastlight-shortcut-input-LATER.txt", age: 2 * 86_400)
+        e.start()
+        #expect(fm.fileExists(atPath: later.path))
+    }
+
+    /// A run before the first listing is remembered too, and a cache
+    /// without a list still lists on the next start.
+    @Test func remembersARunBeforeTheListIsIn() throws {
+        let runner = ShortcutsTests.runner()
+        let clock = Clock()
+        let (e, file, _) = try ext(runner, clock: clock)
+        try e.run("run", data: ["name": "Translate", "id": "5998B765-19FC-4E94-8504-BF7A559687D3"])
+        let cached = try JSONDecoder().decode(ShortcutsExtension.Cache.self, from: Data(contentsOf: file))
+        #expect(cached.lastRun["5998B765-19FC-4E94-8504-BF7A559687D3"] == clock.now)
+        #expect(cached.shortcuts == nil)
+
+        let (again, _, _) = try ext(runner, cache: file, clock: clock)
+        #expect(again.list.value == nil)
+        again.start()
+        again.list.settle()
+        #expect(titles(again.items(for: "", global: false, limit: 1)) == ["Translate"])
+    }
+
+    /// Runs and refreshes saving at once: the file ends with every run.
+    @Test func savesNeverLoseARun() throws {
+        let runner = ShortcutsTests.runner()
+        let (e, file, _) = try ext(runner)
+        let names = (0..<40).map { "S\($0)" }
+        DispatchQueue.concurrentPerform(iterations: names.count) { i in
+            try? e.run("run", data: ["name": names[i]])
+            if i % 4 == 0 {
+                e.start()
+                e.list.settle()
+            }
+        }
+        e.list.settle()
+        let cached = try JSONDecoder().decode(ShortcutsExtension.Cache.self, from: Data(contentsOf: file))
+        #expect(Set(cached.lastRun.keys) == Set(names))
+    }
+
     @Test func saysWhenThereAreNone() throws {
         let runner = FakeRunner()
         runner.replies = ["/usr/bin/shortcuts list --show-identifiers": "", "/usr/bin/shortcuts list --folders --show-identifiers": ""]
