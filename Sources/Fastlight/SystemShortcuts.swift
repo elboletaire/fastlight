@@ -74,8 +74,9 @@ enum KeyboardLayout {
         s.display { character(for: $0)?.uppercased() }
     }
 
-    /// What the key types with no modifiers, on the current layout.
-    static func character(for code: UInt16) -> String? {
+    /// What the key types on the current layout, with no modifiers or with
+    /// ⌘ held: layouts like "Dvorak - QWERTY ⌘" switch keys under ⌘.
+    static func character(for code: UInt16, command: Bool = false) -> String? {
         guard !Key.isKeypad(code), Key.special[code] == nil,
               let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
               let ptr = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return nil }
@@ -85,12 +86,19 @@ enum KeyboardLayout {
         var chars = [UniChar](repeating: 0, count: 4)
         var length = 0
         let status = bytes.withMemoryRebound(to: UCKeyboardLayout.self, capacity: 1) { layout in
-            UCKeyTranslate(layout, code, UInt16(kUCKeyActionDisplay), 0, UInt32(LMGetKbdType()),
+            UCKeyTranslate(layout, code, UInt16(kUCKeyActionDisplay), command ? UInt32(cmdKey >> 8) & 0xFF : 0,
+                           UInt32(LMGetKbdType()),
                            OptionBits(kUCKeyTranslateNoDeadKeysBit), &dead, chars.count, &length, &chars)
         }
         guard status == noErr, length > 0 else { return nil }
         let s = String(utf16CodeUnits: chars, count: length)
         return s.unicodeScalars.allSatisfy({ CharacterSet.controlCharacters.contains($0) }) ? nil : s
+    }
+
+    /// The key that pastes with ⌘: whichever types "v" with ⌘ held on the
+    /// current layout (Dvorak's is the ANSI period key), else ANSI V.
+    static func pasteKeyCode() -> UInt16 {
+        Key.code(typing: "v") { character(for: $0, command: true) } ?? 9 // kVK_ANSI_V
     }
 
     /// For NSMenuItem.keyEquivalent, which wants the character, not the code.

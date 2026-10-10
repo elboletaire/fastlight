@@ -169,6 +169,17 @@ public enum Key {
 
     public static func isKeypad(_ code: UInt16) -> Bool { ansi[code]?.hasPrefix("Keypad") == true }
 
+    /// The key that types `character` on a layout, given what each key
+    /// types there (nil for keys it can't name): the lowest such code from
+    /// 0 to 127, keypad and named keys left out. Nil when no key types it,
+    /// as on a non-Latin layout.
+    public static func code(typing character: String, on keyName: (UInt16) -> String?) -> UInt16? {
+        let wanted = character.lowercased()
+        return (0...127).lazy.map(UInt16.init).first { code in
+            !isKeypad(code) && special[code] == nil && !isModifier(code) && keyName(code)?.lowercased() == wanted
+        }
+    }
+
     /// Modifier keys on their own, which only come as flagsChanged.
     public static func isModifier(_ code: UInt16) -> Bool { (54...63).contains(code) }
 }

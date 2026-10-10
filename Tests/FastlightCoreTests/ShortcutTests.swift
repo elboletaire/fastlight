@@ -23,6 +23,26 @@ import Testing
         #expect(s(Key.space, .option).display(keyName: { _ in "?" }) == "⌥Space")
     }
 
+    /// ⌘V is pressed by what types V on the user's layout, not ANSI V.
+    @Test func findsTheKeyThatTypesACharacter() {
+        let qwerty: (UInt16) -> String? = { Key.ansi[$0] }
+        #expect(Key.code(typing: "v", on: qwerty) == 9)
+        // Dvorak types V with the ANSI period key, and a period with V's.
+        let dvorak: (UInt16) -> String? = { code in
+            switch code {
+            case 47: "v"
+            case 9: "."
+            default: Key.ansi[code].flatMap { $0 == "v" ? nil : $0 }
+            }
+        }
+        #expect(Key.code(typing: "v", on: dvorak) == 47)
+        #expect(Key.code(typing: "V", on: { $0 == 40 ? "V" : nil }) == 40)
+        // A non-Latin layout has no V: the caller falls back to ANSI V.
+        #expect(Key.code(typing: "v", on: { _ in "ж" }) == nil)
+        // Keypad and named keys (F8) don't count, even if a layout names them.
+        #expect(Key.code(typing: "v", on: { $0 == 83 || $0 == 100 || $0 == 31 ? "v" : nil }) == 31)
+    }
+
     @Test func modifiersKeepOnlyTheFourThatCount() {
         // Caps Lock (1 << 16) and fn (1 << 23) ride along in NSEvent flags.
         let m = Shortcut.Modifiers(rawValue: Shortcut.Modifiers.option.rawValue | 1 << 16 | 1 << 23)
