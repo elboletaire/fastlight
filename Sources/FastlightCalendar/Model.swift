@@ -78,12 +78,39 @@ public protocol CalendarSource: Sendable {
 /// The time it is and how to read dates: the system's, or fixed in tests.
 public struct Clock: Sendable {
     public var now: @Sendable () -> Date
-    /// Carries the time zone and locale too.
-    public var calendar: Calendar
+    /// The time zone, asked for each time: the system's follows a change
+    /// made while the helper runs.
+    public var timeZone: @Sendable () -> TimeZone
+    private var base: Calendar
 
-    public init(now: @escaping @Sendable () -> Date = { Date() }, calendar: Calendar = Clock.system()) {
+    /// Carries the time zone and locale too.
+    public var calendar: Calendar {
+        var c = base
+        c.timeZone = timeZone()
+        return c
+    }
+
+    /// Without a calendar, the system's, in its time zone of the moment;
+    /// a calendar given keeps its own.
+    public init(now: @escaping @Sendable () -> Date = { Date() }, calendar: Calendar? = nil,
+                timeZone: (@Sendable () -> TimeZone)? = nil) {
         self.now = now
-        self.calendar = calendar
+        base = calendar ?? Clock.system()
+        if let timeZone {
+            self.timeZone = timeZone
+        } else if calendar == nil {
+            self.timeZone = { Clock.systemTimeZone() }
+        } else {
+            let fixed = base.timeZone
+            self.timeZone = { fixed }
+        }
+    }
+
+    /// The system's time zone now. Foundation keeps the one it read first
+    /// until told to forget it, which only a run loop would hear about.
+    public static func systemTimeZone() -> TimeZone {
+        NSTimeZone.resetSystemTimeZone()
+        return TimeZone.current
     }
 
     /// The user's calendar and time zone, with dates in Fastlight's

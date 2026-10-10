@@ -32,15 +32,15 @@ public final class EventsExtension: StoreExtension<[CalendarEvent]>, @unchecked 
         self.clock = clock
         super.init(domain: .calendars, now: clock.now, access: { source.access(.events) },
                    requestAccess: { source.requestAccess(.events, $0) }) {
-            let from = clock.calendar.startOfDay(for: clock.now())
-            guard let to = clock.calendar.date(byAdding: .day, value: Self.days, to: from) else { return nil }
+            let cal = clock.calendar
+            let from = cal.startOfDay(for: clock.now())
+            guard let to = cal.date(byAdding: .day, value: Self.days, to: from) else { return nil }
             return try? source.events(from: from, to: to)
         }
     }
 
     /// Not over yet, soonest first; on each day all-day events lead.
-    func upcoming(_ events: [CalendarEvent], now: Date) -> [CalendarEvent] {
-        let cal = clock.calendar
+    func upcoming(_ events: [CalendarEvent], now: Date, calendar cal: Calendar) -> [CalendarEvent] {
         let today = cal.startOfDay(for: now)
         func day(_ e: CalendarEvent) -> Date { max(today, cal.startOfDay(for: e.start)) }
         return events.filter { $0.end > now }.sorted { a, b in
@@ -54,7 +54,7 @@ public final class EventsExtension: StoreExtension<[CalendarEvent]>, @unchecked 
 
     public override func results(in events: [CalendarEvent], query q: String, global: Bool, limit: Int) -> [[String: Any]] {
         let text = DateText(clock)
-        let upcoming = upcoming(events, now: text.now)
+        let upcoming = upcoming(events, now: text.now, calendar: text.calendar)
         if q.isEmpty {
             if global { return [] }
             guard !upcoming.isEmpty else {
@@ -89,7 +89,7 @@ public final class EventsExtension: StoreExtension<[CalendarEvent]>, @unchecked 
             "subtitle": subtitle.joined(separator: " · "),
             "icon": ["app": "com.apple.iCal"],
             "actions": [
-                ["type": "open", "target": CalendarLinks.event(e, timeZone: clock.calendar.timeZone), "title": L("Show in Calendar")],
+                ["type": "open", "target": CalendarLinks.event(e, timeZone: text.calendar.timeZone), "title": L("Show in Calendar")],
                 ["type": "copy", "text": details, "title": L("Copy Event Details")],
             ],
         ]
