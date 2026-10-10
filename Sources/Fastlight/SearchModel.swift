@@ -2,19 +2,6 @@ import AppKit
 import FastlightCore
 import UniformTypeIdentifiers
 
-/// A file or folder from fsearch, with what the row shows about it.
-struct FileItem: Hashable, Sendable {
-    var path: String
-    var isDirectory: Bool
-    var size: UInt64?
-    var modified: Date?
-    var line: Int?
-    var snippet: String?
-
-    var name: String { (path as NSString).lastPathComponent }
-    var parent: String { (path as NSString).deletingLastPathComponent }
-}
-
 /// One selectable row.
 enum ResultItem: Identifiable, Hashable {
     case app(AppEntry)

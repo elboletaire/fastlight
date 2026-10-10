@@ -36,7 +36,7 @@ enum Snapshot {
         let client = FSearchClient.forApp()
         for q in live {
             let filter = ResultFilter(query: q)
-            let files = (try? client.search(q, limit: SearchModel.fetchLimit)).map { SearchModel.files(from: $0, filter: filter) } ?? []
+            let files = (try? client.search(q, limit: SearchModel.fetchLimit)).map { FileProvider.items(from: $0, filter: filter, limit: SearchModel.maxFiles) } ?? []
             let slug = q.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }
             all.append(Scene(name: "live-\(String(slug))", query: q, files: files))
         }
