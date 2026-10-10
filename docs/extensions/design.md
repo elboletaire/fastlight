@@ -378,7 +378,9 @@ parser and an evaluator, so answers take microseconds.
   (`sqrt(-1)`), and anything that overflows.
 - Normal search only shows an answer when the query computes something: a
   bare number (`2026`), a constant alone (`pi`), dates (`2026-10-10`,
-  `10/10/2026`) and anything that doesn't parse are left alone. Then it is
+  `10/10/2026`, `2024-05`, `12-2025`, and `2024-0` while typing one), two
+  numbers of 3+ digits joined by `-` (`555-1234`) and anything that
+  doesn't parse are left alone. Then it is
   the Top Hit. Keyword mode always answers or says why not.
 - Display: integers a Double holds exactly (below 2⁵³) as they are
   (`1234567890123 + 1` = 1,234,567,890,124), anything else rounded to 12

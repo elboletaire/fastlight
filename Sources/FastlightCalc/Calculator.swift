@@ -88,9 +88,15 @@ public enum Calculator {
         return c
     }
 
-    /// 2026-10-10, 10/10/2026, 10.10.26: dates, not subtractions.
+    /// 2026-10-10, 10/10/2026, 10.10.26, 2024-05, 12-2025 (and 2024-0 on
+    /// the way to a date): dates, not subtractions. Also two numbers of 3+
+    /// digits joined by a "-", like 555-1234: phone numbers, codes and
+    /// ranges far more often than math. Keyword mode still answers them.
     static func isDate(_ q: String) -> Bool {
-        let patterns = [#"^\d{4}-\d{1,2}-\d{1,2}$"#, #"^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$"#]
+        let patterns = [
+            #"^\d{4}-\d{1,2}-\d{1,2}$"#, #"^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$"#,
+            #"^\d{4}-\d{0,2}$"#, #"^\d{1,2}-\d{4}$"#, #"^\d{3,}-\d{3,}$"#,
+        ]
         return patterns.contains { q.range(of: $0, options: .regularExpression) != nil }
     }
 }
