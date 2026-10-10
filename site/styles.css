@@ -373,3 +373,4 @@ kbd {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
   .shot { filter: none; transform: none; }
 }
+.shot-stack { display: grid; gap: 28px; min-width: 0; }
