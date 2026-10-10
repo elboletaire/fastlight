@@ -53,7 +53,7 @@ let package = Package(
         .target(name: "FastlightWeb", dependencies: ["FastlightL10n"]),
         .executableTarget(name: "fastlight-web", dependencies: ["FastlightWeb"]),
         .testTarget(name: "FastlightL10nTests", dependencies: ["FastlightL10n"]),
-        .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore"]),
+        .testTarget(name: "FastlightCoreTests", dependencies: ["FastlightCore", "FastlightL10n"]),
         .testTarget(name: "FastlightEmojiTests", dependencies: ["FastlightEmoji", "FastlightL10n"]),
         .testTarget(name: "FastlightCalcTests", dependencies: ["FastlightCalc", "FastlightL10n"]),
         .testTarget(name: "FastlightConvertTests", dependencies: ["FastlightConvert", "FastlightCalc", "FastlightL10n"]),

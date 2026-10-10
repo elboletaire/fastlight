@@ -83,12 +83,12 @@ public enum ResultLayout {
             out.append(ResultSection(kind: kind, title: title, items: items, offset: offset))
             offset += items.count
         }
-        if let top { add(.topHit, "Top Hit", [top]) }
+        if let top { add(.topHit, L("Top Hit"), [top]) }
         // maxApps in all, the Top Hit included.
         let topIsApp = if case .app = top { true } else { false }
-        add(.apps, "Applications", apps.prefix(maxApps - (topIsApp ? 1 : 0)).map(ResultItem.app))
+        add(.apps, L("Applications"), apps.prefix(maxApps - (topIsApp ? 1 : 0)).map(ResultItem.app))
         for (ext, results) in found where !results.isEmpty { add(.ext(ext.id), ext.name, results.map(ResultItem.ext)) }
-        add(.files, "Files", files.map(ResultItem.file))
+        add(.files, L("Files"), files.map(ResultItem.file))
         return out
     }
 
@@ -115,9 +115,9 @@ public enum FileSearchState: Equatable, Sendable {
     public init(_ e: FSearchError) {
         self = switch e {
         case .daemon(let msg) where msg.lowercased().hasPrefix("indexing"): .indexing
-        case .notInstalled: .unavailable("fsearch isn't installed, so only apps are searched.")
-        case .timedOut: .unavailable("fsearch isn't answering, so only apps are searched.")
-        default: .unavailable("Can't reach fsearch, so only apps are searched.")
+        case .notInstalled: .unavailable(L("fsearch isn't installed, so only apps are searched."))
+        case .timedOut: .unavailable(L("fsearch isn't answering, so only apps are searched."))
+        default: .unavailable(L("Can't reach fsearch, so only apps are searched."))
         }
     }
 

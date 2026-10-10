@@ -1,0 +1,49 @@
+import Foundation
+import Testing
+import FastlightL10n
+@testable import FastlightCore
+
+/// Core's own strings in Catalan and Spanish; everything else here runs
+/// in English.
+@Suite struct LocalizedCoreTests {
+    func inLanguage<T>(_ lang: String, _ body: () throws -> T) rethrows -> T {
+        try Localizer.$override.withValue(Localizer.named(lang), operation: body)
+    }
+
+    @Test func extensionErrorsNameTheExtension() {
+        #expect(ExtensionError.timeout.message(for: "Calculator") == "Calculator didn’t answer in time.")
+        inLanguage("ca") {
+            #expect(ExtensionError.timeout.message(for: "Calculadora") == "Calculadora no ha respost a temps.")
+            #expect(ExtensionError.disabled.message(for: "Web") == "L’extensió Web està desactivada.")
+        }
+        inLanguage("es") {
+            #expect(ExtensionError.crashed("x").message(for: "Web") == "Web se ha detenido inesperadamente (x).")
+        }
+        // The extension's own words are left alone.
+        inLanguage("ca") { #expect(ExtensionError.reported("Nope").message(for: "X") == "Nope") }
+    }
+
+    @Test func shortcutsAndProblems() {
+        #expect(Shortcut.optionSpace.display() == "⌥Space")
+        inLanguage("ca") {
+            #expect(Shortcut.optionSpace.display() == "⌥Espai")
+            let tab = Shortcut(keyCode: Key.tab, modifiers: .command)
+            #expect(tab.problem?.message(for: tab) == "El macOS reserva ⌘⇥ (canviar d’app).")
+        }
+        inLanguage("es") { #expect(SymbolicHotKey.spotlight.title == "Mostrar búsqueda Spotlight") }
+    }
+
+    @Test func searchSyntaxAndSections() {
+        inLanguage("es") {
+            #expect(QuerySyntax.operators.first?.meaning == "Aproximada; las palabras de 5 letras o más admiten una errata")
+            // The syntax itself stays as typed.
+            #expect(QuerySyntax.listedFilters.map(\.key).contains("ext"))
+            #expect(FileSearchState(.timedOut) == .unavailable("fsearch no responde; solo se buscan aplicaciones."))
+        }
+        inLanguage("ca") {
+            let mtime = QuerySyntax.filters.first { $0.key == "mtime" }
+            #expect(mtime?.entry.meaning == "Modificat fa menys de (<) o fa més de (>). També modified:")
+            #expect(ItemAction(.reveal(path: "/tmp")).displayTitle == "Mostra al Finder")
+        }
+    }
+}

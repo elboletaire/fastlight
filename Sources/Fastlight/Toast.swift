@@ -89,7 +89,7 @@ enum Paster {
     static func paste(_ text: String, into app: NSRunningApplication?) {
         copy(text)
         guard canPaste else {
-            Toast.shared.show("Copied. Press ⌘V to paste, or allow Fastlight to paste for you in Accessibility settings.",
+            Toast.shared.show(L("Copied. Press ⌘V to paste, or allow Fastlight to paste for you in Accessibility settings."),
                               symbol: "doc.on.clipboard", duration: 3)
             if !UserDefaults.standard.bool(forKey: askedKey) {
                 UserDefaults.standard.set(true, forKey: askedKey)

@@ -23,7 +23,7 @@ final class AboutWindowController: NSWindowController {
         let host = NSHostingController(rootView: AboutView(info: info))
         host.sizingOptions = .preferredContentSize
         let window = ClosableWindow(contentViewController: host)
-        window.title = "About Fastlight"
+        window.title = L("About Fastlight")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
@@ -51,17 +51,17 @@ struct AboutView: View {
         VStack(alignment: .leading, spacing: 18) {
             header
             Divider()
-            Text("Search syntax").font(.headline)
+            Text(L("Search syntax")).font(.headline)
             HStack(alignment: .top, spacing: 28) {
                 VStack(alignment: .leading, spacing: 18) {
-                    SyntaxList(title: "Operators", entries: QuerySyntax.operators, syntaxWidth: 104)
-                    SyntaxList(title: "Values for size: and mtime:", entries: QuerySyntax.ranges, syntaxWidth: 104)
+                    SyntaxList(title: L("Operators"), entries: QuerySyntax.operators, syntaxWidth: 104)
+                    SyntaxList(title: L("Values for size: and mtime:"), entries: QuerySyntax.ranges, syntaxWidth: 104)
                 }
                 .frame(width: 360, alignment: .leading)
-                SyntaxList(title: "Filters", entries: QuerySyntax.listedFilters.map(\.entry), syntaxWidth: 56)
+                SyntaxList(title: L("Filters"), entries: QuerySyntax.listedFilters.map(\.entry), syntaxWidth: 56)
                     .frame(width: 430, alignment: .leading)
             }
-            Text("\(QuerySyntax.caseNote) Plain queries leave out app bundles, dot-folders, node_modules and ~/Library; any filter turns that off.")
+            Text(QuerySyntax.caseNote + " " + L("Plain queries leave out app bundles, dot-folders, node_modules and ~/Library; any filter turns that off."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -80,16 +80,16 @@ struct AboutView: View {
                 .resizable()
                 .frame(width: 72, height: 72)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Fastlight").font(.system(size: 22, weight: .semibold))
-                Text("Version \(info.version) (\(info.build))").foregroundStyle(.secondary)
+                Text(verbatim: "Fastlight").font(.system(size: 22, weight: .semibold))
+                Text(L("Version %@ (%@)", info.version, info.build)).foregroundStyle(.secondary)
                 if !info.copyright.isEmpty {
                     Text(info.copyright).font(.callout).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 16)
             VStack(alignment: .trailing, spacing: 6) {
-                Link("Website", destination: URL(string: "https://elboletaire.github.io/fastlight/")!)
-                Link("Source on GitHub", destination: URL(string: "https://github.com/elboletaire/fastlight")!)
+                Link(L("Website"), destination: URL(string: "https://elboletaire.github.io/fastlight/")!)
+                Link(L("Source on GitHub"), destination: URL(string: "https://github.com/elboletaire/fastlight")!)
             }
             .font(.callout)
         }

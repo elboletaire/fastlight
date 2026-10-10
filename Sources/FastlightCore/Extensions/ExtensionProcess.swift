@@ -30,6 +30,22 @@ public enum ExtensionError: Error, LocalizedError, Equatable, Sendable {
         case .reported(let msg): msg
         }
     }
+
+    /// A sentence for people, naming the extension: "Calculator didn't
+    /// answer in time." The extension's own errors are shown as they are.
+    public func message(for name: String) -> String {
+        switch self {
+        case .needsConsent: L("%@ needs your approval to run.", name)
+        case .disabled: L("%@ is disabled.", name)
+        case .failed(let why): L("%@ isn’t working. %@", name, why)
+        case .launch(let why): L("%@ couldn’t start: %@", name, why)
+        case .timeout: L("%@ didn’t answer in time.", name)
+        case .crashed(let why): L("%@ stopped unexpectedly (%@).", name, why)
+        case .superseded: L("%@ was superseded by a newer query.", name)
+        case .badReply(let why): L("%@ sent an invalid reply: %@", name, why)
+        case .reported(let msg): msg
+        }
+    }
 }
 
 /// One extension's child process, spoken to in JSON lines over pipes.
@@ -265,7 +281,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             self.lock.withLock {
                 guard self.generation == gen, self._state == .starting else { return }
                 self.writeLog("no ready line within \(Int(self.config.readyTimeout)) s")
-                self.kill(reason: "it didn't say it was ready within \(Int(self.config.readyTimeout)) s", crash: true, graceful: false)
+                self.kill(reason: L("it didn’t say it was ready within %d s", Int(self.config.readyTimeout)), crash: true, graceful: false)
             }
         }
         readyTimer = timer
@@ -311,7 +327,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             queue.asyncAfter(deadline: .now() + 1) { if p.isRunning { Darwin.kill(pid, SIGKILL) } }
         }
         // Waiters shouldn't sit through the grace period.
-        failAll(crash ? .crashed(reason) : .crashed("stopped"))
+        failAll(crash ? .crashed(reason) : .crashed(L("stopped")))
         process = nil
         if case .failed = _state {} else { _state = .stopped }
         if crash { recordCrash() }
@@ -321,7 +337,7 @@ public final class ExtensionProcess: @unchecked Sendable {
         let now = Date()
         crashes = crashes.filter { now.timeIntervalSince($0) < config.crashWindow } + [now]
         if crashes.count >= config.crashLimit {
-            let why = "crashed \(crashes.count) times in a row; reload extensions to try again"
+            let why = L("It crashed %d times in a row. Reload extensions to try again.", crashes.count)
             writeLog(why)
             _state = .failed(why)
             failAll(.failed(why))
@@ -369,7 +385,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             }
             if buffer.count > config.maxLineBytes {
                 writeLog("a line on stdout is longer than \(config.maxLineBytes) bytes")
-                kill(reason: "it wrote a line longer than \(config.maxLineBytes / 1024) KiB", crash: true, graceful: false)
+                kill(reason: L("it wrote a line longer than %d KiB", config.maxLineBytes / 1024), crash: true, graceful: false)
             }
         }
         for (c, line) in done { c(.success(line)) }
@@ -382,7 +398,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             readyTimer?.cancel()
             readyTimer = nil
             guard ExtensionProtocol.supported.contains(version) else {
-                let why = "it speaks protocol \(version), but this Fastlight supports \(ExtensionProtocol.supported.sorted().map(String.init).joined(separator: ", "))"
+                let why = L("It speaks protocol %d, but this Fastlight supports %@.", version, ExtensionProtocol.supported.sorted().map(String.init).joined(separator: ", "))
                 writeLog(why)
                 _state = .failed(why)
                 failAll(.failed(why))
@@ -405,7 +421,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             let text = String(decoding: line.prefix(200), as: UTF8.self)
             writeLog("ignored a line on stdout (\(why)): \(text)")
             if garbage > config.maxGarbageLines {
-                kill(reason: "it wrote too many lines that aren't protocol messages", crash: true, graceful: false)
+                kill(reason: L("it wrote too many lines that aren’t protocol messages"), crash: true, graceful: false)
             }
         }
     }
@@ -420,7 +436,7 @@ public final class ExtensionProcess: @unchecked Sendable {
             writeLog("request \(id) timed out")
             if timeoutsInARow >= config.maxTimeoutsInARow {
                 timeoutsInARow = 0
-                kill(reason: "it stopped answering", crash: true, graceful: false)
+                kill(reason: L("it stopped answering"), crash: true, graceful: false)
             } else {
                 bumpIdle()
             }
@@ -457,7 +473,7 @@ public final class ExtensionProcess: @unchecked Sendable {
     /// crash, get ready for the next start. Call with the lock held.
     private func finishExit() {
         guard let (status, reason) = exitStatus else { return }
-        let how = reason == .uncaughtSignal ? "signal \(status)" : "exit status \(status)"
+        let how = reason == .uncaughtSignal ? L("signal %d", Int(status)) : L("exit status %d", Int(status))
         writeLog("exited (\(how))")
         readyTimer?.cancel()
         readyTimer = nil

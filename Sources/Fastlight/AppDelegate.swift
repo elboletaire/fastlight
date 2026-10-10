@@ -7,11 +7,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKey: GlobalShortcut!
     private var settings: SettingsWindowController?
     private var aboutWindow: AboutWindowController?
-    private let showItem = NSMenuItem(title: "Show Fastlight", action: #selector(toggle), keyEquivalent: "")
+    private let showItem = NSMenuItem(title: L("Show Fastlight"), action: #selector(toggle), keyEquivalent: "")
     private lazy var extensions = ExtensionCenter()
     private lazy var panel = PanelController(model: SearchModel(extensions: extensions))
-    private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLoginItem), keyEquivalent: "")
-    private let extensionsItem = NSMenuItem(title: "Extensions", action: nil, keyEquivalent: "")
+    private let loginItem = NSMenuItem(title: L("Launch at Login"), action: #selector(toggleLoginItem), keyEquivalent: "")
+    private let extensionsItem = NSMenuItem(title: L("Extensions"), action: nil, keyEquivalent: "")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -20,13 +20,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         menu.addItem(showItem)
         menu.addItem(.separator())
-        extensionsItem.submenu = NSMenu(title: "Extensions")
+        extensionsItem.submenu = NSMenu(title: L("Extensions"))
         menu.addItem(extensionsItem)
         menu.addItem(loginItem)
-        menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
-        menu.addItem(withTitle: "About Fastlight", action: #selector(about), keyEquivalent: "")
+        menu.addItem(withTitle: L("Settings…"), action: #selector(openSettings), keyEquivalent: ",")
+        menu.addItem(withTitle: L("About Fastlight"), action: #selector(about), keyEquivalent: "")
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Fastlight", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: L("Quit Fastlight"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         for i in menu.items where i.action != #selector(NSApplication.terminate(_:)) { i.target = self }
         item.menu = menu
         statusItem = item
@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             hintIfSpotlightWins()
         } else {
             // Otherwise the only sign would be a shortcut that does nothing.
-            Toast.shared.show("\(KeyboardLayout.display(hotKey.shortcut)) is taken by another app. Choose a shortcut in Fastlight Settings.",
+            Toast.shared.show(L("%@ is taken by another app. Choose a shortcut in Fastlight Settings.", KeyboardLayout.display(hotKey.shortcut)),
                               symbol: "exclamationmark.triangle.fill", duration: 6)
         }
         _ = panel // Starts the daemon and the first app scan now rather than on first show.
@@ -81,26 +81,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Each extension with a checkmark when enabled; ones waiting for
     /// approval or broken say so. Then load problems and the folder.
     private func extensionsMenu() -> NSMenu {
-        let menu = NSMenu(title: "Extensions")
+        let menu = NSMenu(title: L("Extensions"))
         for ext in extensions.extensions {
             var title = ext.name
             let enabled = extensions.isEnabled(ext)
             let needsConsent = enabled && extensions.consent.need(ext) != nil
-            if needsConsent { title += " — Needs Approval…" }
-            if case .failed = extensions.host.state(of: ext.id) { title += " — Not Working" }
+            if needsConsent { title = L("%@ — Needs Approval…", title) }
+            if case .failed = extensions.host.state(of: ext.id) { title = L("%@ — Not Working", title) }
             let item = NSMenuItem(title: title, action: #selector(extensionClicked(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = ext.id
             item.state = enabled ? .on : .off
             item.image = ExtensionIcons.menuImage(for: ext.icon)
-            var tip = [ext.summary, "Keywords: " + ext.manifest.keywords.map { "“\($0)”" }.joined(separator: ", "),
-                       "\(ext.id) \(ext.manifest.version)\(ext.builtIn ? " (built in)" : "")"].compactMap { $0 }
+            let keywords = ext.manifest.keywords.map { "“\($0)”" }.joined(separator: ", ")
+            let version = "\(ext.id) \(ext.manifest.version)"
+            var tip = [ext.summary, L("Keywords: %@", keywords),
+                       ext.builtIn ? L("%@ (built in)", version) : version].compactMap { $0 }
             if case .failed(let why) = extensions.host.state(of: ext.id) { tip.append(why) }
             item.toolTip = tip.joined(separator: "\n")
             menu.addItem(item)
         }
         if extensions.extensions.isEmpty {
-            menu.addItem(NSMenuItem(title: "No Extensions", action: nil, keyEquivalent: ""))
+            menu.addItem(NSMenuItem(title: L("No Extensions"), action: nil, keyEquivalent: ""))
         }
         if !extensions.library.issues.isEmpty {
             menu.addItem(.separator())
@@ -115,14 +117,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         menu.addItem(.separator())
-        for (title, action) in [("Open Extensions Folder", #selector(openExtensionsFolder)),
-                                ("Reload Extensions", #selector(reloadExtensions)),
-                                ("Show Extension Logs", #selector(openExtensionLogs))] {
+        for (title, action) in [(L("Open Extensions Folder"), #selector(openExtensionsFolder)),
+                                (L("Reload Extensions"), #selector(reloadExtensions)),
+                                (L("Show Extension Logs"), #selector(openExtensionLogs))] {
             menu.addItem(withTitle: title, action: action, keyEquivalent: "").target = self
         }
         if !Paster.canPaste {
             menu.addItem(.separator())
-            menu.addItem(withTitle: "Allow Pasting into Apps…", action: #selector(allowPasting), keyEquivalent: "").target = self
+            menu.addItem(withTitle: L("Allow Pasting into Apps…"), action: #selector(allowPasting), keyEquivalent: "").target = self
         }
         return menu
     }
@@ -190,7 +192,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         guard UserDefaults.standard.string(forKey: key) != s.description else { return }
         UserDefaults.standard.set(s.description, forKey: key)
-        Toast.shared.show("\(KeyboardLayout.display(s)) opens Spotlight, not Fastlight. See Fastlight Settings.",
+        Toast.shared.show(L("%@ opens Spotlight, not Fastlight. See Fastlight Settings.", KeyboardLayout.display(s)),
                           symbol: "exclamationmark.triangle.fill", duration: 5)
     }
 
@@ -205,7 +207,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } catch {
             NSApp.activate()
             let alert = NSAlert(error: error)
-            alert.informativeText = "Launch at Login needs Fastlight to run from its .app bundle, ideally in /Applications. (\(error.localizedDescription))"
+            alert.informativeText = L("Launch at Login needs Fastlight to run from its .app bundle, ideally in /Applications. (%@)", error.localizedDescription)
             alert.runModal()
         }
     }

@@ -322,9 +322,9 @@ final class SearchModel: ObservableObject {
             sections = []
             // Review can't turn a disabled extension back on: say so instead.
             scopeNotice = extensions.isEnabled(ext)
-                ? Notice(symbol: "hand.raised", text: "\(ext.name) needs your permission before it can run.",
+                ? Notice(symbol: "hand.raised", text: L("%@ needs your permission before it can run.", ext.name),
                          action: .reviewConsent(ext.id))
-                : Notice(symbol: "nosign", text: "\(ext.name) is disabled. Turn it on from the Extensions menu.")
+                : Notice(symbol: "nosign", text: L("%@ is disabled. Turn it on from the Extensions menu.", ext.name))
             onLayoutChange?()
             return
         }
@@ -402,14 +402,14 @@ final class SearchModel: ObservableObject {
             let items = entries.compactMap { if case .ext(let r) = $0 { ResultItem.ext(r) } else { nil } }
             sections = items.isEmpty ? [] : [ResultSection(kind: .ext(scope.ext.id), title: "", items: items, offset: 0)]
             if sections.isEmpty {
-                let what = query.isEmpty ? "Nothing to show yet" : "No results for “\(query)”"
+                let what = query.isEmpty ? L("Nothing to show yet") : L("No results for “%@”", query)
                 scopeNotice = Notice(symbol: "magnifyingglass", text: what)
             }
         case .failed(let e):
             if e is CancellationError || (e as? ExtensionError) == .superseded { return }
             sections = []
-            let why = (e as? LocalizedError)?.errorDescription ?? e.localizedDescription
-            let text = (e as? ExtensionError).map { if case .reported = $0 { why } else { "\(scope.ext.name) \(why)." } } ?? why
+            let text = (e as? ExtensionError)?.message(for: scope.ext.name)
+                ?? (e as? LocalizedError)?.errorDescription ?? e.localizedDescription
             scopeNotice = Notice(symbol: "exclamationmark.triangle", text: text)
         case .timedOut:
             return

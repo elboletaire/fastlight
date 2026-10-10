@@ -29,29 +29,29 @@ public enum QuerySyntax {
         public var listed: Bool
 
         public var entry: Entry {
-            let also = aliases.isEmpty ? "" : ". Also \(aliases.map { "\($0):" }.joined(separator: ", "))"
+            let also = aliases.isEmpty ? "" : L(". Also %@", aliases.map { "\($0):" }.joined(separator: ", "))
             return Entry("\(key):", meaning + also, examples: examples)
         }
     }
 
     /// Words narrow results down by name, and by the folders above it.
-    public static let operators: [Entry] = [
-        Entry("word", "Fuzzy, and words of 5 letters or more survive one typo", examples: ["invoce"]),
-        Entry("'exact", "No fuzziness"),
-        Entry("^prefix", "Name starts with it"),
-        Entry("suffix$", "Name ends with it"),
+    public static var operators: [Entry] { [
+        Entry("word", L("Fuzzy, and words of 5 letters or more survive one typo"), examples: ["invoce"]),
+        Entry("'exact", L("No fuzziness")),
+        Entry("^prefix", L("Name starts with it")),
+        Entry("suffix$", L("Name ends with it")),
         // fsearch drops a path when a negated word is in its name or any
         // folder on it, and takes ', ^ and $ after the !.
-        Entry("!word", "Leave out paths with it in the name or a folder; works with ', ^ and $ too",
+        Entry("!word", L("Leave out paths with it in the name or a folder; works with ', ^ and $ too"),
               examples: ["!node_modules", "!.bak$"]),
-        Entry("\"two words\"", "Quotes keep spaces in one word or value", examples: ["in:\"~/My Notes\""]),
+        Entry("\"two words\"", L("Quotes keep spaces in one word or value"), examples: ["in:\"~/My Notes\""]),
         // A word can be met by a parent folder, as long as one is in the name.
-        Entry("folder/name", "Words can match folders on the path too, as long as one is in the name; / splits words",
+        Entry("folder/name", L("Words can match folders on the path too, as long as one is in the name; / splits words"),
               examples: ["src readme", "src/readme"]),
-    ]
+    ] }
 
     /// Said once rather than on every entry.
-    public static let caseNote = "Matching ignores case, except sym: and grep: or regex: patterns with capitals."
+    public static var caseNote: String { L("Matching ignores case, except sym: and grep: or regex: patterns with capitals.") }
 
     /// `type:` values, `app` included.
     public static let types = ["image", "video", "audio", "doc", "code", "archive", "font", "app"]
@@ -66,37 +66,37 @@ public enum QuerySyntax {
     /// Units for `mtime:`; a bare number is days.
     public static let ageUnits = ["s", "m", "min", "h", "d", "w", "mo", "y"]
 
-    public static let filters: [Filter] = [
-        Filter(key: "ext", aliases: [], meaning: "Extension; commas for several", examples: ["ext:pdf", "ext:jpg,png"], listed: true),
-        Filter(key: "type", aliases: [], meaning: "Kind of file: \(types.joined(separator: ", "))",
+    public static var filters: [Filter] { [
+        Filter(key: "ext", aliases: [], meaning: L("Extension; commas for several"), examples: ["ext:pdf", "ext:jpg,png"], listed: true),
+        Filter(key: "type", aliases: [], meaning: L("Kind of file: %@", types.joined(separator: ", ")),
                examples: ["type:image", "type:doc,code"], listed: true),
         Filter(key: "kind", aliases: [],
                meaning: "\(kinds.map { ([$0.name] + $0.aliases).joined(separator: "/") }.joined(separator: ", "))",
                examples: ["kind:dir"], listed: true),
-        Filter(key: "in", aliases: [], meaning: "Only under a folder, absolute or ~", examples: ["in:~/src"], listed: true),
-        Filter(key: "size", aliases: [], meaning: "Size, with a range", examples: ["size:>5mb", "size:1m..10m"], listed: true),
-        Filter(key: "mtime", aliases: ["modified"], meaning: "Modified within (<) or longer ago than (>)",
+        Filter(key: "in", aliases: [], meaning: L("Only under a folder, absolute or ~"), examples: ["in:~/src"], listed: true),
+        Filter(key: "size", aliases: [], meaning: L("Size, with a range"), examples: ["size:>5mb", "size:1m..10m"], listed: true),
+        Filter(key: "mtime", aliases: ["modified"], meaning: L("Modified within (<) or longer ago than (>)"),
                examples: ["mtime:<7d", "mtime:>1y"], listed: true),
-        Filter(key: "re", aliases: [], meaning: "Regex over the name, ignoring case", examples: ["re:^IMG_\\d+"], listed: true),
-        Filter(key: "path", aliases: [], meaning: "Regex over the full path, ignoring case", examples: ["path:/tests?/"], listed: true),
-        Filter(key: "grep", aliases: ["content"], meaning: "Text inside files; ignores case unless it has capitals",
+        Filter(key: "re", aliases: [], meaning: L("Regex over the name, ignoring case"), examples: ["re:^IMG_\\d+"], listed: true),
+        Filter(key: "path", aliases: [], meaning: L("Regex over the full path, ignoring case"), examples: ["path:/tests?/"], listed: true),
+        Filter(key: "grep", aliases: ["content"], meaning: L("Text inside files; ignores case unless it has capitals"),
                examples: ["grep:TODO"], listed: true),
-        Filter(key: "regex", aliases: [], meaning: "Regex inside files; ignores case unless it has capitals",
+        Filter(key: "regex", aliases: [], meaning: L("Regex inside files; ignores case unless it has capitals"),
                examples: ["regex:fn\\s+main"], listed: true),
-        Filter(key: "sym", aliases: ["symbol"], meaning: "Where a symbol is defined, case and all",
+        Filter(key: "sym", aliases: ["symbol"], meaning: L("Where a symbol is defined, case and all"),
                examples: ["sym:applyFilter"], listed: true),
-        Filter(key: "limit", aliases: [], meaning: "How many results fsearch returns", examples: [], listed: false),
-    ]
+        Filter(key: "limit", aliases: [], meaning: L("How many results fsearch returns"), examples: [], listed: false),
+    ] }
 
     /// How `size:` and `mtime:` values compare.
-    public static let ranges: [Entry] = [
-        Entry(">x  >=x", "More than"),
-        Entry("<x  <=x", "Less than"),
-        Entry("a..b", "Between", examples: ["size:1m..10m"]),
-        Entry("x", "Exactly, for size:"),
-        Entry("Units", "size: \(sizeUnits.joined(separator: " ")), 1 kb = 1000 bytes, bytes if left out; "
-              + "mtime: \(ageUnits.joined(separator: " ")), days if left out"),
-    ]
+    public static var ranges: [Entry] { [
+        Entry(">x  >=x", L("More than")),
+        Entry("<x  <=x", L("Less than")),
+        Entry("a..b", L("Between"), examples: ["size:1m..10m"]),
+        Entry("x", L("Exactly, for size:")),
+        Entry(L("Units"), L("size: %@, 1 kb = 1000 bytes, bytes if left out; mtime: %@, days if left out",
+                            sizeUnits.joined(separator: " "), ageUnits.joined(separator: " "))),
+    ] }
 
     /// Every key fsearch reads as a filter, aliases included.
     public static let filterKeys: Set<String> = Set(filters.flatMap { [$0.key] + $0.aliases })

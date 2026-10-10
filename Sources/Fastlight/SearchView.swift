@@ -1,4 +1,5 @@
 import FastlightCore
+import FastlightL10n
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -61,7 +62,7 @@ extension SearchModel {
         if let scope {
             if let scopeNotice { return .notice(scopeNotice) }
             if sections.isEmpty {
-                return loading ? .notice(Notice(symbol: "hourglass", text: "Asking \(scope.ext.name)…", busy: true)) : .none
+                return loading ? .notice(Notice(symbol: "hourglass", text: L("Asking %@…", scope.ext.name), busy: true)) : .none
             }
             return .results(sections, footer: nil, actions: true)
         }
@@ -70,19 +71,20 @@ extension SearchModel {
         let waiting = typed ? [] : extensions.awaitingConsent
         if let ext = waiting.first {
             let others = waiting.count - 1
-            let text = others > 0 ? "“\(ext.name)” and \(others) more extension\(others == 1 ? "" : "s") need your permission to run."
-                : "The “\(ext.name)” extension needs your permission to run."
+            let text = others > 0 ? Lp("“%@” and %d more extension need your permission to run.",
+                                       "“%@” and %d more extensions need your permission to run.", count: others, ext.name, others)
+                : L("The “%@” extension needs your permission to run.", ext.name)
             return .notice(Notice(symbol: "puzzlepiece.extension", text: text, action: .reviewConsent(ext.id)))
         }
         let fileNotice: Notice? = switch fileState {
         case .indexing:
-            Notice(symbol: "internaldrive", text: "Indexing your disk… Files will show up here when it's done.", busy: true)
+            Notice(symbol: "internaldrive", text: L("Indexing your disk… Files will show up here when it's done."), busy: true)
         case .restarting:
-            Notice(symbol: "lock.open", text: "Restarting search with Full Disk Access…", busy: true)
+            Notice(symbol: "lock.open", text: L("Restarting search with Full Disk Access…"), busy: true)
         case .unavailable(let why):
             Notice(symbol: "exclamationmark.triangle", text: why)
         case .ready(fullDiskAccess: false) where !typed:
-            Notice(symbol: "lock", text: "Allow Full Disk Access to also find files in Desktop, Documents and Downloads.",
+            Notice(symbol: "lock", text: L("Allow Full Disk Access to also find files in Desktop, Documents and Downloads."),
                    action: .fullDiskAccess)
         default:
             fileError.map { Notice(symbol: "exclamationmark.triangle", text: $0) }
@@ -91,7 +93,7 @@ extension SearchModel {
         let hasFiles = sections.contains { $0.items.contains { if case .file = $0 { true } else { false } } }
         if sections.isEmpty {
             if let fileNotice { return .notice(fileNotice) }
-            return .notice(Notice(symbol: "magnifyingglass", text: "No results for “\(query.trimmingCharacters(in: .whitespaces))”"))
+            return .notice(Notice(symbol: "magnifyingglass", text: L("No results for “%@”", query.trimmingCharacters(in: .whitespaces))))
         }
         return .results(sections, footer: hasFiles ? nil : fileNotice)
     }
@@ -132,7 +134,7 @@ struct SearchView: View {
     }
 
     private var placeholder: String {
-        model.scope.map { "Search \($0.ext.name)" } ?? Self.placeholder
+        model.scope.map { L("Search %@", $0.ext.name) } ?? Self.placeholder
     }
 
     private var bar: some View {
@@ -163,7 +165,7 @@ struct SearchView: View {
         .panelBackground(radius: Metrics.barRadius)
     }
 
-    static let placeholder = "Fastlight Search"
+    static var placeholder: String { L("Fastlight Search") }
 }
 
 /// The extension that owns the results, as a token before the text, like
@@ -273,7 +275,7 @@ private struct CardView: View {
                 }
             }
             if let footer {
-                SectionHeader(title: "Files")
+                SectionHeader(title: L("Files"))
                 NoticeRow(notice: footer, onReview: review)
             }
         }
@@ -373,7 +375,7 @@ private struct ResultRow: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                     if case .file(let f) = item, let line = f.line {
-                        Text(":\(line)")
+                        Text(verbatim: ":\(line)")
                             .font(.system(size: 11.5, design: .monospaced))
                             .foregroundStyle(subtle)
                     }
@@ -444,7 +446,7 @@ private struct ResultRow: View {
     private var subtitle: String? {
         switch item {
         case .app(let a):
-            return top ? ["Application", Format.location(of: a)].compactMap { $0 }.joined(separator: " — ") : nil
+            return top ? [L("Application"), Format.location(of: a)].compactMap { $0 }.joined(separator: " — ") : nil
         case .file(let f):
             if let s = f.snippet { return s }
             let parent = Format.path(f.parent)
@@ -545,18 +547,18 @@ private struct NoticeRow: View {
             Spacer(minLength: 8)
             switch notice.action {
             case .fullDiskAccess:
-                Button("Open Settings") {
+                Button(L("Open Settings")) {
                     let url = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
                     if let u = URL(string: url) { NSWorkspace.shared.open(u) }
                 }
                 .controlSize(.small)
                 .buttonStyle(.bordered)
-                .snapshotSafe(snapshot, title: "Open Settings")
+                .snapshotSafe(snapshot, title: L("Open Settings"))
             case .reviewConsent(let id):
-                Button("Review…") { onReview(id) }
+                Button(L("Review…")) { onReview(id) }
                     .controlSize(.small)
                     .buttonStyle(.bordered)
-                    .snapshotSafe(snapshot, title: "Review…")
+                    .snapshotSafe(snapshot, title: L("Review…"))
             case nil:
                 EmptyView()
             }
@@ -637,14 +639,14 @@ enum Format {
         let parent = (app.path as NSString).deletingLastPathComponent
         let plain = ["/Applications", "/System/Applications", NSHomeDirectory() + "/Applications"]
         if plain.contains(parent) { return nil }
-        if parent.hasPrefix("/System/Library/") { return "System" }
+        if parent.hasPrefix("/System/Library/") { return L("System") }
         return FileManager.default.displayName(atPath: parent)
     }
 
     static func kind(_ f: FileItem) -> String {
-        if f.isDirectory { return "Folder" }
+        if f.isDirectory { return L("Folder") }
         let ext = (f.path as NSString).pathExtension
-        return UTType(filenameExtension: ext)?.localizedDescription?.capitalizedFirst ?? "Document"
+        return UTType(filenameExtension: ext)?.localizedDescription?.capitalizedFirst ?? L("Document")
     }
 
     static func size(_ bytes: UInt64) -> String {
@@ -653,12 +655,14 @@ enum Format {
 
     static func date(_ d: Date) -> String {
         let cal = Calendar.current
-        if cal.isDateInToday(d) { return d.formatted(date: .omitted, time: .shortened) }
-        if cal.isDateInYesterday(d) { return "Yesterday" }
+        // In the language of the words around them.
+        let locale = Localizer.current.locale
+        if cal.isDateInToday(d) { return d.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)) }
+        if cal.isDateInYesterday(d) { return L("Yesterday") }
         if cal.isDate(d, equalTo: Date(), toGranularity: .year) {
-            return d.formatted(.dateTime.day().month(.abbreviated))
+            return d.formatted(.dateTime.day().month(.abbreviated).locale(locale))
         }
-        return d.formatted(.dateTime.day().month(.abbreviated).year())
+        return d.formatted(.dateTime.day().month(.abbreviated).year().locale(locale))
     }
 }
 

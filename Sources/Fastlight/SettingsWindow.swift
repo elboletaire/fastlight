@@ -103,9 +103,9 @@ final class SettingsModel: ObservableObject {
         do {
             try hotKey.set(.commandSpace)
             message = nil
-            spotlightNote = Message(text: "Done. Press ⌘Space to open Fastlight.", tone: .info)
+            spotlightNote = Message(text: L("Done. Press ⌘Space to open Fastlight."), tone: .info)
         } catch {
-            message = Message(text: "Couldn’t register ⌘Space: another app may have it.", tone: .error)
+            message = Message(text: L("Couldn’t register ⌘Space: another app may have it."), tone: .error)
         }
         refresh()
     }
@@ -114,26 +114,21 @@ final class SettingsModel: ObservableObject {
     func disableForMe() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Turn off Spotlight’s ⌘Space shortcut?"
-        alert.informativeText = """
-            Fastlight will turn off “Show Spotlight search” in Keyboard Shortcuts and take ⌘Space. \
-            Nothing else changes: Spotlight and its index stay on, so Finder, Mail and other apps can still search.
-
-            This is experimental. macOS has no public way to do it, so Fastlight edits the shortcut’s setting \
-            directly. You can put it back from Settings at any time.
-            """
-        alert.addButton(withTitle: "Turn Off and Use ⌘Space")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = L("Turn off Spotlight’s ⌘Space shortcut?")
+        alert.informativeText = L("Fastlight will turn off “%@” in Keyboard Shortcuts and take ⌘Space. Nothing else changes: Spotlight and its index stay on, so Finder, Mail and other apps can still search.", SymbolicHotKey.spotlight.title)
+            + "\n\n" + L("This is experimental. macOS has no public way to do it, so Fastlight edits the shortcut’s setting directly. You can put it back from Settings at any time.")
+        alert.addButton(withTitle: L("Turn Off and Use ⌘Space"))
+        alert.addButton(withTitle: L("Cancel"))
         let go = { [weak self] (r: NSApplication.ModalResponse) in
             guard r == .alertFirstButtonReturn, let self else { return }
             do {
                 let outcome = try spotlight.disable(conflictingWith: .commandSpace, reload: reload)
                 useCommandSpace()
                 if outcome == .needsLogout {
-                    spotlightNote = Message(text: "Saved. Spotlight keeps ⌘Space until you log out and back in.", tone: .warning)
+                    spotlightNote = Message(text: L("Saved. Spotlight keeps ⌘Space until you log out and back in."), tone: .warning)
                 }
             } catch {
-                spotlightNote = Message(text: "Couldn’t change Spotlight’s shortcut: \(error.localizedDescription)", tone: .error)
+                spotlightNote = Message(text: L("Couldn’t change Spotlight’s shortcut: %@", error.localizedDescription), tone: .error)
             }
             refresh()
         }
@@ -147,10 +142,10 @@ final class SettingsModel: ObservableObject {
             if hotKey.shortcut == .commandSpace { try? hotKey.set(.default) }
             let outcome = try spotlight.restore(reload: reload)
             spotlightNote = outcome == .needsLogout
-                ? Message(text: "Restored. Spotlight gets ⌘Space back after you log out and back in.", tone: .warning)
-                : Message(text: "Spotlight has ⌘Space again; Fastlight is back on \(shortcutText).", tone: .info)
+                ? Message(text: L("Restored. Spotlight gets ⌘Space back after you log out and back in."), tone: .warning)
+                : Message(text: L("Spotlight has ⌘Space again; Fastlight is back on %@.", shortcutText), tone: .info)
         } catch {
-            spotlightNote = Message(text: "Couldn’t restore Spotlight’s shortcut: \(error.localizedDescription)", tone: .error)
+            spotlightNote = Message(text: L("Couldn’t restore Spotlight’s shortcut: %@", error.localizedDescription), tone: .error)
         }
         refresh()
     }
@@ -210,7 +205,7 @@ final class SettingsModel: ObservableObject {
             message = s.problem.map { Message(text: $0.message(for: s), tone: .warning) }
             // ⌘Space has its own section below; other system ones are said here.
             if message == nil, s != .commandSpace, let k = spotlight.conflicts(with: s).first {
-                message = Message(text: "macOS uses \(KeyboardLayout.display(s)) for “\(k.title)”. Turn it off in Keyboard Shortcuts, or Fastlight won’t get it.", tone: .warning)
+                message = Message(text: L("macOS uses %@ for “%@”. Turn it off in Keyboard Shortcuts, or Fastlight won’t get it.", KeyboardLayout.display(s), k.title), tone: .warning)
             }
         } catch {
             switch error {
@@ -219,7 +214,7 @@ final class SettingsModel: ObservableObject {
                 message = Message(text: p.message(for: s), tone: .error)
             case .taken:
                 cancelRecording()
-                message = Message(text: "\(KeyboardLayout.display(s)) is taken by another app. Kept \(shortcutText).", tone: .error)
+                message = Message(text: L("%@ is taken by another app. Kept %@.", KeyboardLayout.display(s), shortcutText), tone: .error)
             }
         }
         refresh()
@@ -239,7 +234,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let host = NSHostingController(rootView: SettingsView(model: model))
         host.sizingOptions = .preferredContentSize
         let window = ClosableWindow(contentViewController: host)
-        window.title = "Fastlight Settings"
+        window.title = L("Fastlight Settings")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
@@ -298,20 +293,20 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Show Fastlight") {
+                LabeledContent(L("Show Fastlight")) {
                     ShortcutRecorder(model: model)
                 }
             } header: {
-                Text("Keyboard Shortcut")
+                Text(L("Keyboard Shortcut"))
             } footer: {
                 recorderFooter.leading()
             }
             Section {
                 SpotlightFlowView(model: model)
             } header: {
-                Text("Use ⌘Space Instead of Spotlight")
+                Text(L("Use ⌘Space Instead of Spotlight"))
             } footer: {
-                Text("Only the shortcut changes. Spotlight and its index stay on, so Finder, Mail and other apps can still search.")
+                Text(L("Only the shortcut changes. Spotlight and its index stay on, so Finder, Mail and other apps can still search."))
                     .settingsFootnote()
                     .leading()
             }
@@ -326,12 +321,12 @@ struct SettingsView: View {
         if let m = model.message {
             MessageLabel(message: m)
         } else if model.recording {
-            Text("Press the new shortcut. Esc cancels, Delete goes back to \(Shortcut.default.display()).")
+            Text(L("Press the new shortcut. Esc cancels, Delete goes back to %@.", Shortcut.default.display()))
                 .settingsFootnote()
         } else if !model.hotKey.isRegistered {
-            MessageLabel(message: .init(text: "\(model.shortcutText) couldn’t be registered: another app may have it. Pick another.", tone: .error))
+            MessageLabel(message: .init(text: L("%@ couldn’t be registered: another app may have it. Pick another.", model.shortcutText), tone: .error))
         } else {
-            Text("Click the shortcut to record a new one.").settingsFootnote()
+            Text(L("Click the shortcut to record a new one.")).settingsFootnote()
         }
     }
 }
@@ -353,14 +348,14 @@ struct ShortcutRecorder: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .help("Cancel")
+                .help(L("Cancel"))
             } else if model.hotKey.shortcut != .default {
                 Button { model.record(.default) } label: {
                     Image(systemName: "arrow.uturn.backward.circle.fill")
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .help("Go back to \(Shortcut.default.display())")
+                .help(L("Go back to %@", Shortcut.default.display()))
             }
         }
         .padding(.leading, 10)
@@ -378,15 +373,15 @@ struct ShortcutRecorder: View {
         .contentShape(Rectangle())
         .onTapGesture { model.toggleRecording() }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Shortcut to show Fastlight")
-        .accessibilityValue(model.recording ? "Recording" : model.shortcutText)
+        .accessibilityLabel(L("Shortcut to show Fastlight"))
+        .accessibilityValue(model.recording ? L("Recording") : model.shortcutText)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { model.toggleRecording() }
     }
 
     private var label: String {
         guard model.recording else { return model.shortcutText }
-        return model.held.isEmpty ? "Type Shortcut" : model.held.symbols
+        return model.held.isEmpty ? L("Type Shortcut") : model.held.symbols
     }
 }
 
@@ -398,28 +393,28 @@ struct SpotlightFlowView: View {
             switch model.flow {
             case .spotlightHasIt:
                 status("magnifyingglass", .secondary,
-                       "Spotlight has ⌘Space. Turn off “Show Spotlight search” in System Settings and Fastlight switches to it.")
+                       L("Spotlight has ⌘Space. Turn off “%@” in System Settings and Fastlight switches to it.", SymbolicHotKey.spotlight.title))
                 steps
                 if model.waiting {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("Waiting for Spotlight’s shortcut to be turned off…").settingsFootnote()
+                        Text(L("Waiting for Spotlight’s shortcut to be turned off…")).settingsFootnote()
                     }
                 }
                 actions
             case .conflict:
                 status("exclamationmark.triangle.fill", .orange,
-                       "Spotlight still has ⌘Space, so pressing it opens Spotlight instead of Fastlight. Turn off “Show Spotlight search” in System Settings.")
+                       L("Spotlight still has ⌘Space, so pressing it opens Spotlight instead of Fastlight. Turn off “%@” in System Settings.", SymbolicHotKey.spotlight.title))
                 steps
                 actions
             case .free:
-                status("checkmark.circle", .secondary, "⌘Space is free: Spotlight’s shortcut is off.")
-                Button("Use ⌘Space") { model.useCommandSpace() }
+                status("checkmark.circle", .secondary, L("⌘Space is free: Spotlight’s shortcut is off."))
+                Button(L("Use ⌘Space")) { model.useCommandSpace() }
                     .buttonStyle(.borderedProminent)
             case .done:
-                status("checkmark.circle.fill", .green, "Fastlight opens with ⌘Space.")
+                status("checkmark.circle.fill", .green, L("Fastlight opens with ⌘Space."))
                 if !model.canRestore {
-                    Text("To give it back to Spotlight, pick another shortcut above and turn “Show Spotlight search” back on in System Settings.")
+                    Text(L("To give it back to Spotlight, pick another shortcut above and turn “%@” back on in System Settings.", SymbolicHotKey.spotlight.title))
                         .settingsFootnote()
                         .padding(.leading, 24)
                 }
@@ -430,10 +425,10 @@ struct SpotlightFlowView: View {
             if model.canRestore {
                 Divider()
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Fastlight turned off Spotlight’s shortcut. Restoring gives it ⌘Space back.")
+                    Text(L("Fastlight turned off Spotlight’s shortcut. Restoring gives it ⌘Space back."))
                         .settingsFootnote()
                     Spacer(minLength: 12)
-                    Button("Restore Spotlight’s Shortcut") { model.restoreSpotlight() }
+                    Button(L("Restore Spotlight’s Shortcut")) { model.restoreSpotlight() }
                 }
             }
         }
@@ -448,18 +443,18 @@ struct SpotlightFlowView: View {
     }
 
     private var steps: some View {
-        Text("Keyboard › Keyboard Shortcuts… › Spotlight")
+        Text(L("Keyboard › Keyboard Shortcuts… › Spotlight"))
             .settingsFootnote()
             .padding(.leading, 24)
     }
 
     private var actions: some View {
         HStack(spacing: 10) {
-            Button("Open Keyboard Settings…") { model.openKeyboardSettings() }
+            Button(L("Open Keyboard Settings…")) { model.openKeyboardSettings() }
                 .buttonStyle(.borderedProminent)
             Spacer()
-            Button("Do It for Me…") { model.disableForMe() }
-            Text("Experimental")
+            Button(L("Do It for Me…")) { model.disableForMe() }
+            Text(L("Experimental"))
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.orange)
                 .padding(.horizontal, 6)
