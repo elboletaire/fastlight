@@ -14,14 +14,14 @@ import Foundation
 final class SystemCalendar: CalendarSource, @unchecked Sendable {
     private let lock = NSLock()
     /// Made only once access is on: a store made before the grant doesn't
-    /// see anything, even afterwards.
+    /// see anything, even afterwards. Dropped whenever access is off, so
+    /// access turned off and back on in System Settings gets a new one.
     private var store: EKEventStore?
-    private var storeAccess: [EKEntityType: Bool] = [:]
 
     static func entity(_ kind: CalendarKind) -> EKEntityType { kind == .events ? .event : .reminder }
 
     func access(_ kind: CalendarKind) -> Access {
-        switch EKEventStore.authorizationStatus(for: Self.entity(kind)) {
+        let access: Access = switch EKEventStore.authorizationStatus(for: Self.entity(kind)) {
         case .notDetermined: .notDetermined
         case .restricted: .restricted
         case .denied: .denied
@@ -29,6 +29,8 @@ final class SystemCalendar: CalendarSource, @unchecked Sendable {
         case .fullAccess: .authorized
         @unknown default: .denied
         }
+        if access != .authorized { lock.withLock { store = nil } }
+        return access
     }
 
     func requestAccess(_ kind: CalendarKind, _ done: @escaping @Sendable (Bool) -> Void) {
