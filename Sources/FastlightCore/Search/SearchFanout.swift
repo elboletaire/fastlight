@@ -54,24 +54,34 @@ public final class SearchFanout {
         }
     }
 
+    /// Stops the current search; whatever its providers still return is
+    /// never reported.
     public func cancel() {
         for t in tasks { t.cancel() }
         tasks = []
+        generation += 1
+        current = nil
     }
 
+    /// Races a budgeted provider against its budget. Unlike a task group,
+    /// this doesn't wait for the loser, which may not notice cancellation.
     nonisolated static func run(_ p: any ResultProvider, _ q: ProviderQuery) async -> ProviderOutcome {
         guard let budget = p.budget else { return await attempt(p, q) }
-        return await withTaskGroup(of: ProviderOutcome.self) { group in
-            group.addTask { await attempt(p, q) }
-            group.addTask {
-                try? await Task.sleep(for: budget)
-                return .timedOut
-            }
-            let first = await group.next() ?? .timedOut
-            // The loser is cancelled: a late extension reply is dropped.
-            group.cancelAll()
-            return first
+        let race = Race()
+        let work = Task { race.finish(await attempt(p, q)) }
+        let timer = Task {
+            try? await Task.sleep(for: budget)
+            race.finish(.timedOut)
         }
+        let outcome = await withTaskCancellationHandler {
+            await race.value()
+        } onCancel: {
+            race.finish(.failed(CancellationError()))
+        }
+        // The loser is cancelled: a late extension reply is dropped.
+        work.cancel()
+        timer.cancel()
+        return outcome
     }
 
     nonisolated static func attempt(_ p: any ResultProvider, _ q: ProviderQuery) async -> ProviderOutcome {
@@ -99,5 +109,33 @@ public final class SearchFanout {
         guard let current else { return }
         painted = true
         onUpdate?(current)
+    }
+}
+
+/// The first outcome wins; later ones are ignored.
+private final class Race: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcome: ProviderOutcome?
+    private var waiter: CheckedContinuation<ProviderOutcome, Never>?
+
+    func finish(_ o: ProviderOutcome) {
+        let w: CheckedContinuation<ProviderOutcome, Never>? = lock.withLock {
+            guard outcome == nil else { return nil }
+            outcome = o
+            defer { waiter = nil }
+            return waiter
+        }
+        w?.resume(returning: o)
+    }
+
+    func value() async -> ProviderOutcome {
+        await withCheckedContinuation { c in
+            let done: ProviderOutcome? = lock.withLock {
+                if let outcome { return outcome }
+                waiter = c
+                return nil
+            }
+            if let done { c.resume(returning: done) }
+        }
     }
 }

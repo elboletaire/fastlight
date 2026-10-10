@@ -265,8 +265,9 @@ Fastlight binary, for `swift run`). User extensions live in
 Fastlight creates on launch.
 
 The library rescans when the panel is shown and from **Reload Extensions**.
-A rescan only lists files and compares a stamp of (path, size, mtime); it
-re-reads manifests and re-hashes only folders whose stamp changed. A changed
+A rescan only lists files and compares a stamp of (path, size, mtime,
+ctime); it re-reads manifests and re-hashes only folders whose stamp
+changed. The ctime is there because it can't be set back by hand. A changed
 extension's running process is stopped.
 
 ## Security and consent
@@ -275,13 +276,17 @@ Extensions run with Fastlight's privileges, which may include Full Disk
 Access. So:
 
 - Every user extension has a **fingerprint**: SHA-256 over the relative path
-  and contents of every file in its folder (except `.DS_Store` and `.git/`),
-  which covers the manifest (and with it id and version), the executable and
-  any script it loads from its folder. Folders over 100 MB or 5,000 files are
-  refused.
+  and contents of every file in its folder (length-prefixed; everything but
+  Finder's `.DS_Store`, hidden files and `.git/` included, since code can run
+  from anywhere in there). It covers the manifest (and with it id and
+  version), the executable and any script it loads from its folder. A
+  symlinked folder is hashed through the link. Folders over 100 MB or 5,000
+  files are refused.
 - `ConsentStore` remembers approved `id → fingerprint` pairs. Nothing is
-  spawned unless the current fingerprint is approved; `ExtensionHost` checks
-  this itself before every spawn, independent of the UI.
+  spawned unless the current fingerprint is approved: `ExtensionHost` checks
+  consent before every request, independent of the UI, and re-hashes the
+  folder right before every process start, so files changed since the last
+  rescan don't run either.
 - The first time a new or changed extension would run (its keyword is typed,
   or the user picks it in the menu), Fastlight hides the panel and asks with
   a standard alert showing the name, id, version, folder and command, and

@@ -68,7 +68,10 @@ struct Scope: Equatable {
 
 @MainActor
 final class SearchModel: ObservableObject {
-    @Published var query = "" { didSet { if query != oldValue { queryChanged() } } }
+    @Published var query = "" { didSet { if query != oldValue, !rewriting { queryChanged() } } }
+    /// Set while queryChanged rewrites the query itself, so that doesn't
+    /// count as typing (and search twice).
+    private var rewriting = false
     @Published private(set) var scope: Scope?
     @Published private(set) var sections: [ResultSection] = []
     @Published var selection = 0
@@ -199,8 +202,9 @@ final class SearchModel: ObservableObject {
         if scope == nil, let m = extensions.router.match(query), let ext = extensions.library.extension(id: m.extensionID) {
             scope = Scope(ext: ext, trigger: m.trigger)
             sections = []
-            // Assigning inside didSet doesn't call didSet again.
+            rewriting = true
             query = m.remainder
+            rewriting = false
         }
         search()
     }

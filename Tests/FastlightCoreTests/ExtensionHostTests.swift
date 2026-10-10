@@ -64,13 +64,33 @@ import Testing
         let lib = library(root)
         lib.refresh()
         let before = try #require(lib.extensions.first?.fingerprint)
-        // Noise that doesn't count.
+        // Finder's noise doesn't count.
         try Data("x".utf8).write(to: dir.appendingPathComponent(".DS_Store"))
-        try FileManager.default.createDirectory(at: dir.appendingPathComponent(".git"), withIntermediateDirectories: true)
-        try Data("x".utf8).write(to: dir.appendingPathComponent(".git/HEAD"))
         #expect(try ExtensionLibrary.fingerprint(of: dir) == before)
-        // A helper file the script might source does.
-        try Data("echo hi".utf8).write(to: dir.appendingPathComponent("lib.sh"))
+        // Anything else does, hidden or not: code can run from there.
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent(".git"), withIntermediateDirectories: true)
+        try Data("echo hi".utf8).write(to: dir.appendingPathComponent(".git/run.sh"))
+        lib.refresh()
+        let withGit = try #require(lib.extensions.first?.fingerprint)
+        #expect(withGit != before)
+        // Same size, modification date put back: still noticed.
+        let script = dir.appendingPathComponent(".git/run.sh")
+        let date = try FileManager.default.attributesOfItem(atPath: script.path)[.modificationDate] as! Date
+        try Data("echo ho".utf8).write(to: script)
+        try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: script.path)
+        lib.refresh()
+        #expect(lib.extensions.first?.fingerprint != withGit)
+    }
+
+    @Test func symlinkedFoldersAreHashedThroughTheLink() throws {
+        let real = try FakeExtension.folder()
+        let root = try FakeExtension.tempDir()
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("linked"), withDestinationURL: real)
+        let lib = library(root)
+        lib.refresh()
+        let before = try #require(lib.extensions.first?.fingerprint)
+        #expect(before == (try ExtensionLibrary.fingerprint(of: real)))
+        try Data("echo changed".utf8).write(to: real.appendingPathComponent("run.sh"))
         lib.refresh()
         #expect(lib.extensions.first?.fingerprint != before)
     }
@@ -211,6 +231,35 @@ import Testing
         await #expect(throws: ExtensionError.reported("cannot do that")) {
             try await host.run(ext, name: "go", item: "a", data: nil, query: "")
         }
+    }
+
+    @Test func refusesToStartFilesChangedSinceApproval() async throws {
+        let (host, ext, root) = try setup()
+        host.consent.approve(ext)
+        defer { host.stopAll(graceful: false) }
+        // Changed on disk after the last rescan: the approved fingerprint no
+        // longer matches, so it must not start.
+        try Data("echo pwned".utf8).write(to: root.appendingPathComponent("ext/extra.sh"))
+        await #expect(throws: ExtensionError.needsConsent) {
+            try await host.search(ext, query: "x", mode: .keyword, limit: 5)
+        }
+        #expect(host.pid(of: ext.id) == nil)
+    }
+
+    @Test func cancellingAWaitingSearchFreesIt() async throws {
+        let (host, ext, _) = try setup()
+        host.consent.approve(ext)
+        defer { host.stopAll(graceful: false) }
+        let busy = Task { try await host.search(ext, query: "slow", mode: .keyword, limit: 5) }
+        try await Task.sleep(for: .milliseconds(200))
+        let waiting = Task { try await host.search(ext, query: "w", mode: .keyword, limit: 5) }
+        try await Task.sleep(for: .milliseconds(50))
+        let started = Date()
+        waiting.cancel()
+        await #expect(throws: CancellationError.self) { try await waiting.value }
+        // Without waiting for "slow" to finish.
+        #expect(Date().timeIntervalSince(started) < 0.5)
+        #expect(try await busy.value.map(\.title) == ["slow"])
     }
 
     @Test func stopsChangedExtensions() async throws {

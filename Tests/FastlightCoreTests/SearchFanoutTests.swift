@@ -16,6 +16,19 @@ struct FakeProvider: ResultProvider {
     }
 }
 
+/// Sleeps a second without ever checking for cancellation.
+struct Stubborn: ResultProvider {
+    var id: String
+    var budget: Duration?
+
+    func results(for query: ProviderQuery) async throws -> [ResultEntry] {
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            DispatchQueue.global().asyncAfter(deadline: .now() + 1) { c.resume() }
+        }
+        return []
+    }
+}
+
 @MainActor
 @Suite struct SearchFanoutTests {
     final class Recorder {
@@ -86,6 +99,28 @@ struct FakeProvider: ResultProvider {
         try? await Task.sleep(for: .milliseconds(600))
         #expect(r.updates.map(\.query.text) == ["new"])
         #expect(paths(r.updates.first?.outcomes["p"]) == ["/p/new"])
+    }
+
+    @Test func cancelledSearchesNeverPaint() async {
+        let fanout = SearchFanout()
+        let r = Recorder()
+        fanout.onUpdate = { r.updates.append($0) }
+        // Providers that ignore cancellation still finish; nothing may show.
+        fanout.search(ProviderQuery(text: "old"), providers: [FakeProvider(id: "p", delay: .milliseconds(100))], firstPaint: nil)
+        fanout.cancel()
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(r.updates.isEmpty)
+    }
+
+    @Test func budgetHoldsEvenWhenTheProviderIgnoresCancellation() async {
+        let stubborn = Stubborn(id: "ext", budget: .milliseconds(80))
+        let started = Date()
+        let r = await run(SearchFanout(), "q", [stubborn]) { $0.updates.last?.isFinal == true }
+        #expect(Date().timeIntervalSince(started) < 0.6)
+        guard case .timedOut = r.updates.last?.outcomes["ext"] else {
+            Issue.record("expected a timeout")
+            return
+        }
     }
 
     @Test func waitsForEveryoneWithoutFirstPaint() async {

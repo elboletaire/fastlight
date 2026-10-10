@@ -85,6 +85,15 @@ public final class ExtensionHost: @unchecked Sendable {
                                                  logURL: logURL(for: ext.id))
             config.readyTimeout = timeouts.ready
             config.idleTimeout = timeouts.idle
+            if !ext.builtIn {
+                // What's on disk now must still be what was approved: the
+                // folder may have changed since the last rescan.
+                let dir = ext.directory
+                let approved = ext.fingerprint
+                config.verify = {
+                    (try? ExtensionLibrary.fingerprint(of: dir)) == approved ? nil : .needsConsent
+                }
+            }
             let s = Slot(fingerprint: ext.fingerprint, process: ExtensionProcess(config: config))
             slots[ext.id] = s
             return s
@@ -94,7 +103,9 @@ public final class ExtensionHost: @unchecked Sendable {
     public func search(_ ext: LoadedExtension, query: String, mode: SearchMode, limit: Int,
                        timeout: TimeInterval? = nil) async throws -> [ExtensionItem] {
         let slot = try slot(for: ext)
-        guard await slot.gate.acquire() else { throw ExtensionError.superseded }
+        guard await slot.gate.acquire() else {
+            throw Task.isCancelled ? CancellationError() as Error : ExtensionError.superseded
+        }
         if Task.isCancelled {
             slot.gate.release()
             throw CancellationError()
@@ -223,25 +234,46 @@ private final class OneShot: @unchecked Sendable {
 }
 
 /// One search in flight per extension; a newer waiter replaces (and
-/// releases with `false`) the one waiting before it.
+/// releases with `false`) the one waiting before it, and so does
+/// cancelling the waiting task.
 final class Gate: @unchecked Sendable {
     private let lock = NSLock()
     private var busy = false
-    private var waiting: CheckedContinuation<Bool, Never>?
+    private var waiting: (token: Int, continuation: CheckedContinuation<Bool, Never>)?
+    private var nextToken = 0
+    /// Cancelled before their continuation was installed.
+    private var cancelled = Set<Int>()
 
     func acquire() async -> Bool {
-        await withCheckedContinuation { c in
-            let (go, superseded) = lock.withLock { () -> (Bool, CheckedContinuation<Bool, Never>?) in
-                if !busy {
-                    busy = true
-                    return (true, nil)
+        let token = lock.withLock { () -> Int in
+            nextToken += 1
+            return nextToken
+        }
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { c in
+                let (go, superseded) = lock.withLock { () -> (Bool?, CheckedContinuation<Bool, Never>?) in
+                    if cancelled.remove(token) != nil { return (false, nil) }
+                    if !busy {
+                        busy = true
+                        return (true, nil)
+                    }
+                    let old = waiting?.continuation
+                    waiting = (token, c)
+                    return (nil, old)
                 }
-                let old = waiting
-                waiting = c
-                return (false, old)
+                superseded?.resume(returning: false)
+                if let go { c.resume(returning: go) }
             }
-            superseded?.resume(returning: false)
-            if go { c.resume(returning: true) }
+        } onCancel: {
+            let c: CheckedContinuation<Bool, Never>? = lock.withLock {
+                if let w = waiting, w.token == token {
+                    waiting = nil
+                    return w.continuation
+                }
+                cancelled.insert(token)
+                return nil
+            }
+            c?.resume(returning: false)
         }
     }
 
@@ -249,7 +281,7 @@ final class Gate: @unchecked Sendable {
         let next: CheckedContinuation<Bool, Never>? = lock.withLock {
             if let w = waiting {
                 waiting = nil
-                return w // stays busy: handed over
+                return w.continuation // stays busy: handed over
             }
             busy = false
             return nil

@@ -195,21 +195,22 @@ public final class ExtensionLibrary {
 
     private static func files(in dir: URL) -> [(rel: String, url: URL, values: URLResourceValues)] {
         let keys: [URLResourceKey] = [.isRegularFileKey, .isSymbolicLinkKey, .isDirectoryKey, .fileSizeKey,
-                                      .contentModificationDateKey]
-        guard let e = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: keys) else { return [] }
-        let base = dir.standardizedFileURL.path
+                                      .contentModificationDateKey, .attributeModificationDateKey]
+        // An extension folder may be a symlink (to a working copy, say); the
+        // enumerator lists nothing through one, which would hash nothing.
+        let real = dir.resolvingSymlinksInPath()
+        guard let e = FileManager.default.enumerator(at: real, includingPropertiesForKeys: keys) else { return [] }
+        let base = real.standardizedFileURL.path
         var out: [(String, URL, URLResourceValues)] = []
         for case let url as URL in e {
             guard let v = try? url.resourceValues(forKeys: Set(keys)) else { continue }
-            let name = url.lastPathComponent
-            if v.isDirectory == true, name == ".git" {
-                e.skipDescendants()
-                continue
-            }
-            if name == ".DS_Store" { continue }
+            // Finder's view settings, rewritten whenever the folder is
+            // looked at. Everything else counts, .git included: code can run
+            // from anywhere in the folder.
+            if url.lastPathComponent == ".DS_Store" { continue }
             guard v.isRegularFile == true || v.isSymbolicLink == true else { continue }
             let full = url.standardizedFileURL.path
-            let rel = full.hasPrefix(base + "/") ? String(full.dropFirst(base.count + 1)) : name
+            let rel = full.hasPrefix(base + "/") ? String(full.dropFirst(base.count + 1)) : url.lastPathComponent
             out.append((rel, url, v))
             if out.count > maxFiles { break }
         }
@@ -217,34 +218,43 @@ public final class ExtensionLibrary {
     }
 
     /// Paths, sizes and dates: changes whenever a file does, without reading.
+    /// The change time (ctime) is in there because, unlike the modification
+    /// time, it can't be set back by hand.
     static func stamp(of dir: URL) -> String {
         files(in: dir).map { f in
-            "\(f.rel)|\(f.values.fileSize ?? -1)|\(f.values.contentModificationDate?.timeIntervalSince1970 ?? 0)"
+            let m = f.values.contentModificationDate?.timeIntervalSince1970 ?? 0
+            let c = f.values.attributeModificationDate?.timeIntervalSince1970 ?? 0
+            return "\(f.rel)|\(f.values.fileSize ?? -1)|\(m)|\(c)"
         }.joined(separator: "\n")
     }
 
     /// SHA-256 over each file's relative path and contents (a symlink's
-    /// target instead of contents), in path order.
+    /// target instead of contents), in path order, every field prefixed
+    /// with its length so no two folders can produce the same input.
     public static func fingerprint(of dir: URL) throws -> String {
         let list = files(in: dir)
         if list.count > maxFiles { throw ValidationError("", "has more than \(maxFiles) files") }
         var total: UInt64 = 0
         var hash = SHA256()
+        func field(_ kind: UInt8, _ data: Data) {
+            var n = UInt64(data.count).bigEndian
+            hash.update(data: Data([kind]))
+            hash.update(data: withUnsafeBytes(of: &n) { Data($0) })
+            hash.update(data: data)
+        }
         for f in list {
-            hash.update(data: Data(f.rel.utf8))
-            hash.update(data: Data([0]))
+            field(0, Data(f.rel.utf8))
             if f.values.isSymbolicLink == true {
                 let target = (try? FileManager.default.destinationOfSymbolicLink(atPath: f.url.path)) ?? ""
-                hash.update(data: Data("link:\(target)".utf8))
+                field(1, Data(target.utf8))
             } else {
                 total += UInt64(f.values.fileSize ?? 0)
                 if total > maxBytes { throw ValidationError("", "is larger than \(maxBytes >> 20) MB") }
                 guard let data = try? Data(contentsOf: f.url, options: .mappedIfSafe) else {
                     throw ValidationError("", "can't read \(f.rel)")
                 }
-                hash.update(data: data)
+                field(2, data)
             }
-            hash.update(data: Data([0]))
         }
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
