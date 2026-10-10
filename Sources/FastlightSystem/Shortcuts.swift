@@ -80,12 +80,15 @@ public struct ShortcutsCLI: Sendable {
 public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
     struct Cache: Codable {
         var updated: Date
-        var shortcuts: [ShortcutInfo]
+        /// nil before the first listing: a run saves when it was run all the same.
+        var shortcuts: [ShortcutInfo]?
         /// Shortcut id (or name) -> last run, for the empty query.
         var lastRun: [String: Date]
     }
 
     public static let appID = "com.apple.shortcuts"
+    /// Input files are named so, in `inputDir`.
+    static let inputPrefix = "fastlight-shortcut-input-"
 
     let cli: ShortcutsCLI
     let cacheFile: URL?
@@ -94,8 +97,13 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
     let now: @Sendable () -> Date
     let list: Background<[ShortcutInfo]>
     private let lock = NSLock()
+    /// Held from reading what to save to writing it, so an older snapshot
+    /// is never written over a newer one.
+    private let saveLock = NSLock()
     private var updated: Date
+    private var shortcuts: [ShortcutInfo]?
     private var lastRun: [String: Date]
+    private var swept = false
 
     public init(cli: ShortcutsCLI = ShortcutsCLI(), cacheFile: URL?, inputDir: URL = FileManager.default.temporaryDirectory,
                 maxAge: TimeInterval = 30, now: @escaping @Sendable () -> Date = { Date() }) {
@@ -106,12 +114,14 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
         self.now = now
         let cache = JSONFile.read(Cache.self, from: cacheFile)
         list = Background(cache?.shortcuts)
+        shortcuts = cache?.shortcuts
         updated = cache?.updated ?? .distantPast
         lastRun = cache?.lastRun ?? [:]
     }
 
     /// Refreshes the list in the background when it's stale.
     public func start() {
+        sweep()
         let stale = lock.withLock { now().timeIntervalSince(updated) > maxAge || list.value == nil }
         guard stale else { return }
         let cli = cli
@@ -120,16 +130,35 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
                 FileHandle.standardError.write(Data("fastlight-shortcuts: couldn't list shortcuts\n".utf8))
                 return nil
             }
-            lock.withLock { updated = now() }
-            save(fresh)
+            lock.withLock { (updated, shortcuts) = (now(), fresh) }
+            save()
             return fresh
         }
     }
 
-    private func save(_ shortcuts: [ShortcutInfo]? = nil) {
-        let (u, runs) = lock.withLock { (updated, lastRun) }
-        guard let all = shortcuts ?? list.value else { return }
-        JSONFile.write(Cache(updated: u, shortcuts: all, lastRun: runs), to: cacheFile)
+    private func save() {
+        saveLock.withLock {
+            let cache = lock.withLock { Cache(updated: updated, shortcuts: shortcuts, lastRun: lastRun) }
+            JSONFile.write(cache, to: cacheFile)
+        }
+    }
+
+    /// Input files are removed when their shortcut ends; one this process
+    /// didn't see end (it quit, or the Mac did) is removed a day later.
+    func sweep() {
+        let first = lock.withLock {
+            defer { swept = true }
+            return !swept
+        }
+        guard first else { return }
+        let fm = FileManager.default
+        let cutoff = now().addingTimeInterval(-86_400)
+        let files = (try? fm.contentsOfDirectory(at: inputDir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        for f in files where f.lastPathComponent.hasPrefix(Self.inputPrefix) {
+            guard let date = try? f.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
+                  date < cutoff else { continue }
+            try? fm.removeItem(at: f)
+        }
     }
 
     public func handle(_ line: String) -> String? {
@@ -230,7 +259,7 @@ public final class ShortcutsExtension: LineHandler, @unchecked Sendable {
         }
         let s = ShortcutInfo(name: shortcutName, id: d["id"] as? String)
         let file = (d["input"] as? String).map { _ in
-            inputDir.appendingPathComponent("fastlight-shortcut-input-\(UUID().uuidString).txt")
+            inputDir.appendingPathComponent("\(Self.inputPrefix)\(UUID().uuidString).txt")
         }
         if let file, let input = d["input"] as? String {
             do {

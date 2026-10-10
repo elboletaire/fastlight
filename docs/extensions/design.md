@@ -474,7 +474,8 @@ for 3+ characters).
   is given a second to fail (an unknown shortcut) and then left to finish
   on its own, since shortcuts can run for minutes. In keyword mode, text
   after a whole name is input: written to a temporary `.txt` file,
-  removed once the shortcut ends. ⌘↵ opens
+  removed once the shortcut ends (or, left by a helper that quit first,
+  a day later, swept on the next start). ⌘↵ opens
   `shortcuts://open-shortcut?name=…`.
 
 **System** (keyword `sys`; global, 3 results for 3+ characters).
