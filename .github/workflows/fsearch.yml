@@ -3,6 +3,12 @@
 # bumps the patch version, and this opens (or refreshes) one PR for it.
 # Merging that PR releases the new version (see tag-release.yml).
 #
+# The PR branch is only ever rewritten while it holds nothing but this
+# workflow's own commit, and only when it's stale: upstream moved past its
+# pin, or main's version moved so its bump would be wrong. A branch that
+# merely lags behind main is left alone. Once someone else has pushed to it,
+# the workflow never force-pushes: it comments on the PR instead.
+#
 # PRs opened with the workflow token don't trigger other workflows, so CI is
 # started on the branch explicitly; its result shows on the PR. Needs
 # "Allow GitHub Actions to create and approve pull requests" in the
@@ -36,6 +42,8 @@ jobs:
           ref: main
           fetch-depth: 0
           submodules: recursive
+          # Nothing below needs them but the explicit fetch and push.
+          persist-credentials: false
 
       - name: Update fsearch
         id: bump
@@ -52,14 +60,32 @@ jobs:
           NEW: ${{ steps.bump.outputs.new }}
           NOTES: ${{ steps.bump.outputs.notes }}
         run: |
-          # Same tree as the open PR (nothing new upstream, main unchanged):
-          # leave it, and its CI run, alone.
-          if git fetch --quiet origin "$BRANCH" 2>/dev/null &&
-             [ "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse 'FETCH_HEAD^{tree}')" ]; then
-            echo "$BRANCH is already current"
-            exit 0
+          bot='41898282+github-actions[bot]@users.noreply.github.com'
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          main="$(git rev-parse HEAD^)" # bump-fsearch.sh made one commit on main
+          force=()
+          if git fetch --quiet "$remote" "refs/heads/$BRANCH" 2>/dev/null; then
+            branch="$(git rev-parse FETCH_HEAD)"
+            pin="$(git ls-tree "$branch" third_party/fsearch | awk '{print $3}')"
+            version="$(git show "$branch:Resources/Info.plist" | plutil -extract CFBundleShortVersionString raw -o - -)"
+            # Same upstream commit and the same version: it only lacks main's
+            # newer commits, which doesn't need a rewrite (nor a new CI run).
+            if [ "$pin" = "$NEW" ] && [ "$version" = "$VERSION" ]; then
+              echo "$BRANCH is already current"
+              exit 0
+            fi
+            others="$(git log --format='%ae%n%ce' "$main..$branch" | grep -vxF "$bot" | sort -u || true)"
+            if [ -n "$others" ]; then
+              msg="fsearch is now at \`${NEW:0:7}\` (Fastlight $VERSION), but \`$BRANCH\` has commits by someone other than github-actions, so the fsearch workflow left it alone. Bring it up to date by hand, or delete the branch so the next run recreates it."
+              echo "::warning::$msg"
+              pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+              if [ -n "$pr" ]; then gh pr comment "$pr" --body "$msg"; fi
+              exit 0
+            fi
+            # Only our own commit: replace it, unless it changed meanwhile.
+            force=(--force-with-lease="refs/heads/$BRANCH:$branch")
           fi
-          git push --force origin "HEAD:refs/heads/$BRANCH"
+          git push --quiet "${force[@]}" "$remote" "HEAD:refs/heads/$BRANCH"
 
           title="build(deps): update fsearch to ${NEW:0:7} (Fastlight $VERSION)"
           body="$RUNNER_TEMP/body.md"
@@ -74,7 +100,7 @@ jobs:
             echo
             echo "Merging this releases Fastlight $VERSION: tag-release.yml tags it and runs the release build."
             echo
-            echo "<sub>Opened by the weekly fsearch workflow. It force-pushes \`$BRANCH\` whenever upstream moves on.</sub>"
+            echo "<sub>Opened by the weekly fsearch workflow. When upstream moves on (or main's version changes), it rewrites \`$BRANCH\`, unless someone else has pushed to it: then it leaves the branch alone and comments here.</sub>"
           } > "$body"
 
           pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
