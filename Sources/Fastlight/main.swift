@@ -1,7 +1,11 @@
 import AppKit
+import FastlightCore
 import FastlightL10n
 
 let app = NSApplication.shared
+// A write to a pipe or socket whose reader is gone fails instead of
+// killing the app; see BrokenPipes.
+BrokenPipes.ignore()
 
 // `--snapshot <dir> [--query q]...` renders the panel to PNGs and exits;
 // each --query adds a scene with real results. See Snapshot.swift.
