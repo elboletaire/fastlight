@@ -155,24 +155,24 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// ↑↓ move, Tab/⇧Tab or ⌘↓/⌘↑ jump between sections, ↵ open (an
-    /// extension item's first action), ⌘↵ reveal in Finder (its second),
-    /// ⌘Y Quick Look, ⌥⌘C copy path, ⌫ on an empty field leaves keyword
-    /// mode, ⎋ clears, then leaves keyword mode, then closes.
+    /// The keys `PanelKey` lists; a held key repeats moves, not actions.
     private func handle(_ e: NSEvent) -> Bool {
-        let mods = e.modifierFlags.intersection([.command, .option, .shift, .control])
-        switch (Int(e.keyCode), mods) {
-        case (125, .command): model.jumpSection(1)
-        case (126, .command): model.jumpSection(-1)
-        case (125, _): model.move(1)
-        case (126, _): model.move(-1)
-        case (48, []): model.jumpSection(1)
-        case (48, .shift): model.jumpSection(-1)
-        case (36, .command), (76, .command): reveal()
-        case (36, []), (76, []): open()
-        case (51, []) where model.scope != nil && model.query.isEmpty:
-            model.leaveScope()
-        case (53, _):
+        let flags = e.modifierFlags
+        var mods: PanelKey.Modifiers = []
+        if flags.contains(.command) { mods.insert(.command) }
+        if flags.contains(.option) { mods.insert(.option) }
+        if flags.contains(.shift) { mods.insert(.shift) }
+        if flags.contains(.control) { mods.insert(.control) }
+        let key = PanelKey.decide(keyCode: Int(e.keyCode), modifiers: mods, characters: e.charactersIgnoringModifiers,
+                                  isRepeat: e.isARepeat, canLeaveScope: model.scope != nil && model.query.isEmpty)
+        switch key {
+        case nil: return false
+        case .move(let d): model.move(d)
+        case .jumpSection(let d): model.jumpSection(d)
+        case .reveal: reveal()
+        case .open: open()
+        case .leaveScope: model.leaveScope()
+        case .escape:
             if !model.query.isEmpty {
                 model.query = ""
             } else if model.scope != nil {
@@ -180,12 +180,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             } else {
                 hide()
             }
-        default:
-            switch (e.charactersIgnoringModifiers?.lowercased(), mods) {
-            case ("y", .command): quickLook()
-            case ("c", [.command, .option]): copyPath()
-            default: return false
-            }
+        case .quickLook: quickLook()
+        case .copyPath: copyPath()
+        case .ignore: break
         }
         return true
     }
