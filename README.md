@@ -87,27 +87,28 @@ sym:applyFilter                  where a symbol is defined
 
 | Operator | Does |
 |---|---|
-| `'exact` | Match the word as typed, no fuzziness |
+| `'exact` | No fuzziness |
 | `^prefix` | Name starts with |
 | `suffix$` | Name ends with |
-| `!word` | Leave out names that contain it |
+| `!word` | Leave out paths with it in the name or a folder: `!node_modules`. Works with `'`, `^` and `$` too: `!.bak$` |
 | `"two words"` | Quotes keep spaces in one word or value: `in:"~/My Notes"` |
+| `folder/name` | Words can match folders on the path too, as long as one is in the name; `/` splits words. `src readme` and `src/readme` both find `~/src/app/README.md` |
 
 | Filter | Does |
 |---|---|
 | `ext:` | Extension; commas for several: `ext:jpg,png` |
 | `type:` | `image`, `video`, `audio`, `doc`, `code`, `archive`, `font` or `app`; commas for several |
 | `kind:` | `file` (`f`), `dir` (`folder`, `d`) or `link` (`symlink`, `l`) |
-| `in:` | Only under a folder: `in:~/src` |
+| `in:` | Only under a folder, absolute or `~`: `in:~/src` |
 | `size:` | `size:>5mb`, `size:1m..10m` |
 | `mtime:` | Modified within (`mtime:<7d`) or longer ago than (`mtime:>1y`). Also `modified:` |
-| `re:` | Regex over the name: `re:^IMG_\d+` |
-| `path:` | Regex over the full path: `path:/tests?/` |
+| `re:` | Regex over the name, ignoring case: `re:^IMG_\d+` |
+| `path:` | Regex over the full path, ignoring case: `path:/tests?/` |
 | `grep:` | Text inside files; ignores case unless it has capitals. Also `content:` |
-| `regex:` | Regex inside files: `regex:fn\s+main` |
+| `regex:` | Regex inside files; ignores case unless it has capitals: `regex:fn\s+main` |
 | `sym:` | Where a symbol is defined, case and all. Also `symbol:` |
 
-`size:` and `mtime:` take `>`, `>=`, `<`, `<=`, a range `a..b`, or an exact value. Sizes are in `b`, `k`/`kb`, `m`/`mb`, `g`/`gb` or `t`/`tb`; times in `s`, `m`/`min`, `h`, `d`, `w`, `mo` or `y`, and a bare number means days. The same reference is in **About Fastlight**.
+`size:` and `mtime:` take `>`, `>=`, `<`, `<=` or a range `a..b`, and `size:` an exact value too. Sizes are in `b`, `k`/`kb`, `m`/`mb`, `g`/`gb` or `t`/`tb` (1 kb is 1000 bytes), and a bare number means bytes; times are in `s`, `m`/`min`, `h`, `d`, `w`, `mo` or `y`, and a bare number means days. Matching ignores case, except `sym:` and `grep:` or `regex:` patterns with capitals. The same reference is in **About Fastlight**.
 
 Plain queries leave out noise like app bundles, dot-folders, `node_modules` and `~/Library`. Any filter turns that off, so `in:~/Library` searches there as usual.
 

@@ -10,21 +10,19 @@ struct AboutInfo {
     var icon: NSImage
 
     @MainActor static var current: AboutInfo {
-        let info = Bundle.main.infoDictionary ?? [:]
-        return AboutInfo(version: info["CFBundleShortVersionString"] as? String ?? "development",
-                         build: info["CFBundleVersion"] as? String ?? "-",
-                         copyright: info["NSHumanReadableCopyright"] as? String ?? "",
-                         icon: NSApp.applicationIconImage)
+        AboutInfo(version: AppInfo.version, build: AppInfo.build, copyright: AppInfo.copyright,
+                  icon: NSApp.applicationIconImage)
     }
 }
 
 /// About Fastlight, with the search syntax: the standard About panel has no
 /// room for it, and it's where people look for what the field understands.
+@MainActor
 final class AboutWindowController: NSWindowController {
     init(info: AboutInfo) {
         let host = NSHostingController(rootView: AboutView(info: info))
         host.sizingOptions = .preferredContentSize
-        let window = NSWindow(contentViewController: host)
+        let window = ClosableWindow(contentViewController: host)
         window.title = "About Fastlight"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
@@ -63,7 +61,7 @@ struct AboutView: View {
                 SyntaxList(title: "Filters", entries: QuerySyntax.listedFilters.map(\.entry), syntaxWidth: 56)
                     .frame(width: 430, alignment: .leading)
             }
-            Text("Plain queries leave out app bundles, dot-folders, node_modules and ~/Library. Any filter turns that off.")
+            Text("\(QuerySyntax.caseNote) Plain queries leave out app bundles, dot-folders, node_modules and ~/Library; any filter turns that off.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
