@@ -16,3 +16,5 @@
 "Division by zero" = "Division by zero";
 "%@ isn't defined there" = "%@ isn't defined there";
 "The result is too large" = "The result is too large";
+"The expression is too long" = "The expression is too long";
+"The expression is nested too deeply" = "The expression is nested too deeply";

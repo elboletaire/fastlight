@@ -10,6 +10,8 @@ public enum CalcError: Error, Equatable, Sendable, LocalizedError {
     case divisionByZero
     case outOfDomain(String)
     case tooLarge
+    case tooLong
+    case tooDeep
 
     public var errorDescription: String? {
         switch self {
@@ -20,6 +22,8 @@ public enum CalcError: Error, Equatable, Sendable, LocalizedError {
         case .divisionByZero: L("Division by zero")
         case .outOfDomain(let f): L("%@ isn't defined there", f)
         case .tooLarge: L("The result is too large")
+        case .tooLong: L("The expression is too long")
+        case .tooDeep: L("The expression is nested too deeply")
         }
     }
 }
@@ -209,20 +213,44 @@ public struct Parser {
         "sin", "cos", "tan", "asin", "acos", "atan", "deg", "rad",
     ]
 
+    /// Longer input is not math anyone types.
+    public static let maxLength = 1000
+    /// How deep parentheses, unary minus and ^ may nest, and how tall the
+    /// tree may grow ("1+1+…" is a tree as tall as it is long): parsing,
+    /// evaluating and printing all recurse on it, and must not overflow
+    /// the stack, even on a secondary thread's.
+    public static let maxDepth = 100
+
     private var tokens: [Token]
     private var pos = 0
+    private var depth = 0
 
     public static func parse(_ s: String, decimal: Character = ".") throws -> Expr {
+        guard s.utf8.count <= maxLength else { throw CalcError.tooLong }
         let toks = try Lexer(decimal: decimal).tokens(s)
         if toks == [.end] { throw CalcError.empty }
         var p = Parser(tokens: toks)
         let e = try p.expression(0)
         guard p.peek == .end else { throw CalcError.unexpected(p.describe(p.peek)) }
-        return e
+        return e.expr
     }
 
     private init(tokens: [Token]) {
         self.tokens = tokens
+    }
+
+    /// An expression and its height.
+    private struct Node {
+        var expr: Expr
+        var height: Int
+    }
+
+    /// A node over `children`; a tree too tall is too long an expression,
+    /// since nesting is caught before (as too deep).
+    private static func node(_ e: Expr, _ children: Node...) throws -> Node {
+        let h = (children.map(\.height).max() ?? 0) + 1
+        guard h <= maxDepth else { throw CalcError.tooLong }
+        return Node(expr: e, height: h)
     }
 
     private var peek: Token { tokens[pos] }
@@ -241,34 +269,39 @@ public struct Parser {
         }
     }
 
-    private mutating func expression(_ minPrec: Int) throws -> Expr {
+    private mutating func expression(_ minPrec: Int) throws -> Node {
+        depth += 1
+        defer { depth -= 1 }
+        guard depth <= Self.maxDepth else { throw CalcError.tooDeep }
         var left = try prefix()
         while true {
             switch peek {
             case .op("%"):
                 pos += 1
-                left = .percent(left)
+                left = try Self.node(.percent(left.expr), left)
             case .op("!"):
                 pos += 1
-                left = .factorial(left)
+                left = try Self.node(.factorial(left.expr), left)
             case .op(let c) where "+-*/^".contains(c):
                 let prec = Self.precedence(c)
                 guard prec >= minPrec else { return left }
                 pos += 1
                 // ^ binds to the right: its right side may be another ^.
                 let right = try expression(c == "^" ? prec : prec + 1)
-                left = .binary(c, left, right)
+                left = try Self.node(.binary(c, left.expr, right.expr), left, right)
             case .name("of"):
                 guard 2 >= minPrec else { return left }
-                guard case .percent(let p) = left else { throw CalcError.unexpected("of") }
+                guard case .percent(let p) = left.expr else { throw CalcError.unexpected("of") }
                 pos += 1
                 // Right-associative: "50% of 50% of 80".
-                left = .percentOf(p, try expression(2))
+                let base = try expression(2)
+                left = try Self.node(.percentOf(p, base.expr), left, base)
             case .name, .op("("):
                 // Juxtaposition multiplies: 2π, 3(4+5), (1+2)(3+4). Not
                 // two numbers, though: "1 2" is a typo, not 2.
                 guard 2 >= minPrec else { return left }
-                left = .binary("*", left, try expression(3))
+                let right = try expression(3)
+                left = try Self.node(.binary("*", left.expr, right.expr), left, right)
             default:
                 return left
             }
@@ -283,12 +316,13 @@ public struct Parser {
         }
     }
 
-    private mutating func prefix() throws -> Expr {
+    private mutating func prefix() throws -> Node {
         switch next() {
         case .number(let n):
-            return .number(n)
+            return Node(expr: .number(n), height: 1)
         case .op("-"):
-            return .negate(try expression(3))
+            let e = try expression(3)
+            return try Self.node(.negate(e.expr), e)
         case .op("+"):
             return try expression(3)
         case .op("("):
@@ -296,10 +330,11 @@ public struct Parser {
             guard next() == .op(")") else { throw CalcError.missingParenthesis }
             return e
         case .name(let n):
-            if Self.constants[n] != nil { return .constant(n) }
+            if Self.constants[n] != nil { return Node(expr: .constant(n), height: 1) }
             guard Self.functions.contains(n) else { throw CalcError.unknownName(n) }
             // sqrt(2) or sqrt 2; the argument binds like unary minus.
-            return .call(n, try expression(3))
+            let arg = try expression(3)
+            return try Self.node(.call(n, arg.expr), arg)
         case let t:
             throw CalcError.unexpected(describe(t))
         }
@@ -315,70 +350,76 @@ extension Expr {
         return v
     }
 
+    /// Recursive on the tree, so its frame is kept small: the work is in
+    /// the helpers below, which don't recurse.
     private func value() throws -> Double {
         switch self {
-        case .number(let n):
-            return n
-        case .constant(let c):
-            return Parser.constants[c] ?? .nan
-        case .negate(let e):
-            return -(try e.value())
-        case .percent(let e):
-            return try e.value() / 100
-        case .percentOf(let p, let base):
-            return try p.value() / 100 * base.value()
-        case .factorial(let e):
-            let n = try e.value()
-            guard n >= 0, n == n.rounded() else { throw CalcError.outOfDomain("!") }
-            guard n <= 170 else { throw CalcError.tooLarge }
-            return n < 2 ? 1 : (2...Int(n)).reduce(1.0) { $0 * Double($1) }
+        case .number(let n): return n
+        case .constant(let c): return Parser.constants[c] ?? .nan
+        case .negate(let e): return -(try e.value())
+        case .percent(let e): return try e.value() / 100
+        case .percentOf(let p, let base): return try p.value() / 100 * base.value()
+        case .factorial(let e): return try Self.factorial(e.value())
         case .binary(let op, let l, let r):
             let a = try l.value()
             // "80 + 10%" adds 10% of 80, like a calculator's % key.
-            if op == "+" || op == "-", case .percent(let p) = r {
-                let share = a * (try p.value()) / 100
-                return op == "+" ? a + share : a - share
-            }
-            let b = try r.value()
-            switch op {
-            case "+": return a + b
-            case "-": return a - b
-            case "*": return a * b
-            case "/":
-                guard b != 0 else { throw CalcError.divisionByZero }
-                return a / b
-            default:
-                let v = pow(a, b)
-                if v.isNaN { throw CalcError.outOfDomain("^") }
-                return v
-            }
-        case .call(let f, let arg):
-            let x = try arg.value()
-            func need(_ ok: Bool) throws { if !ok { throw CalcError.outOfDomain(f) } }
-            switch f {
-            case "sqrt": try need(x >= 0); return x.squareRoot()
-            case "cbrt": return cbrt(x)
-            case "abs": return abs(x)
-            case "round": return x.rounded()
-            case "floor": return x.rounded(.down)
-            case "ceil": return x.rounded(.up)
-            case "ln": try need(x > 0); return log(x)
-            case "log": try need(x > 0); return log10(x)
-            case "log2": try need(x > 0); return log2(x)
-            case "exp": return exp(x)
-            case "sin": return Self.clean(sin(x))
-            case "cos": return Self.clean(cos(x))
-            case "tan":
-                // tan(π/2) is a huge number by rounding, not a real answer.
-                try need(abs(cos(x)) > 1e-12)
-                return Self.clean(tan(x))
-            case "asin": try need(abs(x) <= 1); return asin(x)
-            case "acos": try need(abs(x) <= 1); return acos(x)
-            case "atan": return atan(x)
-            case "deg": return x * 180 / .pi
-            case "rad": return x * .pi / 180
-            default: throw CalcError.unknownName(f)
-            }
+            if op == "+" || op == "-", case .percent(let p) = r { return Self.addShare(op, a, try p.value()) }
+            return try Self.apply(op, a, r.value())
+        case .call(let f, let arg): return try Self.call(f, arg.value())
+        }
+    }
+
+    private static func factorial(_ n: Double) throws -> Double {
+        guard n >= 0, n == n.rounded() else { throw CalcError.outOfDomain("!") }
+        guard n <= 170 else { throw CalcError.tooLarge }
+        return n < 2 ? 1 : (2...Int(n)).reduce(1.0) { $0 * Double($1) }
+    }
+
+    private static func addShare(_ op: Character, _ a: Double, _ percent: Double) -> Double {
+        let share = a * percent / 100
+        return op == "+" ? a + share : a - share
+    }
+
+    private static func apply(_ op: Character, _ a: Double, _ b: Double) throws -> Double {
+        switch op {
+        case "+": return a + b
+        case "-": return a - b
+        case "*": return a * b
+        case "/":
+            guard b != 0 else { throw CalcError.divisionByZero }
+            return a / b
+        default:
+            let v = pow(a, b)
+            if v.isNaN { throw CalcError.outOfDomain("^") }
+            return v
+        }
+    }
+
+    private static func call(_ f: String, _ x: Double) throws -> Double {
+        func need(_ ok: Bool) throws { if !ok { throw CalcError.outOfDomain(f) } }
+        switch f {
+        case "sqrt": try need(x >= 0); return x.squareRoot()
+        case "cbrt": return cbrt(x)
+        case "abs": return abs(x)
+        case "round": return x.rounded()
+        case "floor": return x.rounded(.down)
+        case "ceil": return x.rounded(.up)
+        case "ln": try need(x > 0); return log(x)
+        case "log": try need(x > 0); return log10(x)
+        case "log2": try need(x > 0); return log2(x)
+        case "exp": return exp(x)
+        case "sin": return clean(sin(x))
+        case "cos": return clean(cos(x))
+        case "tan":
+            // tan(π/2) is a huge number by rounding, not a real answer.
+            try need(abs(cos(x)) > 1e-12)
+            return clean(tan(x))
+        case "asin": try need(abs(x) <= 1); return asin(x)
+        case "acos": try need(abs(x) <= 1); return acos(x)
+        case "atan": return atan(x)
+        case "deg": return x * 180 / .pi
+        case "rad": return x * .pi / 180
+        default: throw CalcError.unknownName(f)
         }
     }
 

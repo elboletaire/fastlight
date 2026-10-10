@@ -18,6 +18,10 @@ import Testing
         #expect(bad["title"] as? String == "Cap resultat")
         #expect(bad["subtitle"] as? String == "Divisió per zero")
         #expect(keyword("foo(2)", "ca")["subtitle"] as? String == "Nom desconegut: “foo”")
+        #expect(keyword(String(repeating: "1+", count: 600) + "1", "ca")["subtitle"] as? String
+            == "L’expressió és massa llarga")
+        #expect(keyword(String(repeating: "(", count: 201) + "1", "es")["subtitle"] as? String
+            == "La expresión tiene demasiados niveles de anidamiento")
         let answer = keyword("1920*1080", "ca")
         #expect(answer["title"] as? String == "2.073.600")
         let actions = answer["actions"] as? [[String: Any]] ?? []
