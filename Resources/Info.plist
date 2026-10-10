@@ -30,6 +30,8 @@
 	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Fastlight asks System Events, Finder or the login window to switch Dark Mode, empty the Trash, log out, restart or shut down, only when you choose that action.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Fastlight shows your upcoming events when you type “cal” or search for one. They are read on this Mac and never leave it.</string>
 	<key>NSContactsUsageDescription</key>

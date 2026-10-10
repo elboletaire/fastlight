@@ -78,21 +78,29 @@ sign_flags=(--force --sign "$identity")
 if [ "$identity" != "-" ]; then
   sign_flags+=(--options runtime --timestamp)
 fi
-# Contacts, Calendars and Reminders: under the hardened runtime, TCC denies
-# them without asking unless the responsible app has these entitlements.
-# That's Fastlight, which starts the helpers that read them; those helpers
-# carry them too. Ad-hoc builds have no hardened runtime and don't need them.
-pim=()
+# Under the hardened runtime, TCC denies without asking unless the
+# responsible app, Fastlight, has the entitlement for what's asked:
+# Contacts, Calendars (and Reminders), and Apple events (Automation: the
+# System extension's osascript to System Events, Finder and loginwindow).
+# Each helper also carries the ones for what it does itself, no more:
+# Contacts and Calendar read the stores, System spawns osascript.
+# Ad-hoc builds have no hardened runtime and don't need them.
+app_ent=() pim=() system=()
 if [ "$identity" != "-" ]; then
-  pim=(--entitlements Resources/Fastlight.entitlements)
+  app_ent=(--entitlements Resources/Fastlight.entitlements)
+  pim=(--entitlements Resources/fastlight-pim.entitlements)
+  system=(--entitlements Resources/fastlight-system.entitlements)
 fi
 codesign "${sign_flags[@]}" --identifier com.elboletaire.fastlight.fsearch "$app/Contents/Helpers/fsearch"
 for h in "${helpers[@]}"; do
   ent=()
-  case "$h" in fastlight-contacts|fastlight-calendar) ent=(${pim[@]+"${pim[@]}"}) ;; esac
+  case "$h" in
+    fastlight-contacts|fastlight-calendar) ent=(${pim[@]+"${pim[@]}"}) ;;
+    fastlight-system) ent=(${system[@]+"${system[@]}"}) ;;
+  esac
   codesign "${sign_flags[@]}" ${ent[@]+"${ent[@]}"} --identifier "com.elboletaire.fastlight.$h" "$app/Contents/Helpers/$h"
 done
-codesign "${sign_flags[@]}" ${pim[@]+"${pim[@]}"} "$app"
+codesign "${sign_flags[@]}" ${app_ent[@]+"${app_ent[@]}"} "$app"
 codesign --verify --deep --strict "$app"
 
 # Ad-hoc signatures change with every build, and Full Disk Access is tied to
