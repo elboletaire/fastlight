@@ -29,21 +29,32 @@ on:
 permissions:
   contents: read
 
-# Another release's update, or a manual run, waits instead of racing.
-concurrency:
-  group: homebrew-tap
-  cancel-in-progress: false
-
 jobs:
   cask:
     runs-on: ubuntu-latest
+    # Another release's update, or a manual run, waits instead of racing.
+    # On the job, not the workflow: a workflow-level group in a called
+    # workflow deadlocks if the caller ever gets one with the same name.
+    concurrency:
+      group: homebrew-tap
+      cancel-in-progress: false
     env:
       HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
       TAG: ${{ inputs.tag }}
     steps:
+      # A release goes on without it (when called, the event is the
+      # caller's); a manual run is meant to update the tap or check the
+      # token, so it fails.
       - name: No tap token
         if: env.HAS_TAP_TOKEN != 'true'
-        run: echo "::notice::HOMEBREW_TAP_TOKEN isn't set, so the Homebrew tap wasn't updated"
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN isn't set"
+            exit 1
+          fi
+          echo "::notice::HOMEBREW_TAP_TOKEN isn't set, so the Homebrew tap wasn't updated"
 
       - name: Check the tag
         if: env.HAS_TAP_TOKEN == 'true'
@@ -92,9 +103,10 @@ jobs:
           auth="$(printf 'x-access-token:%s' "$TAP_TOKEN" | base64 -w0)"
           echo "::add-mask::$auth"
           tapgit() { git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" "$@"; }
-          # Fails here, before anything is committed, if the token can read
-          # the tap but not push to it (or has expired).
-          if ! tapgit push --dry-run --quiet origin HEAD; then
+          # GitHub refuses the push handshake to a token that can't write, so
+          # a dry run catches a read-only or expired token even when there's
+          # nothing to push (a run for a release the tap already has).
+          if ! tapgit push --dry-run --quiet origin HEAD:main; then
             echo "::error::HOMEBREW_TAP_TOKEN can't push to elboletaire/homebrew-tap: it needs Contents: read and write on it"
             exit 1
           fi
@@ -108,13 +120,14 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit --quiet -m "fastlight $version"
           for attempt in 1 2 3 4 5; do
-            if tapgit push --quiet origin HEAD; then
+            if tapgit push --quiet origin HEAD:main; then
               echo "Updated elboletaire/homebrew-tap to Fastlight $version"
               exit 0
             fi
+            if [ "$attempt" = 5 ]; then break; fi
             echo "Push rejected (attempt $attempt), rebasing onto the tap's latest"
             sleep $((attempt * 3))
-            tapgit pull --quiet --rebase origin HEAD
+            tapgit pull --quiet --rebase origin main
           done
           echo "::error::couldn't push to elboletaire/homebrew-tap"
           exit 1

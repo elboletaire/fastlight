@@ -73,7 +73,7 @@ notice and the tap stays where it is.
 
 5. **Check the token**: run the *Homebrew tap* workflow (`homebrew.yml`) with
    the latest tag. When the tap already has that release it pushes nothing,
-   but it still fails if the token can't push.
+   but it still fails if the secret is missing or the token can't push.
 
    ```sh
    gh workflow run homebrew.yml --repo elboletaire/fastlight -f tag=v0.5.0
@@ -94,8 +94,9 @@ After `release.yml` publishes a `v*` release, its `homebrew` job runs
    with other projects' release workflows, so a rejected push rebases onto
    theirs and tries again.
 
-If that step failed (an expired token, say), fix it and run `homebrew.yml`
-by hand with the tag: there's no need to re-run the whole release.
+If that step failed (an expired token, say), fix it and re-run the release
+run's failed jobs, which re-runs only `homebrew`. Past GitHub's 30-day
+re-run window, run `homebrew.yml` by hand with the tag instead.
 
 So a change to the cask here reaches the tap with the next release. To push
 one sooner, or to fix the tap by hand:
