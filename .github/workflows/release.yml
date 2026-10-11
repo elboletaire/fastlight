@@ -7,8 +7,8 @@
 # The build (which runs cargo build scripts, SwiftPM and dmgbuild from PyPI)
 # gets a read-only token that isn't kept in .git/config; only the publish
 # job, which runs nothing but gh, can write. The homebrew job then updates
-# the cask in elboletaire/homebrew-tap, with its own token for that
-# repository alone (HOMEBREW_TAP_TOKEN, optional).
+# the cask in elboletaire/homebrew-tap (homebrew.yml), with its own token for
+# that repository alone (HOMEBREW_TAP_TOKEN, optional).
 #
 # Ad-hoc signed by default. To ship a Developer ID signed and notarized DMG,
 # add these repository secrets (signing and notarization are each skipped
@@ -147,65 +147,12 @@ jobs:
             gh release create "$TAG" "$dmg" --verify-tag --title "Fastlight ${TAG#v}" --generate-notes
           fi
 
-  # Points the cask in elboletaire/homebrew-tap at the release just
-  # published: the cask from packaging/homebrew/tap at this tag, with this
-  # DMG's version and sha256. Needs a HOMEBREW_TAP_TOKEN secret (a
-  # fine-grained token with Contents: read and write on that repository
-  # only); without one it only leaves a notice. See packaging/homebrew/README.md.
+  # The cask in elboletaire/homebrew-tap, pointed at the release just
+  # published. See homebrew.yml, which can also be run on its own.
   homebrew:
     needs: publish
-    runs-on: ubuntu-latest
-    env:
-      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
-    steps:
-      - name: No tap token
-        if: env.HAS_TAP_TOKEN != 'true'
-        run: echo "::notice::HOMEBREW_TAP_TOKEN isn't set, so the Homebrew tap wasn't updated"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.HAS_TAP_TOKEN == 'true'
-        with:
-          path: fastlight
-          sparse-checkout: |
-            packaging/homebrew
-            scripts
-          persist-credentials: false
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.HAS_TAP_TOKEN == 'true'
-        with:
-          repository: elboletaire/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          path: tap
-          persist-credentials: false
-
-      # The sha256 is taken from the DMG as published, which is what brew
-      # downloads. A re-run with nothing to change pushes nothing.
-      - name: Update the cask
-        if: env.HAS_TAP_TOKEN == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          version="${TAG#v}"
-          gh release download "$TAG" -p "Fastlight-$version.dmg" -D "$RUNNER_TEMP"
-          mkdir -p tap/Casks
-          cp fastlight/packaging/homebrew/tap/Casks/fastlight.rb tap/Casks/fastlight.rb
-          fastlight/scripts/update-cask.sh "$version" "$RUNNER_TEMP/Fastlight-$version.dmg" tap/Casks/fastlight.rb
-          ruby -c tap/Casks/fastlight.rb
-
-          cd tap
-          git add Casks/fastlight.rb
-          if git diff --cached --quiet; then
-            echo "The tap already has Fastlight $version"
-            exit 0
-          fi
-          git -c user.name='github-actions[bot]' \
-            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit --quiet -m "fastlight $version"
-          auth="$(printf 'x-access-token:%s' "$TAP_TOKEN" | base64 -w0)"
-          echo "::add-mask::$auth"
-          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push --quiet origin HEAD
-          echo "Updated $(git remote get-url origin) to Fastlight $version"
+    uses: ./.github/workflows/homebrew.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

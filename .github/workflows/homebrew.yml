@@ -1,0 +1,133 @@
+# Points the cask in elboletaire/homebrew-tap at a published release: the
+# cask from packaging/homebrew/tap at that tag, with its DMG's version and
+# sha256. release.yml calls it after publishing; run it by hand (with the
+# tag) to retry a tap update without rebuilding the release, or to check the
+# token: a run for a release the tap already has pushes nothing, but still
+# checks that the token can push.
+#
+# Needs a HOMEBREW_TAP_TOKEN secret (a fine-grained token with Contents:
+# read and write on that repository only); without one it only leaves a
+# notice. See packaging/homebrew/README.md.
+name: Homebrew tap
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.5.0
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  cask:
+    runs-on: ubuntu-latest
+    # Another release's update, or a manual run, waits instead of racing.
+    # On the job, not the workflow: a workflow-level group in a called
+    # workflow deadlocks if the caller ever gets one with the same name.
+    concurrency:
+      group: homebrew-tap
+      cancel-in-progress: false
+    env:
+      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      # A release goes on without it (when called, the event is the
+      # caller's); a manual run is meant to update the tap or check the
+      # token, so it fails.
+      - name: No tap token
+        if: env.HAS_TAP_TOKEN != 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN isn't set"
+            exit 1
+          fi
+          echo "::notice::HOMEBREW_TAP_TOKEN isn't set, so the Homebrew tap wasn't updated"
+
+      - name: Check the tag
+        if: env.HAS_TAP_TOKEN == 'true'
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::error::'$TAG' isn't a release tag like v0.5.0"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAS_TAP_TOKEN == 'true'
+        with:
+          ref: ${{ inputs.tag }}
+          path: fastlight
+          sparse-checkout: |
+            packaging/homebrew
+            scripts
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAS_TAP_TOKEN == 'true'
+        with:
+          repository: elboletaire/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+          persist-credentials: false
+
+      # The sha256 is taken from the DMG as published, which is what brew
+      # downloads. The tap is shared with other projects' release workflows,
+      # so a push that loses a race rebases onto theirs and tries again.
+      - name: Update the cask
+        if: env.HAS_TAP_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          version="${TAG#v}"
+          gh release download "$TAG" -p "Fastlight-$version.dmg" -D "$RUNNER_TEMP"
+          mkdir -p tap/Casks
+          cp fastlight/packaging/homebrew/tap/Casks/fastlight.rb tap/Casks/fastlight.rb
+          fastlight/scripts/update-cask.sh "$version" "$RUNNER_TEMP/Fastlight-$version.dmg" tap/Casks/fastlight.rb
+          ruby -c tap/Casks/fastlight.rb
+
+          cd tap
+          auth="$(printf 'x-access-token:%s' "$TAP_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          tapgit() { git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" "$@"; }
+          # GitHub refuses the push handshake to a token that can't write, so
+          # a dry run catches a read-only or expired token even when there's
+          # nothing to push (a run for a release the tap already has).
+          if ! tapgit push --dry-run --quiet origin HEAD:main; then
+            echo "::error::HOMEBREW_TAP_TOKEN can't push to elboletaire/homebrew-tap: it needs Contents: read and write on it"
+            exit 1
+          fi
+          git add Casks/fastlight.rb
+          if git diff --cached --quiet; then
+            echo "The tap already has Fastlight $version"
+            exit 0
+          fi
+          # In the checkout's config, not just the commit's: a rebase commits too.
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --quiet -m "fastlight $version"
+          for attempt in 1 2 3 4 5; do
+            if tapgit push --quiet origin HEAD:main; then
+              echo "Updated elboletaire/homebrew-tap to Fastlight $version"
+              exit 0
+            fi
+            if [ "$attempt" = 5 ]; then break; fi
+            echo "Push rejected (attempt $attempt), rebasing onto the tap's latest"
+            sleep $((attempt * 3))
+            tapgit pull --quiet --rebase origin main
+          done
+          echo "::error::couldn't push to elboletaire/homebrew-tap"
+          exit 1
