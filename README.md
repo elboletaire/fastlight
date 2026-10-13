@@ -38,7 +38,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 - **Dictionary.** Type `define serendipity` for definitions from the dictionaries built into macOS, offline. Only after `define `/`dict `, so normal search stays apps and files. ↵ opens it in Dictionary.app.
 - **Web.** Type `github.com` or `localhost:3000` and opening it is the Top Hit. Type `web ` and anything to search Google (or DuckDuckGo, Wikipedia…; the default is [configurable](docs/extensions/README.md)) in your browser.
 - **Extensions in any language.** A folder with a manifest and a script or binary that speaks JSON lines. See [Extensions](#extensions).
-- **Feels native.** A floating panel that looks and behaves like Spotlight, with Liquid Glass on macOS 26 and later, Quick Look, and Reveal in Finder.
+- **Feels native.** A floating panel that looks and behaves like Spotlight, with Liquid Glass on macOS 27 and later, Quick Look, and Reveal in Finder.
 - **Private.** Everything runs locally. No network access, no accounts, no telemetry. Contacts, Calendar and Reminders are read from this Mac's own stores, only after you allow it, and never written to. (Extensions you install can do whatever their code does.)
 
 ## Install
