@@ -119,18 +119,29 @@ struct SearchView: View {
     var body: some View {
         let card = model.card
         VStack(spacing: Metrics.gap) {
-            bar
-            if card != .none {
-                CardView(model: model, card: card)
-                    .frame(height: card.height, alignment: .top)
-                    .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous))
-                    .panelBackground(radius: Metrics.cardRadius)
-                    .transition(.opacity.animation(.easeOut(duration: 0.12)))
+            if #available(macOS 26, *), PanelStyle.current == .glassContainer {
+                GlassEffectContainer(spacing: Metrics.gap) {
+                    VStack(spacing: Metrics.gap) { panels(card) }
+                }
+            } else {
+                panels(card)
             }
         }
         .frame(width: Metrics.width)
         .frame(maxHeight: .infinity, alignment: .top)
         .onAppear { focused = true }
+    }
+
+    @ViewBuilder
+    private func panels(_ card: Card) -> some View {
+        bar
+        if card != .none {
+            CardView(model: model, card: card)
+                .frame(height: card.height, alignment: .top)
+                .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous))
+                .panelBackground(radius: Metrics.cardRadius)
+                .transition(.opacity.animation(.easeOut(duration: 0.12)))
+        }
     }
 
     private var placeholder: String {
@@ -591,8 +602,37 @@ extension View {
     }
 }
 
-/// Liquid Glass on macOS 26+, a behind-window blur before that, and a flat
-/// stand-in for snapshots, which can't capture what's behind a window.
+/// How the panels are drawn. Glass on macOS 26 draws a dark rim around the
+/// bar and card, so the frosted blur is the default there; macOS 27 gets glass.
+/// Override for testing: `defaults write com.elboletaire.fastlight PanelStyle glass|glassContainer|frosted`.
+enum PanelStyle: String {
+    case glass
+    case glassContainer
+    case frosted
+
+    static let current: PanelStyle = {
+        if let raw = UserDefaults.standard.string(forKey: "PanelStyle"),
+           let style = PanelStyle(rawValue: raw), style.isAvailable {
+            return style
+        }
+        if #available(macOS 27, *) { return .glass }
+        return .frosted
+    }()
+
+    private var isAvailable: Bool {
+        switch self {
+        case .frosted: true
+        case .glass, .glassContainer:
+            if #available(macOS 26, *) { true } else { false }
+        }
+    }
+
+    /// The container's glass draws its own shadow, so the window's would double it.
+    var windowShadow: Bool { self != .glassContainer }
+}
+
+/// Liquid Glass where the style asks for it, a behind-window blur otherwise, and
+/// a flat stand-in for snapshots, which can't capture what's behind a window.
 private struct PanelBackground: ViewModifier {
     let radius: CGFloat
     @Environment(\.snapshot) private var snapshot
@@ -605,7 +645,7 @@ private struct PanelBackground: ViewModifier {
                 .background(shape.fill(scheme == .dark ? Color(white: 0.16).opacity(0.86) : Color(white: 0.98).opacity(0.84)))
                 .overlay(shape.strokeBorder(Color.white.opacity(scheme == .dark ? 0.14 : 0.7), lineWidth: 1))
                 .shadow(color: .black.opacity(scheme == .dark ? 0.35 : 0.12), radius: 14, y: 6)
-        } else if #available(macOS 26, *) {
+        } else if PanelStyle.current != .frosted, #available(macOS 26, *) {
             content.glassEffect(.regular, in: shape)
         } else {
             content

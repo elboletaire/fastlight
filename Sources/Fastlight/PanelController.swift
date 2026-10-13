@@ -21,7 +21,7 @@ final class SearchPanel: NSPanel {
         isReleasedWhenClosed = false
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = true
+        hasShadow = PanelStyle.current.windowShadow
         // The system's zoom-in is slow for something summoned per keystroke;
         // show() fades in instead.
         animationBehavior = .none
