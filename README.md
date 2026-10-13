@@ -12,7 +12,7 @@
 [![Powered by fsearch](https://img.shields.io/badge/powered%20by-fsearch-7B5CFF?style=flat-square)](https://github.com/noahdunnagan/fsearch)
 [![License: MIT](https://img.shields.io/badge/license-MIT-FFC81A?style=flat-square)](LICENSE)
 
-[Features](#features) • [Install](#install) • [Usage](#usage) • [Replace Spotlight](#replace-spotlight) • [Extensions](#extensions) • [Build from source](#build-from-source) • [How it works](#how-it-works) • [Website](https://elboletaire.github.io/fastlight/)
+[Features](#features) • [Install](#install) • [Usage](#usage) • [Replace Spotlight](#replace-spotlight) • [Extensions](#extensions) • [Development](docs/development.md) • [Website](https://elboletaire.github.io/fastlight/)
 
 <img src="site/og.png" alt="Fastlight: find anything on your Mac in microseconds" width="800">
 
@@ -27,16 +27,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 - **Forgiving matching.** `vsc` finds Visual Studio Code, `sys set` finds System Settings, `mian.rs` still finds `main.rs`. Apps you open often move up.
 - **Search inside files.** `grep:`, `regex:` and `sym:` search file contents through fsearch's index and show the matching line. ↵ opens it at that line in VS Code, Cursor, VSCodium, Zed, BBEdit or TextMate, when one of them is the file's default app.
 - **Power-user filters.** `ext:`, `in:`, `size:`, `mtime:`, `kind:` and more, straight from the search field.
-- **Emoji picker.** Type `:` and a name, keyword or Slack shortcode (`:joy`, `:tada:`) and ↵ pastes it where you were typing.
-- **Calculator.** Type `1920*1080`, `2^10` or `15% of 80` and the answer is the Top Hit; ↵ copies it.
-- **Conversions.** Units (`10 km in mi`, `72f in c`, `5 gb in mb`), world clocks (`time in tokyo`, `3pm london in nyc`) and date math (`days until dec 25`, `today + 90 days`), offline; ↵ copies the answer.
-- **System Settings.** Type `bluetooth`, `displays` or `full disk access` and ↵ opens that pane of System Settings.
-- **Shortcuts.** Run your shortcuts by name; `sc translate hello` passes "hello" as input.
-- **System actions.** Lock Screen, Sleep, Toggle Dark Mode, Eject All Disks, and Empty Trash, Log Out, Restart and Shut Down, which ask for a second ↵ first.
-- **Contacts.** Type a name, company, email or number and the person shows up; `contact ` lists them with their addresses and numbers, one ↵ away from an email, a call, a message or FaceTime.
-- **Calendar and Reminders.** `cal ` is today's agenda and the next two weeks, `remind ` what's due, overdue first; type a few letters of an event or reminder and it shows up in normal search too. Read-only, and only once you allow it.
-- **Dictionary.** Type `define serendipity` for definitions from the dictionaries built into macOS, offline. Only after `define `/`dict `, so normal search stays apps and files. ↵ opens it in Dictionary.app.
-- **Web.** Type `github.com` or `localhost:3000` and opening it is the Top Hit. Type `web ` and anything to search Google (or DuckDuckGo, Wikipedia…; the default is [configurable](docs/extensions/README.md)) in your browser.
+- **Built in.** An emoji picker, a calculator, unit, time zone and date conversions, a dictionary, web search, System Settings panes, Shortcuts, system actions, Contacts, Calendar and Reminders. See [what each one does](#built-in-extensions).
 - **Extensions in any language.** A folder with a manifest and a script or binary that speaks JSON lines. See [Extensions](#extensions).
 - **Feels native.** A floating panel that looks and behaves like Spotlight, with Liquid Glass on macOS 27 and later, Quick Look, and Reveal in Finder.
 - **Private.** Everything runs locally. No network access, no accounts, no telemetry. Contacts, Calendar and Reminders are read from this Mac's own stores, only after you allow it, and never written to. (Extensions you install can do whatever their code does.)
@@ -55,8 +46,7 @@ Press **⌥Space** anywhere, type a few letters, hit **↵**. Fastlight searches
 
 > [!NOTE]
 > Builds that aren't notarized are blocked the first time you open them. Go to System Settings › Privacy & Security and click **Open Anyway**.
-
-> [!NOTE]
+>
 > Releases are signed ad hoc until there is a Developer ID, so each update has a new signature and macOS drops the Full Disk Access grant. After updating, remove Fastlight from the Full Disk Access list and add it again.
 
 > [!TIP]
@@ -102,6 +92,9 @@ grep:TODO ext:swift              lines containing TODO in Swift files
 sym:applyFilter                  where a symbol is defined
 ```
 
+<details>
+<summary><b>Operators and filters</b></summary>
+
 | Operator | Does |
 |---|---|
 | `'exact` | No fuzziness |
@@ -127,6 +120,8 @@ sym:applyFilter                  where a symbol is defined
 
 `size:` and `mtime:` take `>`, `>=`, `<`, `<=` or a range `a..b`, and `size:` an exact value too. Sizes are in `b`, `k`/`kb`, `m`/`mb`, `g`/`gb` or `t`/`tb` (1 kb is 1000 bytes), and a bare number means bytes; times are in `s`, `m`/`min`, `h`, `d`, `w`, `mo` or `y`, and a bare number means days. Matching ignores case, except `sym:` and `grep:` or `regex:` patterns with capitals. The same reference is in **About Fastlight**.
 
+</details>
+
 Plain queries leave out noise like app bundles, dot-folders, `node_modules` and `~/Library`. Any filter turns that off, so `in:~/Library` searches there as usual.
 
 ## Replace Spotlight
@@ -150,7 +145,28 @@ cp -R examples/extensions/bc ~/Library/Application\ Support/Fastlight/Extensions
 
 Then type `bc 2*21`. Fastlight asks before running a new or changed extension for the first time, since it runs with Fastlight's permissions. The menu bar icon › Extensions turns them on and off and opens their folder and logs.
 
-The built-in extensions (emoji, calculator, conversions, dictionary, web, System Settings, Shortcuts, System, Contacts, Calendar and Reminders) are bundled and built the same way. Write your own with [the extension guide](docs/extensions/README.md); the design is in [docs/extensions/design.md](docs/extensions/design.md).
+The built-in extensions are bundled and built the same way. Write your own with [the extension guide](docs/extensions/README.md); the design is in [docs/extensions/design.md](docs/extensions/design.md).
+
+### Built-in extensions
+
+| Extension | Try |
+|---|---|
+| Emoji | `:joy`, `:tada:`: a name, keyword or Slack shortcode; ↵ pastes it where you were typing |
+| Calculator | `1920*1080`, `2^10`, `15% of 80`: the answer is the Top Hit; ↵ copies it |
+| Conversions | `10 km in mi`, `time in tokyo`, `3pm london in nyc`, `days until dec 25`, offline; ↵ copies the answer |
+| Dictionary | `define serendipity`, from the dictionaries built into macOS, offline; ↵ opens Dictionary.app |
+| Web | `github.com` or `localhost:3000` opens it; `web ` and anything searches Google (or DuckDuckGo, Wikipedia…; [configurable](docs/extensions/README.md)) |
+| System Settings | `bluetooth`, `displays`, `full disk access`; ↵ opens that pane |
+| Shortcuts | Run your shortcuts by name; `sc translate hello` passes "hello" as input |
+| System | Lock Screen, Sleep, Toggle Dark Mode, Eject All Disks; Empty Trash, Log Out, Restart and Shut Down ask for a second ↵ |
+| Contacts | A name, company, email or number; `contact ` lists them, one ↵ from an email, a call, a message or FaceTime |
+| Calendar and Reminders | `cal ` is today's agenda and the next two weeks, `remind ` what's due, overdue first; events and reminders also show up in normal search. Read-only |
+
+Contacts, Calendar and Reminders only work once you allow them.
+
+## Languages
+
+Fastlight speaks English, Catalan and Spanish, following the order of languages in System Settings › General › Language & Region. What you type stays English: keywords, units, date phrases and search filters work the same in every language. To add one, see [Translations](docs/development.md#translations).
 
 ## Build from source
 
@@ -160,76 +176,17 @@ You need the Swift 6 toolchain (the Command Line Tools are enough, no Xcode) and
 brew install rustup && "$(brew --prefix rustup)/bin/rustup" default stable
 git clone --recursive https://github.com/elboletaire/fastlight.git && cd fastlight
 make            # build/Fastlight.app, with fsearch embedded
+make install    # replace /Applications/Fastlight.app
 ```
-
-| Command | Does |
-|---|---|
-| `make run` | Build and open the app |
-| `make install` | Build, quit the running copy and replace `/Applications/Fastlight.app` |
-| `make dmg` | Build `build/Fastlight-<version>.dmg` |
-| `make test` | Run the test suite |
-| `make clean` | Remove build output |
-
-`make dmg` lays out the DMG window (background, icon positions) with [dmgbuild](https://github.com/dmgbuild/dmgbuild), which it runs through [uv](https://docs.astral.sh/uv/) (`brew install uv`) or Python 3.10+. Without either it builds a plain DMG and warns.
-
-`UNIVERSAL=1 make dmg` builds for both Apple Silicon and Intel, and `CODESIGN_IDENTITY="Developer ID Application: …"` signs with a real identity and the hardened runtime. The [release workflow](.github/workflows/release.yml) does both on `v*` tags, and notarizes when the secrets listed at its top are set. Run by hand from a branch, it only builds: the DMG is left as the run's artifact and no release is touched.
-
-Releasing is merging a version bump: when `CFBundleShortVersionString` in `Resources/Info.plist` changes on `main` to a version with no tag yet, [`tag-release.yml`](.github/workflows/tag-release.yml) tags it and runs the release workflow. Tags aren't pushed by hand. Once the release is published, the workflow points the Homebrew cask in [elboletaire/homebrew-tap](https://github.com/elboletaire/homebrew-tap) at the new DMG; see [packaging/homebrew](packaging/homebrew/README.md).
-
-The bundled fsearch keeps itself current: every Monday, [`fsearch.yml`](.github/workflows/fsearch.yml) checks fsearch's `main`. If it has moved on, it opens a PR (branch `deps/fsearch`) that updates the submodule, bumps the patch version and lists the upstream changes. CI runs on it, and merging it releases the new version. Until then it keeps that PR current when upstream moves on again (or `main`'s version changes), but never rewrites the branch once someone else has pushed to it: it comments on the PR instead. `scripts/bump-fsearch.sh` does the same locally. The workflow can also be run from the Actions tab at any time.
 
 > [!IMPORTANT]
 > Local builds are signed ad hoc, and macOS ties Full Disk Access to the signature. Grant it again after each rebuild, or sign with a real identity.
 
-`scripts/snapshot.sh` renders the panel with sample data to `build/snapshots/`, in light and dark, which is handy when working on the design. `--language ca` renders in another language (into `build/snapshots/ca/`) and `--only settings,about,convert` keeps the scenes whose names start with those.
-
-## Translations
-
-Fastlight speaks English, Catalan and Spanish: the app's own UI and what the built-in extensions show. It follows the order of languages in System Settings › General › Language & Region, and uses English when none of them is translated. What you type stays English: keywords, units, date phrases and search filters work the same in every language.
-
-The strings live in `Resources/<lang>.lproj/`, one table per module (`App.strings`, `Core.strings`, `Convert.strings`…), with plurals in a matching `.stringsdict`, and permission prompts in `InfoPlist.strings`. The keys are the English text, so a missing translation shows English. Code looks them up with `L("…")` and `Lp("one", "other", count:)`, defined per module in `L10n.swift`, through `Sources/FastlightL10n`. No Xcode needed: there are no String Catalogs to compile, and `scripts/bundle.sh` copies the lproj folders into `Contents/Resources`.
-
-- **The app and its helpers** find `Contents/Resources` from their own executable (`Contents/MacOS` or `Contents/Helpers`). The app tells its extensions which language it picked through `FASTLIGHT_LANGUAGE`.
-- **Outside the bundle** (`swift run`, tests, snapshots) it's English, unless `FASTLIGHT_LANGUAGE` names a language, which is then read from the source tree. Tests can render a language with `Localizer.$override.withValue(Localizer.named("ca")) { … }`.
-- **Built-in extensions' names and descriptions** are translated in `Extensions.strings`, keyed by the English in their `extension.json`. Third-party extensions are shown as their manifests say.
-- **To add a language**, copy `Resources/en.lproj` to `Resources/<code>.lproj`, translate the values, add the code to `CFBundleLocalizations` in `Resources/Info.plist` and to `translations` in `Tests/FastlightL10nTests/CatalogTests.swift`. The tests check that every key the code uses is in each table, and that the format arguments and plural forms match; `plutil -lint Resources/*.lproj/*` catches syntax errors. A language with plural forms other than "one" and "other" needs its rule in `Localizer.category`.
+The [development guide](docs/development.md) covers the other `make` targets, releases, translations and how Fastlight runs fsearch.
 
 ## How it works
 
-Fastlight is a menu-bar app in Swift. It registers a global hotkey and shows a floating panel. Apps come from its own index of `/Applications`, `/System/Applications`, `~/Applications` and a few system folders, ranked by name match and by how often you open them. Files come from fsearch: Fastlight starts the bundled daemon at `Fastlight.app/Contents/Helpers/fsearch` and talks to it as JSON lines over `~/Library/Application Support/FSearch/fsearch.sock`.
-
-| Path | What's there |
-|---|---|
-| `Sources/FastlightCore` | Search providers, fsearch client, app index and ranking, file result filter, extension host. No AppKit, covered by unit tests. |
-| `Sources/Fastlight` | Menu-bar app, hotkey, panel and results UI. |
-| `Sources/FastlightEmoji`, `Sources/fastlight-emoji` | The bundled emoji picker extension. Its data is in `Extensions/emoji`, regenerated by `scripts/generate-emoji.swift`. |
-| `Sources/FastlightCalc`, `Sources/fastlight-calc` | The bundled calculator extension: its own expression parser, no `bc`. |
-| `Sources/FastlightConvert`, `Sources/fastlight-convert` | The bundled conversions extension: units, time zones and dates. |
-| `Sources/FastlightSystem`, `Sources/fastlight-system` | The bundled System Settings, Shortcuts and System extensions: one helper, three manifests in `Extensions/settings`, `shortcuts` and `system`. |
-| `Sources/FastlightContacts`, `Sources/fastlight-contacts` | The bundled Contacts extension: search and actions, and the Contacts framework behind a protocol. |
-| `Sources/FastlightCalendar`, `Sources/fastlight-calendar` | The bundled Calendar and Reminders extensions, one EventKit helper for both. `Sources/FastlightPIM` is what they share with Contacts: access states, permission items, the background loader. |
-| `Sources/FastlightDictionary`, `Sources/fastlight-dict` | The bundled dictionary extension, on DictionaryServices. |
-| `Sources/FastlightWeb`, `Sources/fastlight-web` | The bundled web extension: address detection and web search. |
-| `examples/extensions` | Example extensions in sh and Python. |
-| `third_party/fsearch` | fsearch, as a git submodule pinned to a known commit, moved forward weekly by a PR. |
-| `scripts/` | Build, bundle, DMG, test and snapshot scripts, driven by the `Makefile`. |
-| `assets/brand` | Logo, icons and the [brand guide](assets/brand/BRAND.md). |
-
-Fastlight starts the fsearch daemon as its own child process, so the Full Disk Access you give Fastlight covers it. fsearch decides whether it has that access when it starts, so Fastlight keeps an eye on both sides:
-
-- **Only its own daemon.** Before connecting, Fastlight reads the daemon's pid from `socket.lock` and its executable from the system. A daemon started by another binary (a standalone `fsearch`, or a Fastlight elsewhere on disk that has quit) runs under someone else's permissions, so Fastlight stops it and starts the bundled one. So does a daemon older than the bundled binary, left over from before an update. There are two exceptions. fsearch's own login agent (`fsearch install --login`): launchd would restart it straight away, so Fastlight uses it as is, and Full Disk Access has to be granted to `~/.local/bin/fsearch` instead. And the daemon of another copy of Fastlight that is still running (an installed one next to a development build, say): replacing it would only have the two copies take turns stopping each other's daemon, so it's used as is, with that copy's Full Disk Access, until that copy quits.
-- **Access granted later.** When Fastlight has Full Disk Access but its daemon reports none, it restarts the daemon, which then scans the folders it skipped. It checks at launch and each time the panel opens, and gives up after a few tries rather than loop.
-- **Quitting.** The daemon keeps running after Fastlight quits, so the next launch answers at once and changes keep being tracked. That's safe now that a daemon that isn't Fastlight's, or is outdated, gets replaced.
-
-## Website
-
-The project site lives in `site/`: plain HTML, CSS and a little vanilla JavaScript, with no build step. [`pages.yml`](.github/workflows/pages.yml) publishes it to <https://elboletaire.github.io/fastlight/> on every push to `main` that touches `site/`. To preview it locally:
-
-```sh
-python3 -m http.server -d site    # then open http://localhost:8000
-```
-
-The social card `site/og.png` is rendered from `site/og/og.html`; see `site/og/README.txt`.
+Fastlight is a menu-bar app in Swift. It registers a global hotkey and shows a floating panel. Apps come from its own index of `/Applications`, `/System/Applications`, `~/Applications` and a few system folders, ranked by name match and by how often you open them. Files come from [fsearch](https://github.com/noahdunnagan/fsearch): Fastlight starts the bundled daemon as its own child process, so the Full Disk Access you give Fastlight covers it, and talks to it as JSON lines over a Unix socket. The daemon keeps running after Fastlight quits, so the next launch answers at once and changes keep being tracked.
 
 ## Credits
 
