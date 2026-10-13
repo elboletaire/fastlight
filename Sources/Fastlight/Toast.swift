@@ -50,7 +50,7 @@ final class Toast {
         let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = true
+        p.hasShadow = PanelStyle.current.windowShadow
         p.level = .statusBar
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
