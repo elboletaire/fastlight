@@ -181,8 +181,8 @@ text is 17–19 px Inter. Headings use line-height 1.1–1.2.
   trails carry a soft bloom.
 - The 16 and 32 px slots in the `.icns` use `src/app-icon-small.svg`, which is
   flat with the hinted comet.
-- Menu bar: `Resources/MenuBarIcon.png` (18 px, two tails + ring + spark) and
-  `@2x` (36 px, three tails + ring + spark). Both are pure black on
+- Menu bar: `Resources/MenuBarIcon.png` (18 px, two tails + ring, no spark: too small to read at that size) and
+  `@2x` (36 px, three tails + ring). Both are pure black on
   transparent, to be loaded as a template image (`isTemplate = true`).
 
 ## Regenerating
